@@ -33,6 +33,34 @@
     color: #34495e;
 }
 
+.listen-prompt {
+    font-size: 18px;
+    font-weight: 600;
+    color: #7f8c8d;
+    letter-spacing: 0.5px;
+    margin-top: 8px;
+}
+
+.listen-audio {
+    margin: 12px 0;
+}
+
+.hint-box {
+    margin-top: 14px;
+    font-size: 14px;
+    color: #7f8c8d;
+}
+
+.hint-box summary {
+    cursor: pointer;
+    user-select: none;
+}
+
+.hint-text {
+    margin-top: 6px;
+    font-size: 18px;
+}
+
 .pronunciation {
     font-size: 22px;
     margin: 8px 0;

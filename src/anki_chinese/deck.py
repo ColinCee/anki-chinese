@@ -46,7 +46,7 @@ def _build_model() -> genanki.Model:
                 "afmt": _read_template("recognition_back.html"),
             },
             {
-                "name": "Recall",
+                "name": "Listening",
                 "qfmt": _read_template("recall_front.html"),
                 "afmt": _read_template("recall_back.html"),
             },

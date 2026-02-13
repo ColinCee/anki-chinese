@@ -91,6 +91,11 @@ def audio(
         "-f",
         help="Regenerate files that already exist.",
     ),
+    fail_fast: bool = typer.Option(
+        False,
+        "--fail-fast",
+        help="Stop immediately on first TTS error.",
+    ),
 ):
     """Generate pronunciation audio via Azure TTS.
 
@@ -112,27 +117,36 @@ def audio(
         targets = all_notes[:limit]
 
     rprint(f"[blue]Generating audio[/blue] for {len(targets)} notes ...")
+    # Intentionally serial by default: Free (F0) TTS has low per-minute limits,
+    # and bursty parallel requests are more likely to trigger 429 throttling.
+    failures: list[str] = []
 
     for i, note in enumerate(targets, 1):
         rprint(f"  [{i}/{len(targets)}] {note.hanzi} ({note.keyword})")
 
-        if note.pinyin:
-            note.mandarin_audio = generate_mandarin(
-                note.hanzi,
-                note.pinyin,
-                force=force,
-            )
-        if note.jyutping:
-            note.cantonese_audio = generate_cantonese(
-                note.hanzi,
-                note.jyutping,
-                force=force,
-            )
-        if note.example_word:
-            note.example_audio = generate_example_audio(
-                note.example_word,
-                force=force,
-            )
+        try:
+            if note.pinyin:
+                note.mandarin_audio = generate_mandarin(
+                    note.hanzi,
+                    note.pinyin,
+                    force=force,
+                )
+            if note.jyutping:
+                note.cantonese_audio = generate_cantonese(
+                    note.hanzi,
+                    note.jyutping,
+                    force=force,
+                )
+            if note.example_word:
+                note.example_audio = generate_example_audio(
+                    note.example_word,
+                    force=force,
+                )
+        except Exception as e:
+            failures.append(f"{note.hanzi} ({note.keyword}): {e}")
+            rprint(f"    [red]✗[/red] {e}")
+            if fail_fast:
+                raise
 
     # Merge filtered results back into the full list
     if char or limit > 0:
@@ -141,6 +155,14 @@ def audio(
 
     save_notes(all_notes, ENRICHED_PATH)
     rprint(f"[green]✓[/green] Audio done for {len(targets)} notes")
+    if failures:
+        rprint(
+            f"[yellow]⚠ {len(failures)} notes failed during audio generation[/yellow]"
+        )
+        for failure in failures[:15]:
+            rprint(f"  • {failure}")
+        if len(failures) > 15:
+            rprint(f"  … and {len(failures) - 15} more")
 
 
 # ── build ─────────────────────────────────────────────────────────────
@@ -198,15 +220,25 @@ def build(
             )
 
             targets = notes[:audio_limit] if audio_limit else notes
+            failures: list[str] = []
             for note in targets:
-                if note.pinyin:
-                    note.mandarin_audio = generate_mandarin(note.hanzi, note.pinyin)
-                if note.jyutping:
-                    note.cantonese_audio = generate_cantonese(note.hanzi, note.jyutping)
-                if note.example_word:
-                    note.example_audio = generate_example_audio(note.example_word)
+                try:
+                    if note.pinyin:
+                        note.mandarin_audio = generate_mandarin(note.hanzi, note.pinyin)
+                    if note.jyutping:
+                        note.cantonese_audio = generate_cantonese(
+                            note.hanzi, note.jyutping
+                        )
+                    if note.example_word:
+                        note.example_audio = generate_example_audio(note.example_word)
+                except Exception as e:
+                    failures.append(f"{note.hanzi} ({note.keyword}): {e}")
             save_notes(notes, ENRICHED_PATH)
             rprint(f"  [green]✓[/green] Audio for {len(targets)} notes")
+            if failures:
+                rprint(
+                    f"  [yellow]⚠ {len(failures)} notes failed during audio generation[/yellow]"
+                )
         else:
             rprint("\n[bold]Step 2/3 · Audio[/bold] [dim](skipped)[/dim]")
 

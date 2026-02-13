@@ -122,6 +122,13 @@ def _ssml_cantonese(hanzi: str, jyutping: str) -> str:
 </speak>"""
 
 
+def _ssml_plain(*, text: str, voice: str, lang: str) -> str:
+    """Build plain SSML with no forced phoneme pronunciation."""
+    return f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{lang}">
+    <voice name="{voice}">{text}</voice>
+</speak>"""
+
+
 def _generate_audio(ssml: str, output_path: Path) -> bool:
     """Synthesize speech from SSML and save to file.  Returns True on success."""
     import azure.cognitiveservices.speech as speechsdk
@@ -164,7 +171,15 @@ def generate_mandarin(hanzi: str, pinyin: str, *, force: bool = False) -> str:
         return f"[sound:{filename}]"
 
     ssml = _ssml_mandarin(hanzi, pinyin)
-    _generate_audio(ssml, output_path)
+    try:
+        _generate_audio(ssml, output_path)
+    except RuntimeError as e:
+        # Some syllables/tones are rejected by Azure's sapi phoneme parser.
+        # Fall back to plain text synthesis to keep the pipeline moving.
+        if "Unknown phoneme" not in str(e):
+            raise
+        fallback = _ssml_plain(text=hanzi, voice=MANDARIN_VOICE, lang="zh-CN")
+        _generate_audio(fallback, output_path)
     return f"[sound:{filename}]"
 
 
@@ -178,7 +193,13 @@ def generate_cantonese(hanzi: str, jyutping: str, *, force: bool = False) -> str
         return f"[sound:{filename}]"
 
     ssml = _ssml_cantonese(hanzi, jyutping)
-    _generate_audio(ssml, output_path)
+    try:
+        _generate_audio(ssml, output_path)
+    except RuntimeError as e:
+        if "Unknown phoneme" not in str(e):
+            raise
+        fallback = _ssml_plain(text=hanzi, voice=CANTONESE_VOICE, lang="zh-HK")
+        _generate_audio(fallback, output_path)
     return f"[sound:{filename}]"
 
 
@@ -192,8 +213,6 @@ def generate_example_audio(word: str, *, force: bool = False) -> str:
 
     # For example words, we don't force phoneme — let Azure pick naturally
     # since multi-char words have enough context for correct pronunciation
-    ssml = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="zh-CN">
-  <voice name="{MANDARIN_VOICE}">{word}</voice>
-</speak>"""
+    ssml = _ssml_plain(text=word, voice=MANDARIN_VOICE, lang="zh-CN")
     _generate_audio(ssml, output_path)
     return f"[sound:{filename}]"

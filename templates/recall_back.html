@@ -4,6 +4,8 @@
 
 <div class="hanzi">{{Hanzi}}</div>
 
+<div class="keyword">{{Keyword}}</div>
+
 <div class="pronunciation">
     <span class="label">Mandarin</span><br>
     <span id="pinyin-display">{{Pinyin}}</span>
@@ -29,6 +31,10 @@
 <hr class="divider">
 <div class="stroke-order">{{StrokeOrder}}</div>
 {{/StrokeOrder}}
+
+{{#Mnemonic}}
+<div class="mnemonic">💡 {{Mnemonic}}</div>
+{{/Mnemonic}}
 
 <script>
 (function() {
