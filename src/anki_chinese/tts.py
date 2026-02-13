@@ -9,6 +9,7 @@ pinyin/jyutping fields, so audio always matches the displayed romanization.
 from __future__ import annotations
 
 import os
+import unicodedata
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -16,6 +17,58 @@ from dotenv import load_dotenv
 from .config import GENERATED_MEDIA_DIR, MANDARIN_VOICE, CANTONESE_VOICE
 
 load_dotenv()
+
+# ---------- diacritical pinyin → Azure SAPI format ----------
+# Azure zh-CN SAPI expects: "yi 1", "zhong 1", "lv 3", "de 5"
+# Our stored pinyin uses tone diacritics: "yī", "zhōng", "lǜ", "de"
+
+# Map combining diacritical marks to tone numbers
+_TONE_MARKS: dict[int, int] = {
+    0x0304: 1,  # macron  ̄  → tone 1
+    0x0301: 2,  # acute   ́  → tone 2
+    0x030C: 3,  # caron   ̌  → tone 3
+    0x0300: 4,  # grave   ̀  → tone 4
+}
+
+
+def _to_sapi_pinyin(diacritical: str) -> str:
+    """Convert diacritical pinyin (yī, zhōng, lǜ) to Azure SAPI format (yi 1, zhong 1, lv 3).
+
+    Steps:
+      1. Decompose Unicode so tone marks become combining characters.
+      2. Scan for the combining tone mark → extract tone number.
+      3. Convert u + combining diaeresis (ü) → v  (Azure SAPI convention).
+      4. Strip remaining combining marks to get bare ASCII syllable.
+      5. Append space + tone number (neutral tone = 5).
+    """
+    # Normalize to NFD so e.g. ī → i + combining macron
+    nfd = unicodedata.normalize("NFD", diacritical.strip().lower())
+
+    tone = 5  # default: neutral tone (轻声)
+    bare_chars: list[str] = []
+    i = 0
+    while i < len(nfd):
+        ch = nfd[i]
+        cp = ord(ch)
+
+        if cp in _TONE_MARKS:
+            tone = _TONE_MARKS[cp]
+            # don't append the combining tone mark
+        elif cp == 0x0308:
+            # Combining diaeresis — preceding char should be 'u' → replace with 'v'
+            if bare_chars and bare_chars[-1] == "u":
+                bare_chars[-1] = "v"
+            # drop the combining diaeresis itself
+        elif unicodedata.category(ch).startswith("M"):
+            # skip any other combining marks (shouldn't happen, but be safe)
+            pass
+        else:
+            bare_chars.append(ch)
+
+        i += 1
+
+    syllable = "".join(bare_chars)
+    return f"{syllable} {tone}"
 
 
 def _get_speech_config():  # type: ignore[no-untyped-def]
@@ -32,19 +85,39 @@ def _get_speech_config():  # type: ignore[no-untyped-def]
 
 
 def _ssml_mandarin(hanzi: str, pinyin_with_tone: str) -> str:
-    """Build SSML that forces a specific Mandarin pronunciation."""
+    """Build SSML that forces a specific Mandarin pronunciation.
+
+    Converts diacritical pinyin (yī) to Azure SAPI format (yi 1).
+    """
+    sapi_ph = _to_sapi_pinyin(pinyin_with_tone)
     return f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="zh-CN">
   <voice name="{MANDARIN_VOICE}">
-    <phoneme alphabet="sapi" ph="{pinyin_with_tone}">{hanzi}</phoneme>
+    <phoneme alphabet="sapi" ph="{sapi_ph}">{hanzi}</phoneme>
   </voice>
 </speak>"""
 
 
+def _to_sapi_jyutping(jyutping: str) -> str:
+    """Ensure jyutping has a space before the tone number for Azure SAPI.
+
+    Our data stores 'jat1' but Azure expects 'jat 1'.
+    """
+    jp = jyutping.strip()
+    if jp and jp[-1].isdigit() and len(jp) >= 2 and jp[-2] != " ":
+        return jp[:-1] + " " + jp[-1]
+    return jp
+
+
 def _ssml_cantonese(hanzi: str, jyutping: str) -> str:
-    """Build SSML that forces a specific Cantonese pronunciation."""
+    """Build SSML that forces a specific Cantonese pronunciation.
+
+    Uses alphabet="sapi" (Azure's SAPI set uses jyutping symbols for zh-HK).
+    Ensures jyutping has the space-separated tone format Azure expects.
+    """
+    sapi_jp = _to_sapi_jyutping(jyutping)
     return f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="zh-HK">
   <voice name="{CANTONESE_VOICE}">
-    <phoneme alphabet="jyutping" ph="{jyutping}">{hanzi}</phoneme>
+    <phoneme alphabet="sapi" ph="{sapi_jp}">{hanzi}</phoneme>
   </voice>
 </speak>"""
 

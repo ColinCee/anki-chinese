@@ -29,22 +29,14 @@ def enrich_notes(
     for note in track(notes, description="Enriching notes..."):
         # ── Pinyin ────────────────────────────────────────────────
         if not note.pinyin:
-            py, needs_review = lookup_pinyin(note.hanzi)
+            py, is_polyphonic = lookup_pinyin(note.hanzi)
             note.pinyin = py
-            if needs_review:
+            if is_polyphonic:
                 note.needs_review = True
                 note.review_reason = (
-                    f"Polyphonic character — verify pinyin '{py}' "
-                    f"matches keyword '{note.keyword}'"
-                )
-        else:
-            # Even if we have pinyin, check if it's polyphonic
-            _, needs_review = lookup_pinyin(note.hanzi, existing=note.pinyin)
-            if needs_review:
-                note.needs_review = True
-                note.review_reason = (
-                    f"Polyphonic — existing pinyin '{note.pinyin}', "
-                    f"verify it matches keyword '{note.keyword}'"
+                    f"Polyphonic character — no pinyin in source, "
+                    f"defaulted to '{py}' — verify against "
+                    f"keyword '{note.keyword}'"
                 )
 
         # ── Jyutping ─────────────────────────────────────────────

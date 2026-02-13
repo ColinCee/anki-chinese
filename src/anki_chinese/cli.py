@@ -295,6 +295,59 @@ def status():
 
     if review_count:
         rprint(f"[yellow]⚠ {review_count} notes flagged for review[/yellow]")
+        rprint("[dim]Run 'anki-chinese review' to inspect and verify them.[/dim]")
+
+
+# ── review ────────────────────────────────────────────────────────────
+
+
+@app.command()
+def review():
+    """Inspect notes flagged for review.
+
+    \b
+    Shows notes where the enrichment pipeline couldn't confidently
+    pick the right data (e.g. polyphonic characters with no pinyin
+    in the source).  Fix issues by adding entries to
+    data/overrides.json, then re-run 'anki-chinese init'.
+    """
+    from .models import load_notes
+
+    notes = load_notes(ENRICHED_PATH)
+    flagged = [n for n in notes if n.needs_review]
+
+    if not flagged:
+        rprint("[green]✓ No notes need review.[/green]")
+        return
+
+    table = Table(
+        title=f"Notes Needing Review · {len(flagged)} flagged",
+        show_lines=True,
+    )
+    table.add_column("#", style="dim", width=4)
+    table.add_column("Hanzi", style="bold", width=4)
+    table.add_column("Pinyin", width=8)
+    table.add_column("Keyword", width=18)
+    table.add_column("Heisig", width=6)
+    table.add_column("Reason", style="dim")
+
+    for i, n in enumerate(flagged, 1):
+        table.add_row(
+            str(i),
+            n.hanzi,
+            n.pinyin,
+            n.keyword,
+            n.heisig_num,
+            n.review_reason,
+        )
+
+    console.print(table)
+
+    rprint(
+        "\n[bold]To fix:[/bold] add corrections to [bold]data/overrides.json[/bold]:"
+    )
+    rprint('  [dim]{ "行": { "pinyin": "xíng" } }[/dim]')
+    rprint("Then re-run [bold]anki-chinese init[/bold].\n")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────
@@ -310,7 +363,7 @@ def _report_review_items(notes: list[CharacterNote]) -> None:
         rprint(f"  {n.hanzi} ({n.keyword}): {n.review_reason}")
     if len(review) > 15:
         rprint(f"  … and {len(review) - 15} more")
-    rprint("[dim]Add corrections to data/overrides.json and re-run init.[/dim]")
+    rprint("[dim]Run 'anki-chinese review' to see details and verify them.[/dim]")
 
 
 if __name__ == "__main__":

@@ -19,6 +19,21 @@ def _strip_html(html: str) -> str:
     return re.sub(r"<[^>]+>", "", html).strip()
 
 
+def _extract_hanzi(raw: str) -> str:
+    """Extract the hanzi character from column 2.
+
+    Usually this is just the character itself, but some rows have an
+    ``<img src="770b.gif" />`` tag instead.  The filename is the Unicode
+    codepoint in hex, so we can recover the character from it.
+    """
+    raw = raw.strip()
+    if "<img" in raw:
+        match = re.search(r'src="([0-9a-fA-F]+)\.gif"', raw)
+        if match:
+            return chr(int(match.group(1), 16))
+    return raw
+
+
 def _extract_pinyin(html: str) -> str:
     """Extract plain pinyin from '<span class="tone1">yī</span> <!-- yi -->'."""
     # The actual pinyin with diacriticals is inside the span
@@ -79,7 +94,7 @@ def parse_old_deck(path: Path) -> list[CharacterNote]:
         stroke_html = row[4].strip()
 
         note = CharacterNote(
-            hanzi=row[2].strip(),
+            hanzi=_extract_hanzi(row[2]),
             keyword=row[3].strip(),
             pinyin=_extract_pinyin(row[7]) if row[7].strip() else "",
             jyutping=_extract_jyutping(row[13]) if row[13].strip() else "",
