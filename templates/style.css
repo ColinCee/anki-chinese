@@ -1,0 +1,113 @@
+/* ── Chinese RSH Card Styles ─────────────────────────────────────── */
+
+.card {
+    font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+    font-size: 20px;
+    text-align: center;
+    color: #2c3e50;
+    background-color: #fafafa;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+/* ── Tone colors (Pleco standard) ─────────────────────────────── */
+
+.tone1 { color: #e74c3c; }   /* red */
+.tone2 { color: #e67e22; }   /* orange */
+.tone3 { color: #27ae60; }   /* green */
+.tone4 { color: #2980b9; }   /* blue */
+.tone5 { color: #999999; }   /* grey — neutral tone */
+
+/* ── Layout ───────────────────────────────────────────────────── */
+
+.hanzi {
+    font-size: 72px;
+    font-weight: bold;
+    margin: 20px 0;
+}
+
+.keyword {
+    font-size: 28px;
+    font-weight: 600;
+    margin: 10px 0;
+    color: #34495e;
+}
+
+.pronunciation {
+    font-size: 22px;
+    margin: 8px 0;
+}
+
+.pronunciation .label {
+    font-size: 14px;
+    color: #95a5a6;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.divider {
+    border: none;
+    border-top: 1px solid #ecf0f1;
+    margin: 16px auto;
+    width: 60%;
+}
+
+.example {
+    font-size: 18px;
+    color: #555;
+    margin: 12px 0;
+}
+
+.example .word {
+    font-size: 24px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.example .meaning {
+    font-size: 16px;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.stroke-order {
+    margin: 16px 0;
+}
+
+.stroke-order img {
+    max-width: 120px;
+    max-height: 120px;
+}
+
+.meta {
+    font-size: 13px;
+    color: #bdc3c7;
+    margin-top: 16px;
+}
+
+.mnemonic {
+    font-size: 16px;
+    color: #8e44ad;
+    font-style: italic;
+    margin-top: 12px;
+    padding: 8px;
+    background: #f5f0f8;
+    border-radius: 6px;
+}
+
+.night_mode .card,
+.nightMode .card {
+    background-color: #1a1a2e;
+    color: #e0e0e0;
+}
+
+.night_mode .keyword,
+.nightMode .keyword {
+    color: #ccc;
+}
+
+.night_mode .mnemonic,
+.nightMode .mnemonic {
+    background: #2a2040;
+    color: #c39bd3;
+}
