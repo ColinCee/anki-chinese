@@ -58,3 +58,8 @@ Edit `data/example_words.json`:
 ```
 
 Then rerun `init`.
+
+Notes:
+
+- If a character has no manual example, the pipeline now tries to auto-pick a common 2-character word.
+- Manual entries in `data/example_words.json` always override auto-generated examples.

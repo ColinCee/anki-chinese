@@ -49,6 +49,7 @@ Output: `output/chinese_rsh.apkg`
 - `build` needs `data/enriched.json`, so run `init` first (unless already done).
 - `audio` is optional; you can build and study without it.
 - `audio` can be slow on free-tier Azure due to low per-minute limits.
+- Example words are auto-generated when missing; manual overrides still come from `data/example_words.json`.
 
 ## Most common commands
 
