@@ -45,6 +45,13 @@
     margin: 12px 0;
 }
 
+.listen-keyword {
+    font-size: 24px;
+    font-weight: 600;
+    color: #34495e;
+    margin-top: 4px;
+}
+
 .hint-box {
     margin-top: 14px;
     font-size: 14px;
