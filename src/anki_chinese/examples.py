@@ -95,6 +95,19 @@ def _extract_entry_fields(entry: dict) -> tuple[str, int | None, str]:
     return word, freq, meaning
 
 
+def _iter_2char_candidates(word: str) -> list[str]:
+    """Return 2-character candidates from a word.
+
+    - If already 2 chars, returns that word.
+    - If longer, returns contiguous 2-char slices.
+    """
+    if len(word) == 2:
+        return [word]
+    if len(word) < 2:
+        return []
+    return [word[i : i + 2] for i in range(len(word) - 1)]
+
+
 def _build_auto_index() -> dict[str, tuple[str, str]]:
     """Build best 2-char example per hanzi using HSK frequency ranking.
 
@@ -107,24 +120,27 @@ def _build_auto_index() -> dict[str, tuple[str, str]]:
             continue
 
         word, freq, meaning = _extract_entry_fields(entry)
-        if len(word) != 2:
-            continue
-        if not _is_cjk(word):
+        if not word:
             continue
         rank = freq if freq is not None else 1_000_000_000
         has_rank = freq is not None
 
-        for ch in set(word):
-            prev = best.get(ch)
-            if prev is None:
-                best[ch] = (word, rank, has_rank, meaning)
+        for candidate in _iter_2char_candidates(word):
+            if len(candidate) != 2 or not _is_cjk(candidate):
                 continue
+            candidate_meaning = meaning if candidate == word else ""
 
-            _, prev_rank, prev_has_rank, _ = prev
-            if has_rank and not prev_has_rank:
-                best[ch] = (word, rank, has_rank, meaning)
-            elif has_rank == prev_has_rank and rank < prev_rank:
-                best[ch] = (word, rank, has_rank, meaning)
+            for ch in set(candidate):
+                prev = best.get(ch)
+                if prev is None:
+                    best[ch] = (candidate, rank, has_rank, candidate_meaning)
+                    continue
+
+                _, prev_rank, prev_has_rank, _ = prev
+                if has_rank and not prev_has_rank:
+                    best[ch] = (candidate, rank, has_rank, candidate_meaning)
+                elif has_rank == prev_has_rank and rank < prev_rank:
+                    best[ch] = (candidate, rank, has_rank, candidate_meaning)
 
     return {ch: (word, meaning) for ch, (word, _, _, meaning) in best.items()}
 
