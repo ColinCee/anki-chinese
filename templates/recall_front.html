@@ -1,6 +1,13 @@
 <div class="listen-prompt">🎧 Listen</div>
 <div class="listen-audio">{{MandarinAudio}}</div>
-<div class="listen-keyword">{{Keyword}}</div>
+
+{{#ExampleWord}}
+<div class="example listen-example">
+	<span class="word">{{ExampleWord}}</span>
+	{{ExampleAudio}}
+	{{#ExampleMeaning}}<br><span class="meaning">{{ExampleMeaning}}</span>{{/ExampleMeaning}}
+</div>
+{{/ExampleWord}}
 
 <details class="hint-box">
 	<summary>Show pinyin hint</summary>

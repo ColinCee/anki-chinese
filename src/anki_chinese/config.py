@@ -16,7 +16,9 @@ GENERATED_MEDIA_DIR = MEDIA_DIR / "generated"
 TEMPLATE_DIR = PROJECT_ROOT / "templates"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
-OLD_DECK_PATH = DATA_DIR / "All Decks.txt"
+SOURCE_DECK_PATH = DATA_DIR / "Exported-deck.txt"
+# Backward-compatible alias for existing imports.
+OLD_DECK_PATH = SOURCE_DECK_PATH
 OVERRIDES_PATH = DATA_DIR / "overrides.json"
 ENRICHED_PATH = DATA_DIR / "enriched.json"
 

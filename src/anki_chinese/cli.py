@@ -2,7 +2,7 @@
 CLI for generating and managing your Anki Chinese deck.
 
 Commands:
-    init     Parse old deck export + fill in pinyin, jyutping, examples
+    init     Parse source deck export + fill in pinyin, jyutping, examples
     audio    Generate pronunciation audio via Azure TTS
     build    Build the .apkg deck file (use --full for the complete pipeline)
     status   Show coverage stats and check for problems
@@ -18,7 +18,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .config import (
-    OLD_DECK_PATH,
+    SOURCE_DECK_PATH,
     ENRICHED_PATH,
 )
 from .models import CharacterNote
@@ -37,10 +37,10 @@ console = Console()
 @app.command()
 def init(
     input_file: Path = typer.Option(
-        OLD_DECK_PATH,
+        SOURCE_DECK_PATH,
         "--input",
         "-i",
-        help="Old Anki text export to parse.",
+        help="Anki text export to parse.",
     ),
     skip_examples: bool = typer.Option(
         False,
@@ -48,14 +48,14 @@ def init(
         help="Skip example-word lookup.",
     ),
 ):
-    """Parse old deck export and enrich with pinyin, jyutping, examples."""
-    from .parser import parse_old_deck
+    """Parse source deck export and enrich with pinyin, jyutping, examples."""
+    from .parser import parse_deck_export
     from .models import save_notes
     from .enrich import enrich_notes
 
     # Step 1: parse
     rprint(f"[blue]Parsing[/blue] {input_file} ...")
-    notes = parse_old_deck(input_file)
+    notes = parse_deck_export(input_file)
     rprint(f"  [green]✓[/green] {len(notes)} notes parsed")
 
     # Step 2: enrich
@@ -200,12 +200,12 @@ def build(
     from .deck import build_deck
 
     if full:
-        from .parser import parse_old_deck
+        from .parser import parse_deck_export
         from .enrich import enrich_notes
 
         # 1. Init
         rprint("\n[bold]Step 1/3 · Parse + Enrich[/bold]")
-        notes = parse_old_deck(OLD_DECK_PATH)
+        notes = parse_deck_export(SOURCE_DECK_PATH)
         notes = enrich_notes(notes, skip_examples=skip_examples)
         _report_review_items(notes)
         save_notes(notes, ENRICHED_PATH)

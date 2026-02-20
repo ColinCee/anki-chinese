@@ -13,4 +13,7 @@ wheels/
 .env
 output/*.apkg
 media/generated/
+ 
+# Downloaded HSK vocabulary cache
+data/hsk_complete.min.json
 data/enriched.json

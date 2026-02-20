@@ -24,7 +24,7 @@ Files in `templates/` control card UI:
 - `style.css`
 - `recognition_front.html`
 - `recognition_back.html`
-- `recall_front.html` (listening front)
+- `recall_front.html` (listening front: audio + optional example phrase)
 - `recall_back.html`
 
 After editing templates:
@@ -63,3 +63,5 @@ Notes:
 
 - If a character has no manual example, the pipeline now tries to auto-pick a common 2-character word.
 - Manual entries in `data/example_words.json` always override auto-generated examples.
+- Auto-pick policy is frequency-based from Complete HSK Vocabulary (`complete.min.json`): lower `frequency` rank means more common.
+- Listening front shows the example only when `ExampleWord` is present (no placeholder when missing).

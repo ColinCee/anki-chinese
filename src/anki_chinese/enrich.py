@@ -35,8 +35,7 @@ def enrich_notes(
                 note.needs_review = True
                 note.review_reason = (
                     f"Polyphonic character — no pinyin in source, "
-                    f"defaulted to '{py}' — verify against "
-                    f"keyword '{note.keyword}'"
+                    f"defaulted to '{py}' — verify reading manually"
                 )
 
         # ── Jyutping ─────────────────────────────────────────────
