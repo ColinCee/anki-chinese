@@ -20,6 +20,7 @@ from rich.table import Table
 from .config import (
     SOURCE_DECK_PATH,
     ENRICHED_PATH,
+    GENERATED_MEDIA_DIR,
 )
 from .models import CharacterNote
 
@@ -80,6 +81,34 @@ def init(
     # Step 3: enrich
     rprint("[blue]Enriching[/blue] ...")
     notes = enrich_notes(notes, skip_examples=skip_examples)
+
+    # Step 4: clear stale example audio when example_word changed
+    stale_files: list[Path] = []
+    for note in notes:
+        if (
+            note.example_audio
+            and note.example_word
+            and note.example_word not in note.example_audio
+        ):
+            # Audio was for a different word — remove the reference
+            # and clean up the orphaned file
+            old_file = note.example_audio.replace("[sound:", "").rstrip("]")
+            old_path = GENERATED_MEDIA_DIR / old_file
+            if old_path.exists():
+                stale_files.append(old_path)
+            note.example_audio = ""
+
+    if stale_files:
+        removed = 0
+        for p in stale_files:
+            try:
+                p.unlink()
+                removed += 1
+            except OSError:
+                pass
+        rprint(
+            f"  [yellow]⚠[/yellow] Removed {removed} stale example audio files"
+        )
 
     _report_review_items(notes)
 
