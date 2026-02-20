@@ -95,54 +95,53 @@ def _extract_entry_fields(entry: dict) -> tuple[str, int | None, str]:
     return word, freq, meaning
 
 
-def _iter_2char_candidates(word: str) -> list[str]:
-    """Return 2-character candidates from a word.
-
-    - If already 2 chars, returns that word.
-    - If longer, returns contiguous 2-char slices.
-    """
-    if len(word) == 2:
-        return [word]
-    if len(word) < 2:
-        return []
-    return [word[i : i + 2] for i in range(len(word) - 1)]
-
-
 def _build_auto_index() -> dict[str, tuple[str, str]]:
-    """Build best 2-char example per hanzi using HSK frequency ranking.
+    """Build best example word per hanzi using HSK frequency ranking.
+
+    Prefers real 2-char words (where the word *is* the candidate).
+    Falls back to the full word (any length) when no standalone
+    2-char word exists for a character — this avoids meaningless
+    substrings like '心丸' from '定心丸'.
 
     Lower rank value means more common usage.
     """
-    best: dict[str, tuple[str, int, bool, str]] = {}
+    # is_exact=True means the candidate is the full word (has a real meaning).
+    # is_exact=False means it's a 2-char slice of a longer word (no meaning).
+    # Tuple: (word, rank, has_rank, meaning, is_exact)
+    best: dict[str, tuple[str, int, bool, str, bool]] = {}
 
     for entry in _load_hsk_vocab():
         if not isinstance(entry, dict):
             continue
 
         word, freq, meaning = _extract_entry_fields(entry)
-        if not word:
+        if not word or len(word) < 2 or not _is_cjk(word):
             continue
         rank = freq if freq is not None else 1_000_000_000
         has_rank = freq is not None
 
-        for candidate in _iter_2char_candidates(word):
-            if len(candidate) != 2 or not _is_cjk(candidate):
+        # For each character in the word, consider using this word as example
+        for ch in set(word):
+            is_exact = True  # full word, keeps its meaning
+            prev = best.get(ch)
+
+            if prev is None:
+                best[ch] = (word, rank, has_rank, meaning, is_exact)
                 continue
-            candidate_meaning = meaning if candidate == word else ""
 
-            for ch in set(candidate):
-                prev = best.get(ch)
-                if prev is None:
-                    best[ch] = (candidate, rank, has_rank, candidate_meaning)
-                    continue
+            _, prev_rank, prev_has_rank, _, prev_exact = prev
 
-                _, prev_rank, prev_has_rank, _ = prev
+            # Prefer exact (full-word) matches over substring slices
+            if is_exact and not prev_exact:
+                best[ch] = (word, rank, has_rank, meaning, is_exact)
+            elif is_exact == prev_exact:
+                # Among same type, prefer higher frequency (lower rank)
                 if has_rank and not prev_has_rank:
-                    best[ch] = (candidate, rank, has_rank, candidate_meaning)
+                    best[ch] = (word, rank, has_rank, meaning, is_exact)
                 elif has_rank == prev_has_rank and rank < prev_rank:
-                    best[ch] = (candidate, rank, has_rank, candidate_meaning)
+                    best[ch] = (word, rank, has_rank, meaning, is_exact)
 
-    return {ch: (word, meaning) for ch, (word, _, _, meaning) in best.items()}
+    return {ch: (word, meaning) for ch, (word, _, _, meaning, _) in best.items()}
 
 
 def _lookup_auto(hanzi: str) -> tuple[str, str]:

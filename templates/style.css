@@ -150,3 +150,13 @@
     background: #2a2040;
     color: #c39bd3;
 }
+
+.night_mode .example,
+.nightMode .example {
+    color: #d0d6de;
+}
+
+.night_mode .example .word,
+.nightMode .example .word {
+    color: #f2f5f8;
+}

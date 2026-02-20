@@ -50,7 +50,7 @@ def init(
 ):
     """Parse source deck export and enrich with pinyin, jyutping, examples."""
     from .parser import parse_deck_export
-    from .models import save_notes
+    from .models import load_notes, save_notes
     from .enrich import enrich_notes
 
     # Step 1: parse
@@ -58,7 +58,26 @@ def init(
     notes = parse_deck_export(input_file)
     rprint(f"  [green]✓[/green] {len(notes)} notes parsed")
 
-    # Step 2: enrich
+    # Step 2: preserve audio fields from previous enriched data (if any)
+    _AUDIO_FIELDS = ("mandarin_audio", "cantonese_audio", "example_audio")
+    if ENRICHED_PATH.exists():
+        prev_notes = load_notes(ENRICHED_PATH)
+        prev_by_hanzi = {n.hanzi: n for n in prev_notes}
+        restored = 0
+        for note in notes:
+            prev = prev_by_hanzi.get(note.hanzi)
+            if prev is None:
+                continue
+            for field in _AUDIO_FIELDS:
+                if not getattr(note, field) and getattr(prev, field):
+                    setattr(note, field, getattr(prev, field))
+                    restored += 1
+        if restored:
+            rprint(
+                f"  [green]✓[/green] Restored {restored} audio references from previous data"
+            )
+
+    # Step 3: enrich
     rprint("[blue]Enriching[/blue] ...")
     notes = enrich_notes(notes, skip_examples=skip_examples)
 
