@@ -47,10 +47,14 @@ def enrich_notes(
                 note.review_reason = f"No jyutping found for '{note.hanzi}'"
 
         # ── Example word ──────────────────────────────────────────
-        if not skip_examples and not note.example_word:
-            word, meaning = lookup_example(note.hanzi)
-            note.example_word = word
-            note.example_meaning = meaning
+        if not skip_examples:
+            if not note.example_word or (
+                note.example_word and not note.example_meaning
+            ):
+                word, meaning = lookup_example(note.hanzi)
+                if word and meaning:
+                    note.example_word = word
+                    note.example_meaning = meaning
 
         # ── Apply manual overrides (always last) ──────────────────
         note = apply_overrides(note, overrides)
