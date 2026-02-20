@@ -3,9 +3,13 @@
 
 {{#ExampleWord}}
 <div class="example listen-example">
-	<span class="word">{{ExampleWord}}</span>
 	{{ExampleAudio}}
-	{{#ExampleMeaning}}<br><span class="meaning">{{ExampleMeaning}}</span>{{/ExampleMeaning}}
+	{{#ExampleMeaning}}
+	<details class="hint-box">
+		<summary>Show meaning</summary>
+		<div class="meaning">{{ExampleMeaning}}</div>
+	</details>
+	{{/ExampleMeaning}}
 </div>
 {{/ExampleWord}}
 
