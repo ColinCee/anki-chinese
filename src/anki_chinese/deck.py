@@ -90,7 +90,7 @@ def build_deck(notes: list[CharacterNote]) -> Path:
     media_files: list[str] = []
     if GENERATED_MEDIA_DIR.exists():
         media_files = [
-            str(p) for p in GENERATED_MEDIA_DIR.iterdir() if p.suffix == ".mp3"
+            str(p) for p in GENERATED_MEDIA_DIR.glob("*.mp3")
         ]
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

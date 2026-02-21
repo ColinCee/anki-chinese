@@ -2,10 +2,11 @@
 CLI for generating and managing your Anki Chinese deck.
 
 Commands:
-    init     Parse source deck export + fill in pinyin, jyutping, examples
-    audio    Generate pronunciation audio via Azure TTS
-    build    Build the .apkg deck file (use --full for the complete pipeline)
-    status   Show coverage stats and check for problems
+    init            Parse source deck export + fill in pinyin, jyutping, examples
+    audio           Generate pronunciation audio via Azure TTS
+    build           Build the .apkg deck file (use --full for the complete pipeline)
+    status          Show coverage stats and check for problems
+    test-tts        Quick-test TTS for a single character or word
 """
 
 from __future__ import annotations
@@ -93,9 +94,8 @@ def init(
             # Audio was for a different word — remove the reference
             # and clean up the orphaned file
             old_file = note.example_audio.replace("[sound:", "").rstrip("]")
-            old_path = GENERATED_MEDIA_DIR / old_file
-            if old_path.exists():
-                stale_files.append(old_path)
+            candidates = [GENERATED_MEDIA_DIR / old_file]
+            stale_files.extend(p for p in candidates if p.exists())
             note.example_audio = ""
 
     if stale_files:
@@ -106,9 +106,7 @@ def init(
                 removed += 1
             except OSError:
                 pass
-        rprint(
-            f"  [yellow]⚠[/yellow] Removed {removed} stale example audio files"
-        )
+        rprint(f"  [yellow]⚠[/yellow] Removed {removed} stale example audio files")
 
     _report_review_items(notes)
 
@@ -278,7 +276,9 @@ def build(
                             note.hanzi, note.jyutping
                         )
                     if note.example_word:
-                        note.example_audio = generate_example_audio(note.example_word)
+                        note.example_audio = generate_example_audio(
+                            note.example_word
+                        )
                 except Exception as e:
                     failures.append(f"{note.hanzi} ({note.keyword}): {e}")
             save_notes(notes, ENRICHED_PATH)
@@ -428,6 +428,159 @@ def review():
     )
     rprint('  [dim]{ "行": { "pinyin": "xíng" } }[/dim]')
     rprint("Then re-run [bold]anki-chinese init[/bold].\n")
+
+
+# ── test-tts ──────────────────────────────────────────────────────────
+
+
+@app.command(name="test-tts")
+def test_tts(
+    char: str = typer.Option(
+        "",
+        "--char",
+        "-c",
+        help="Character to test (looks up pinyin/jyutping from enriched data).",
+    ),
+    word: str = typer.Option(
+        "",
+        "--word",
+        "-w",
+        help="Arbitrary Mandarin text to synthesise (plain, no phoneme forcing).",
+    ),
+    voice: str = typer.Option(
+        "",
+        "--voice",
+        "-v",
+        help="Override Mandarin voice name (e.g. zh-CN-XiaoyiNeural) for comparison.",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        "-f",
+        help="Regenerate even if the file already exists.",
+    ),
+):
+    """Generate test audio for a single character or word.
+
+    \b
+    Examples:
+      anki-chinese test-tts --char 电                           # default voice
+      anki-chinese test-tts --char 电 --voice zh-CN-XiaoyiNeural  # compare voice
+      anki-chinese test-tts --word 你好 --voice zh-CN-YunxiNeural
+
+    Files are written into media/test/ with the voice short-name in the
+    filename so you can A/B compare easily.
+    """
+    if not char and not word:
+        rprint("[red]✗[/red] Pass --char or --word (or both).")
+        raise typer.Exit(1)
+
+    from .tts import (
+        _ssml_mandarin,
+        _ssml_cantonese,
+        _ssml_plain,
+        _generate_audio,
+    )
+    from .config import MANDARIN_VOICE, TEST_MEDIA_DIR
+
+    TEST_MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Resolve voice: use override or default
+    use_voice = voice or MANDARIN_VOICE
+    # Short tag for filenames (e.g. "XiaoyiNeural" from "zh-CN-XiaoyiNeural")
+    voice_tag = use_voice.split("-", 2)[-1] if "-" in use_voice else use_voice
+    if voice:
+        rprint(f"[dim]Voice:[/dim] {use_voice}")
+
+    if char:
+        # Try to look up the character in enriched data
+        note: CharacterNote | None = None
+        if ENRICHED_PATH.exists():
+            from .models import load_notes
+
+            all_notes = load_notes(ENRICHED_PATH)
+            matches = [n for n in all_notes if n.hanzi == char]
+            if matches:
+                note = matches[0]
+
+        if note:
+            rprint(
+                f"[blue]Testing[/blue] {note.hanzi} ({note.keyword})"
+            )
+
+            table = Table(show_header=False, box=None, padding=(0, 2))
+            table.add_column("Type", style="cyan")
+            table.add_column("File")
+            table.add_column("Size", justify="right", style="dim")
+
+            if note.pinyin:
+                safe_pinyin = note.pinyin.replace(" ", "_")
+                fname = f"{voice_tag}_cmn_{note.hanzi}_{safe_pinyin}.mp3"
+                fpath = TEST_MEDIA_DIR / fname
+                if not fpath.exists() or force:
+                    ssml = _ssml_mandarin(note.hanzi, note.pinyin, voice=use_voice)
+                    _generate_audio(ssml, fpath)
+                size = fpath.stat().st_size if fpath.exists() else 0
+                table.add_row(
+                    "Mandarin",
+                    fname,
+                    f"{size:,} bytes",
+                )
+
+            if note.jyutping:
+                safe_jp = note.jyutping.replace(" ", "_")
+                fname = f"{voice_tag}_yue_{note.hanzi}_{safe_jp}.mp3"
+                fpath = TEST_MEDIA_DIR / fname
+                if not fpath.exists() or force:
+                    ssml = _ssml_cantonese(note.hanzi, note.jyutping)
+                    _generate_audio(ssml, fpath)
+                size = fpath.stat().st_size if fpath.exists() else 0
+                table.add_row(
+                    "Cantonese",
+                    fname,
+                    f"{size:,} bytes",
+                )
+
+            if note.example_word:
+                fname = f"{voice_tag}_cmn_{note.example_word}.mp3"
+                fpath = TEST_MEDIA_DIR / fname
+                if not fpath.exists() or force:
+                    ssml = _ssml_plain(
+                        text=note.example_word,
+                        voice=use_voice,
+                        lang="zh-CN",
+                    )
+                    _generate_audio(ssml, fpath)
+                size = fpath.stat().st_size if fpath.exists() else 0
+                table.add_row(
+                    f"Example ({note.example_word})",
+                    fname,
+                    f"{size:,} bytes",
+                )
+
+            console.print(table)
+        else:
+            rprint(
+                f"[yellow]⚠[/yellow] '{char}' not in enriched data — "
+                "generating plain Mandarin audio only."
+            )
+            filename = f"{voice_tag}_test_{char}.mp3"
+            output_path = TEST_MEDIA_DIR / filename
+            ssml = _ssml_plain(text=char, voice=use_voice, lang="zh-CN")
+            _generate_audio(ssml, output_path)
+            rprint(f"  → {output_path} ({output_path.stat().st_size:,} bytes)")
+
+    if word:
+        rprint(f"[blue]Testing word[/blue] {word}")
+        filename = f"{voice_tag}_test_{word}.mp3"
+        output_path = TEST_MEDIA_DIR / filename
+
+        if output_path.exists() and not force:
+            rprint(f"  → {output_path} (cached, {output_path.stat().st_size:,} bytes)")
+        else:
+            ssml = _ssml_plain(text=word, voice=use_voice, lang="zh-CN")
+            _generate_audio(ssml, output_path)
+            rprint(f"  → {output_path} ({output_path.stat().st_size:,} bytes)")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────

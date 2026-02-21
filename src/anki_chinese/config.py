@@ -13,6 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 MEDIA_DIR = PROJECT_ROOT / "media"
 GENERATED_MEDIA_DIR = MEDIA_DIR / "generated"
+TEST_MEDIA_DIR = MEDIA_DIR / "test"
 TEMPLATE_DIR = PROJECT_ROOT / "templates"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 

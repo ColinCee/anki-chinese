@@ -84,14 +84,15 @@ def _get_speech_config():  # type: ignore[no-untyped-def]
     return speechsdk.SpeechConfig(subscription=key, region=region)
 
 
-def _ssml_mandarin(hanzi: str, pinyin_with_tone: str) -> str:
+def _ssml_mandarin(hanzi: str, pinyin_with_tone: str, *, voice: str | None = None) -> str:
     """Build SSML that forces a specific Mandarin pronunciation.
 
     Converts diacritical pinyin (yī) to Azure SAPI format (yi 1).
     """
     sapi_ph = _to_sapi_pinyin(pinyin_with_tone)
+    v = voice or MANDARIN_VOICE
     return f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="zh-CN">
-  <voice name="{MANDARIN_VOICE}">
+  <voice name="{v}">
     <phoneme alphabet="sapi" ph="{sapi_ph}">{hanzi}</phoneme>
   </voice>
 </speak>"""
@@ -204,7 +205,7 @@ def generate_cantonese(hanzi: str, jyutping: str, *, force: bool = False) -> str
 
 
 def generate_example_audio(word: str, *, force: bool = False) -> str:
-    """Generate Mandarin audio for an example word."""
+    """Generate Mandarin audio for an example word.  Returns '[sound:filename.mp3]' tag."""
     filename = f"cmn_{word}.mp3"
     output_path = GENERATED_MEDIA_DIR / filename
 
