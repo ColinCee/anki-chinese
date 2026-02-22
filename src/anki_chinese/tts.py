@@ -19,8 +19,7 @@ from .config import GENERATED_MEDIA_DIR, MANDARIN_VOICE, CANTONESE_VOICE
 
 # ── Rate limiter ──────────────────────────────────────────────────────
 # Azure F0 tier: 20 transactions per 60 seconds.
-# A flat 4-second sleep between every request keeps us at 15/min.
-_REQUEST_INTERVAL = 4.0  # seconds between API calls
+_REQUEST_INTERVAL = 3.0  # seconds between API calls (20 per 60s)
 
 load_dotenv()
 
