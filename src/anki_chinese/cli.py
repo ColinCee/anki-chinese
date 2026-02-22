@@ -276,9 +276,7 @@ def build(
                             note.hanzi, note.jyutping
                         )
                     if note.example_word:
-                        note.example_audio = generate_example_audio(
-                            note.example_word
-                        )
+                        note.example_audio = generate_example_audio(note.example_word)
                 except Exception as e:
                     failures.append(f"{note.hanzi} ({note.keyword}): {e}")
             save_notes(notes, ENRICHED_PATH)
@@ -504,9 +502,7 @@ def test_tts(
                 note = matches[0]
 
         if note:
-            rprint(
-                f"[blue]Testing[/blue] {note.hanzi} ({note.keyword})"
-            )
+            rprint(f"[blue]Testing[/blue] {note.hanzi} ({note.keyword})")
 
             table = Table(show_header=False, box=None, padding=(0, 2))
             table.add_column("Type", style="cyan")

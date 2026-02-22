@@ -9,12 +9,18 @@ pinyin/jyutping fields, so audio always matches the displayed romanization.
 from __future__ import annotations
 
 import os
+import time
 import unicodedata
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 from .config import GENERATED_MEDIA_DIR, MANDARIN_VOICE, CANTONESE_VOICE
+
+# ── Rate limiter ──────────────────────────────────────────────────────
+# Azure F0 tier: 20 transactions per 60 seconds.
+# A flat 4-second sleep between every request keeps us at 15/min.
+_REQUEST_INTERVAL = 4.0  # seconds between API calls
 
 load_dotenv()
 
@@ -84,7 +90,9 @@ def _get_speech_config():  # type: ignore[no-untyped-def]
     return speechsdk.SpeechConfig(subscription=key, region=region)
 
 
-def _ssml_mandarin(hanzi: str, pinyin_with_tone: str, *, voice: str | None = None) -> str:
+def _ssml_mandarin(
+    hanzi: str, pinyin_with_tone: str, *, voice: str | None = None
+) -> str:
     """Build SSML that forces a specific Mandarin pronunciation.
 
     Converts diacritical pinyin (yī) to Azure SAPI format (yi 1).
@@ -136,6 +144,9 @@ def _generate_audio(ssml: str, output_path: Path) -> bool:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Simple fixed-interval rate limiting
+    time.sleep(_REQUEST_INTERVAL)
+
     config = _get_speech_config()
     config.set_speech_synthesis_output_format(
         speechsdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3
@@ -155,10 +166,19 @@ def _generate_audio(ssml: str, output_path: Path) -> bool:
 
     if result.reason == speechsdk.ResultReason.Canceled:
         details = result.cancellation_details
-        raise RuntimeError(
-            f"TTS failed for {output_path.name}: {details.reason} — {details.error_details}"
-        )
+        msg = f"TTS failed for {output_path.name}: {details.reason} — {details.error_details}"
+        # On 429, warn and skip instead of crashing the whole run
+        if "429" in (details.error_details or ""):
+            print(f"    ⚠ Skipping (rate-limited): {output_path.name}")
+            return False
+        raise RuntimeError(msg)
+
     return False
+
+
+def _is_valid_audio(path: Path) -> bool:
+    """Return True if the file exists and is non-empty (not corrupted)."""
+    return path.exists() and path.stat().st_size > 0
 
 
 def generate_mandarin(hanzi: str, pinyin: str, *, force: bool = False) -> str:
@@ -168,7 +188,7 @@ def generate_mandarin(hanzi: str, pinyin: str, *, force: bool = False) -> str:
     filename = f"cmn_{hanzi}_{safe_pinyin}.mp3"
     output_path = GENERATED_MEDIA_DIR / filename
 
-    if output_path.exists() and not force:
+    if _is_valid_audio(output_path) and not force:
         return f"[sound:{filename}]"
 
     ssml = _ssml_mandarin(hanzi, pinyin)
@@ -190,7 +210,7 @@ def generate_cantonese(hanzi: str, jyutping: str, *, force: bool = False) -> str
     filename = f"yue_{hanzi}_{safe_jp}.mp3"
     output_path = GENERATED_MEDIA_DIR / filename
 
-    if output_path.exists() and not force:
+    if _is_valid_audio(output_path) and not force:
         return f"[sound:{filename}]"
 
     ssml = _ssml_cantonese(hanzi, jyutping)
@@ -209,7 +229,7 @@ def generate_example_audio(word: str, *, force: bool = False) -> str:
     filename = f"cmn_{word}.mp3"
     output_path = GENERATED_MEDIA_DIR / filename
 
-    if output_path.exists() and not force:
+    if _is_valid_audio(output_path) and not force:
         return f"[sound:{filename}]"
 
     # For example words, we don't force phoneme — let Azure pick naturally

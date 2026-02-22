@@ -51,5 +51,5 @@ FIELDS = [
 ]
 
 # ── Azure TTS ─────────────────────────────────────────────────────────
-MANDARIN_VOICE = "zh-CN-XiaoxiaoNeural"
+MANDARIN_VOICE = "zh-CN-XiaoyiNeural"
 CANTONESE_VOICE = "zh-HK-HiuGaaiNeural"

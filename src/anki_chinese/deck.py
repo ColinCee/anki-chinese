@@ -89,9 +89,7 @@ def build_deck(notes: list[CharacterNote]) -> Path:
     # Collect all generated media files
     media_files: list[str] = []
     if GENERATED_MEDIA_DIR.exists():
-        media_files = [
-            str(p) for p in GENERATED_MEDIA_DIR.glob("*.mp3")
-        ]
+        media_files = [str(p) for p in GENERATED_MEDIA_DIR.glob("*.mp3")]
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     output_path = OUTPUT_DIR / "chinese_rsh.apkg"
