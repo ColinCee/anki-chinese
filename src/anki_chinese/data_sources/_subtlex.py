@@ -97,6 +97,7 @@ def is_available(path: Path) -> bool:
         return False
     try:
         import openpyxl  # noqa: F401  # type: ignore[import-untyped]
+
         return True
     except ImportError:
         return False

@@ -23,6 +23,15 @@ OLD_DECK_PATH = SOURCE_DECK_PATH
 OVERRIDES_PATH = DATA_DIR / "overrides.json"
 ENRICHED_PATH = DATA_DIR / "enriched.json"
 
+# ── data_sources paths ────────────────────────────────────────────────
+EXAMPLE_WORDS_PATH = DATA_DIR / "example_words.json"
+HSK_VOCAB_PATH = DATA_DIR / "hsk_complete.min.json"
+# CC-CEDICT: auto-downloaded on first use by data_sources._cedict
+CEDICT_PATH = DATA_DIR / "cedict_1_0_ts_utf-8_mdbg.txt"
+# SUBTLEX-CH: optional — place SUBTLEX_CH.xlsx in data/ to enable frequency scoring
+# Download: https://crr.ugent.be/subtlex-ch/SUBTLEX_CH_131_30.zip
+SUBTLEX_PATH = DATA_DIR / "SUBTLEX_CH.xlsx"
+
 # ── genanki IDs (generated once, never change) ────────────────────────
 MODEL_ID = 1_704_328_571  # Unique ID for the note type
 DECK_ID = 1_704_328_572  # Unique ID for the deck

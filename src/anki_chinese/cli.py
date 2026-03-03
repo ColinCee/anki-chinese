@@ -51,9 +51,9 @@ def init(
     ),
 ):
     """Parse source deck export and enrich with pinyin, jyutping, examples."""
-    from .parser import parse_deck_export
+    from .pipeline.parser import parse_deck_export
     from .models import load_notes, save_notes
-    from .enrich import enrich_notes
+    from .pipeline.enrich import enrich_notes
 
     # Step 1: parse
     rprint(f"[blue]Parsing[/blue] {input_file} ...")
@@ -149,7 +149,11 @@ def audio(
     Skips files that already exist unless --force is set.
     """
     from .models import load_notes, save_notes
-    from .tts import generate_mandarin, generate_cantonese, generate_example_audio
+    from .pipeline.tts import (
+        generate_mandarin,
+        generate_cantonese,
+        generate_example_audio,
+    )
 
     all_notes = load_notes(ENRICHED_PATH)
     targets = all_notes
@@ -243,11 +247,11 @@ def build(
     in a single command.
     """
     from .models import load_notes, save_notes
-    from .deck import build_deck
+    from .pipeline.deck import build_deck
 
     if full:
-        from .parser import parse_deck_export
-        from .enrich import enrich_notes
+        from .pipeline.parser import parse_deck_export
+        from .pipeline.enrich import enrich_notes
 
         # 1. Init
         rprint("\n[bold]Step 1/3 · Parse + Enrich[/bold]")
@@ -259,7 +263,7 @@ def build(
         # 2. Audio
         if not skip_audio:
             rprint("\n[bold]Step 2/3 · Audio[/bold]")
-            from .tts import (
+            from .pipeline.tts import (
                 generate_mandarin,
                 generate_cantonese,
                 generate_example_audio,
@@ -473,7 +477,7 @@ def test_tts(
         rprint("[red]✗[/red] Pass --char or --word (or both).")
         raise typer.Exit(1)
 
-    from .tts import (
+    from .pipeline.tts import (
         _ssml_mandarin,
         _ssml_cantonese,
         _ssml_plain,

@@ -1,0 +1,61 @@
+"""
+Enrichment pipeline — takes parsed notes and fills in missing data.
+
+Does NOT generate audio — that's a separate step because it requires
+Azure credentials and costs money.
+"""
+
+from __future__ import annotations
+
+from rich.progress import track
+
+from ..config import OVERRIDES_PATH
+from ..data_sources import lookup_example, lookup_jyutping, lookup_pinyin
+from ..models import CharacterNote, apply_overrides, load_overrides
+
+
+def enrich_notes(
+    notes: list[CharacterNote],
+    *,
+    skip_examples: bool = False,
+) -> list[CharacterNote]:
+    """Fill in missing pinyin, jyutping, and examples for each note."""
+    overrides = load_overrides(OVERRIDES_PATH)
+    enriched: list[CharacterNote] = []
+
+    for note in track(notes, description="Enriching notes..."):
+        # ── Pinyin ────────────────────────────────────────────────
+        if not note.pinyin:
+            py, is_polyphonic = lookup_pinyin(note.hanzi)
+            note.pinyin = py
+            if is_polyphonic:
+                note.needs_review = True
+                note.review_reason = (
+                    f"Polyphonic character — no pinyin in source, "
+                    f"defaulted to '{py}' — verify reading manually"
+                )
+
+        # ── Jyutping ─────────────────────────────────────────────
+        if not note.jyutping:
+            jp, needs_review = lookup_jyutping(note.hanzi)
+            note.jyutping = jp
+            if needs_review and not note.needs_review:
+                note.needs_review = True
+                note.review_reason = f"No jyutping found for '{note.hanzi}'"
+
+        # ── Example word ──────────────────────────────────────────
+        if not skip_examples:
+            if not note.example_word or (
+                note.example_word and not note.example_meaning
+            ):
+                word, meaning = lookup_example(note.hanzi)
+                if word and meaning:
+                    note.example_word = word
+                    note.example_meaning = meaning
+
+        # ── Apply manual overrides (always last) ──────────────────
+        note = apply_overrides(note, overrides)
+
+        enriched.append(note)
+
+    return enriched
