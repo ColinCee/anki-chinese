@@ -18,11 +18,11 @@ from ._overrides import load_example_overrides
 from ._pinyin import lookup_pinyin, lookup_pinyin_word
 
 # Module-level lazy indexes — built once on first use
-_hsk_index: dict[str, tuple[str, str]] | None = None
-_cedict_index: dict[str, tuple[str, str]] | None = None
+_hsk_index: dict[str, list[tuple[str, str, str]]] | None = None
+_cedict_index: dict[str, list[tuple[str, str, str]]] | None = None
 
 
-def _get_hsk_index() -> dict[str, tuple[str, str]]:
+def _get_hsk_index() -> dict[str, list[tuple[str, str, str]]]:
     global _hsk_index
     if _hsk_index is None:
         from . import _hsk
@@ -31,7 +31,7 @@ def _get_hsk_index() -> dict[str, tuple[str, str]]:
     return _hsk_index
 
 
-def _get_cedict_index() -> dict[str, tuple[str, str]]:
+def _get_cedict_index() -> dict[str, list[tuple[str, str, str]]]:
     global _cedict_index
     if _cedict_index is None:
         from . import _cedict
@@ -40,8 +40,49 @@ def _get_cedict_index() -> dict[str, tuple[str, str]]:
     return _cedict_index
 
 
-def lookup_example(hanzi: str) -> tuple[str, str]:
-    """Return (example_word, example_meaning) for *hanzi*, or ("", "").
+def _normalize_pinyin(text: str) -> str:
+    return " ".join(text.strip().lower().split())
+
+
+def _reading_matches(
+    hanzi: str,
+    word: str,
+    word_pinyin: str,
+    preferred_pinyin: str,
+) -> bool:
+    preferred = _normalize_pinyin(preferred_pinyin)
+    if not preferred or hanzi not in word:
+        return True
+
+    syllables = word_pinyin.split()
+    if len(syllables) != len(word):
+        return False
+
+    return any(
+        syllables[index] == preferred
+        for index, ch in enumerate(word)
+        if ch == hanzi
+    )
+
+
+def _pick_example(
+    candidates: list[tuple[str, str, str]],
+    *,
+    hanzi: str,
+    preferred_pinyin: str,
+) -> tuple[str, str, str]:
+    if not candidates:
+        return "", "", ""
+
+    for word, meaning, pinyin in candidates:
+        if _reading_matches(hanzi, word, pinyin, preferred_pinyin):
+            return word, meaning, pinyin
+
+    return candidates[0]
+
+
+def lookup_example(hanzi: str, preferred_pinyin: str = "") -> tuple[str, str, str]:
+    """Return (example_word, example_meaning, example_pinyin) for *hanzi*.
 
     Consults sources in priority order:
         1. Manual overrides (example_words.json) — always wins
@@ -53,19 +94,28 @@ def lookup_example(hanzi: str) -> tuple[str, str]:
     entry = overrides.get(hanzi, {})
     word = entry.get("word", "")
     if word:
-        return word, entry.get("meaning", "")
+        pinyin = entry.get("pinyin", "") or lookup_pinyin_word(word)
+        return word, entry.get("meaning", ""), _normalize_pinyin(pinyin)
 
     # 2. HSK
-    hsk_word, hsk_meaning = _get_hsk_index().get(hanzi, ("", ""))
+    hsk_word, hsk_meaning, hsk_pinyin = _pick_example(
+        _get_hsk_index().get(hanzi, []),
+        hanzi=hanzi,
+        preferred_pinyin=preferred_pinyin,
+    )
     if hsk_word:
-        return hsk_word, hsk_meaning
+        return hsk_word, hsk_meaning, hsk_pinyin
 
     # 3. CC-CEDICT (with optional SUBTLEX scoring)
-    cedict_word, cedict_meaning = _get_cedict_index().get(hanzi, ("", ""))
+    cedict_word, cedict_meaning, cedict_pinyin = _pick_example(
+        _get_cedict_index().get(hanzi, []),
+        hanzi=hanzi,
+        preferred_pinyin=preferred_pinyin,
+    )
     if cedict_word:
-        return cedict_word, cedict_meaning
+        return cedict_word, cedict_meaning, cedict_pinyin
 
-    return "", ""
+    return "", "", ""
 
 
 __all__ = [

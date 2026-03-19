@@ -20,7 +20,7 @@ uv run anki-chinese init
 
 Options:
 
-- `-i, --input PATH`: use a different source file (default: `data/Exported-deck.txt`)
+- `-i, --input PATH`: use a different source file (default: `data/All Decks.txt`)
 - `--skip-examples`: skip example-word lookup
 
 Outputs:

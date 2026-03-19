@@ -29,6 +29,8 @@ from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
+from pypinyin.contrib.tone_convert import to_tone
+
 _CEDICT_ZIP_URL = (
     "https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.zip"
 )
@@ -37,11 +39,19 @@ _CEDICT_ZIP_URL = (
 _LINE_RE = re.compile(r"^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+/(.+)/$")
 
 # Module-level cache
-_index: dict[str, tuple[str, str]] | None = None
+_index: dict[str, list[tuple[str, str, str]]] | None = None
 
 
 def _is_cjk(word: str) -> bool:
     return all("\u4e00" <= ch <= "\u9fff" for ch in word)
+
+
+def _normalize_pinyin(text: str) -> str:
+    return " ".join(text.lower().split())
+
+
+def _cedict_pinyin_to_diacritical(text: str) -> str:
+    return _normalize_pinyin(to_tone(text.replace("u:", "v").lower()))
 
 
 def _download_and_cache(path: Path) -> str:
@@ -56,7 +66,9 @@ def _download_and_cache(path: Path) -> str:
         # The archive ships as cedict_ts.u8 (UTF-8 text despite the extension)
         txt_names = [n for n in zf.namelist() if n.endswith((".txt", ".u8"))]
         if not txt_names:
-            raise RuntimeError(f"No data file found inside CC-CEDICT zip: {zf.namelist()}")
+            raise RuntimeError(
+                f"No data file found inside CC-CEDICT zip: {zf.namelist()}"
+            )
         content = zf.read(txt_names[0]).decode("utf-8")
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -74,8 +86,8 @@ def _load_raw(path: Path) -> str:
 def build_index(
     path: Path,
     subtlex_path: Path | None = None,
-) -> dict[str, tuple[str, str]]:
-    """Build {hanzi -> (best_word, meaning)} from CC-CEDICT at *path*.
+) -> dict[str, list[tuple[str, str, str]]]:
+    """Build {hanzi -> [(word, meaning, pinyin), ...]} from CC-CEDICT at *path*.
 
     Optionally scores candidates using SUBTLEX-CH frequency data when
     *subtlex_path* points to the SUBTLEX_CH.xlsx file.
@@ -90,8 +102,7 @@ def build_index(
         if _subtlex.is_available(subtlex_path):
             freq_table = _subtlex.get_freq_table(subtlex_path)
 
-    # best[ch] = (word, meaning, freq, word_len)
-    best: dict[str, tuple[str, str, float, int]] = {}
+    candidates: dict[str, list[tuple[int, float, int, str, str, str]]] = {}
 
     for line in text.splitlines():
         if line.startswith("#") or not line.strip():
@@ -101,6 +112,7 @@ def build_index(
             continue
 
         simplified = m.group(2)
+        pinyin = _cedict_pinyin_to_diacritical(m.group(3))
         definitions = m.group(4).split("/")
         meaning = definitions[0].strip() if definitions else ""
 
@@ -111,34 +123,35 @@ def build_index(
             continue
 
         freq = freq_table.get(simplified, 0.0)
-        is_two_char = wlen == 2
+        tier = 0 if wlen == 2 else 1
 
         for ch in set(simplified):
-            prev = best.get(ch)
-            if prev is None:
-                best[ch] = (simplified, meaning, freq, wlen)
+            candidates.setdefault(ch, []).append(
+                (tier, -freq, wlen, simplified, meaning, pinyin)
+            )
+
+    index: dict[str, list[tuple[str, str, str]]] = {}
+    for ch, rows in candidates.items():
+        rows.sort(key=lambda item: (item[0], item[1], item[2], item[3]))
+        deduped: list[tuple[str, str, str]] = []
+        seen: set[str] = set()
+        for _, _, _, word, meaning, pinyin in rows:
+            if word in seen:
                 continue
+            deduped.append((word, meaning, pinyin))
+            seen.add(word)
+        index[ch] = deduped
 
-            _, _, prev_freq, prev_len = prev
-            prev_two = prev_len == 2
-
-            # 2-char words beat longer words
-            if is_two_char and not prev_two:
-                best[ch] = (simplified, meaning, freq, wlen)
-            elif is_two_char == prev_two:
-                # Same tier — prefer higher SUBTLEX frequency
-                if freq > prev_freq:
-                    best[ch] = (simplified, meaning, freq, wlen)
-                elif freq == prev_freq and wlen < prev_len:
-                    # Last resort: shorter word
-                    best[ch] = (simplified, meaning, freq, wlen)
-
-    return {ch: (word, meaning) for ch, (word, meaning, _, _) in best.items()}
+    return index
 
 
-def lookup(hanzi: str, path: Path, subtlex_path: Path | None = None) -> tuple[str, str]:
-    """Return (word, meaning) for *hanzi* from CC-CEDICT, or ("", "")."""
+def lookup(
+    hanzi: str,
+    path: Path,
+    subtlex_path: Path | None = None,
+) -> list[tuple[str, str, str]]:
+    """Return [(word, meaning, pinyin), ...] for *hanzi* from CC-CEDICT."""
     global _index
     if _index is None:
         _index = build_index(path, subtlex_path)
-    return _index.get(hanzi, ("", ""))
+    return _index.get(hanzi, [])

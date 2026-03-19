@@ -10,6 +10,7 @@ optionally generates TTS audio, and produces a clean `.apkg` for Anki.
 - Keep a **consistent character-first learning workflow** across the RSH book.
 - Train **Mandarin reading + pronunciation** while keeping Cantonese as support.
 - Reinforce each character with a **common usage phrase** on listening cards.
+- Store explicit **example-word pinyin** so example audio is forced to the intended reading.
 - Make the deck **regenerable** without losing Anki review history.
 
 ## Quick start
@@ -51,12 +52,12 @@ Output: `output/chinese_rsh.apkg`
 - `audio` is optional; you can build and study without it.
 - `audio` can be slow on free-tier Azure due to low per-minute limits.
 - Example words are auto-generated when missing; manual overrides still come from `data/example_words.json`.
-- Default source input is `data/Exported-deck.txt`.
+- Default source input is `data/All Decks.txt`.
 
 ## Most common commands
 
 ```bash
-# Parse + enrich source deck (default: data/Exported-deck.txt)
+# Parse + enrich source deck (default: data/All Decks.txt)
 uv run anki-chinese init
 
 # Check data quality

@@ -52,8 +52,8 @@ Edit `data/example_words.json`:
 
 ```json
 {
-  "早": { "word": "早上", "meaning": "morning" },
-  "大": { "word": "大学", "meaning": "university" }
+  "早": { "word": "早上", "meaning": "morning", "pinyin": "zǎo shang" },
+  "大": { "word": "大学", "meaning": "university", "pinyin": "dà xué" }
 }
 ```
 
@@ -63,5 +63,6 @@ Notes:
 
 - If a character has no manual example, the pipeline now tries to auto-pick a common 2-character word.
 - Manual entries in `data/example_words.json` always override auto-generated examples.
+- If `pinyin` is omitted for a manual example, the pipeline derives it automatically before TTS.
 - Auto-pick policy is frequency-based from Complete HSK Vocabulary (`complete.min.json`): lower `frequency` rank means more common.
 - Listening front shows the example only when `ExampleWord` is present (no placeholder when missing).

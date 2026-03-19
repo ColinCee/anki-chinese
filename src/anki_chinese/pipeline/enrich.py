@@ -10,8 +10,28 @@ from __future__ import annotations
 from rich.progress import track
 
 from ..config import OVERRIDES_PATH
-from ..data_sources import lookup_example, lookup_jyutping, lookup_pinyin
+from ..data_sources import (
+    lookup_example,
+    lookup_jyutping,
+    lookup_pinyin,
+    lookup_pinyin_word,
+)
 from ..models import CharacterNote, apply_overrides, load_overrides
+
+
+def _example_matches_primary_reading(note: CharacterNote) -> bool:
+    if not note.example_word or not note.example_pinyin or not note.pinyin:
+        return True
+
+    syllables = note.example_pinyin.split()
+    if len(syllables) != len(note.example_word):
+        return False
+
+    return any(
+        syllables[index] == note.pinyin
+        for index, ch in enumerate(note.example_word)
+        if ch == note.hanzi
+    )
 
 
 def enrich_notes(
@@ -47,14 +67,33 @@ def enrich_notes(
         if not skip_examples:
             if not note.example_word or (
                 note.example_word and not note.example_meaning
+            ) or (
+                note.example_word and not note.example_pinyin
             ):
-                word, meaning = lookup_example(note.hanzi)
-                if word and meaning:
+                word, meaning, example_pinyin = lookup_example(
+                    note.hanzi,
+                    preferred_pinyin=note.pinyin,
+                )
+                if word:
                     note.example_word = word
                     note.example_meaning = meaning
+                    note.example_pinyin = example_pinyin
+
+        if note.example_word and not note.example_pinyin:
+            note.example_pinyin = lookup_pinyin_word(note.example_word)
+
+        if note.example_word and note.example_pinyin and not _example_matches_primary_reading(note):
+            note.needs_review = True
+            note.review_reason = (
+                f"Example '{note.example_word}' uses '{note.example_pinyin}', "
+                f"which does not match primary reading '{note.pinyin}'"
+            )
 
         # ── Apply manual overrides (always last) ──────────────────
         note = apply_overrides(note, overrides)
+
+        if note.example_word and not note.example_pinyin:
+            note.example_pinyin = lookup_pinyin_word(note.example_word)
 
         enriched.append(note)
 

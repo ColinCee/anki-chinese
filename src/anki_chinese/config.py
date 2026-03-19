@@ -17,7 +17,7 @@ TEST_MEDIA_DIR = MEDIA_DIR / "test"
 TEMPLATE_DIR = PROJECT_ROOT / "templates"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
-SOURCE_DECK_PATH = DATA_DIR / "Exported-deck.txt"
+SOURCE_DECK_PATH = DATA_DIR / "All Decks.txt"
 # Backward-compatible alias for existing imports.
 OLD_DECK_PATH = SOURCE_DECK_PATH
 OVERRIDES_PATH = DATA_DIR / "overrides.json"
@@ -52,6 +52,7 @@ FIELDS = [
     "CantoneseAudio",
     "ExampleWord",
     "ExampleMeaning",
+    "ExamplePinyin",
     "ExampleAudio",
     "StrokeOrder",
     "HeisigNum",

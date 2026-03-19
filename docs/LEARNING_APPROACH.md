@@ -60,7 +60,7 @@ For polyphonic characters with missing source readings, entries are flagged for 
 
 Recommended workflow after exporting from Anki:
 
-1. Export deck to `data/Exported-deck.txt`.
+1. Export deck to `data/All Decks.txt`.
 2. Run `uv run anki-chinese init`.
 3. Run `uv run anki-chinese review` and fix readings/examples via overrides.
 4. Optionally run `uv run anki-chinese audio`.

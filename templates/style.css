@@ -26,6 +26,13 @@
     margin: 20px 0;
 }
 
+.front-example {
+    font-size: 28px;
+    font-weight: 600;
+    color: #34495e;
+    margin: -6px 0 8px;
+}
+
 .keyword {
     font-size: 28px;
     font-weight: 600;
@@ -143,6 +150,11 @@
 .night_mode .keyword,
 .nightMode .keyword {
     color: #ccc;
+}
+
+.night_mode .front-example,
+.nightMode .front-example {
+    color: #dfe6ee;
 }
 
 .night_mode .mnemonic,

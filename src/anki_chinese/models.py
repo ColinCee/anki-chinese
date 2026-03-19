@@ -23,6 +23,7 @@ class CharacterNote:
     cantonese_audio: str = ""
     example_word: str = ""
     example_meaning: str = ""
+    example_pinyin: str = ""
     example_audio: str = ""
     stroke_order: str = ""
     heisig_num: str = ""
@@ -44,6 +45,7 @@ class CharacterNote:
             self.cantonese_audio,
             self.example_word,
             self.example_meaning,
+            self.example_pinyin,
             self.example_audio,
             self.stroke_order,
             self.heisig_num,

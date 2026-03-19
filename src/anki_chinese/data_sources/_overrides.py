@@ -2,13 +2,13 @@
 Manual example-word overrides loader.
 
 Reads data/example_words.json — a hand-curated dict of
-{hanzi: {"word": "...", "meaning": "..."}} that always wins over any
+{hanzi: {"word": "...", "meaning": "...", "pinyin": "..."}} that always wins over any
 auto-detected example in the lookup chain.
 
 Format:
     {
-        "早": {"word": "早安", "meaning": "good morning"},
-        "行": {"word": "银行", "meaning": "bank"}
+        "早": {"word": "早安", "meaning": "good morning", "pinyin": "zǎo ān"},
+        "行": {"word": "银行", "meaning": "bank", "pinyin": "yín háng"}
     }
 """
 

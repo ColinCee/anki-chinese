@@ -12,9 +12,9 @@ more frequently.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
-from pathlib import Path
 
 _HSK_VOCAB_URL = (
     "https://raw.githubusercontent.com/drkameleon/"
@@ -22,7 +22,7 @@ _HSK_VOCAB_URL = (
 )
 
 # Module-level cache
-_index: dict[str, tuple[str, str]] | None = None
+_index: dict[str, list[tuple[str, str, str]]] | None = None
 
 
 def _is_cjk(word: str) -> bool:
@@ -57,12 +57,17 @@ def _load_raw(path: Path) -> list[dict]:
     return data
 
 
-def _extract_fields(entry: dict) -> tuple[str, int | None, str]:
-    """Return (simplified_word, frequency_rank, first_meaning)."""
+def _normalize_pinyin(text: str) -> str:
+    return " ".join(text.lower().split())
+
+
+def _extract_fields(entry: dict) -> tuple[str, int | None, str, str]:
+    """Return (simplified_word, frequency_rank, first_meaning, pinyin)."""
     word = entry.get("s") or entry.get("simplified") or ""
     freq = entry.get("q") or entry.get("frequency")
 
     meaning = ""
+    pinyin = ""
     forms = entry.get("f") or entry.get("forms")
     if isinstance(forms, list) and forms:
         first_form = forms[0]
@@ -70,9 +75,14 @@ def _extract_fields(entry: dict) -> tuple[str, int | None, str]:
             meanings = first_form.get("m") or first_form.get("meanings")
             if isinstance(meanings, list) and meanings and isinstance(meanings[0], str):
                 meaning = meanings[0]
+            info = first_form.get("i")
+            if isinstance(info, dict):
+                raw_pinyin = info.get("y")
+                if isinstance(raw_pinyin, str):
+                    pinyin = _normalize_pinyin(raw_pinyin)
 
     if not isinstance(word, str):
-        return "", None, ""
+        return "", None, "", ""
     if isinstance(freq, str):
         try:
             freq = int(freq)
@@ -81,54 +91,49 @@ def _extract_fields(entry: dict) -> tuple[str, int | None, str]:
     if not isinstance(freq, int):
         freq = None
 
-    return word, freq, meaning
+    return word, freq, meaning, pinyin
 
 
-def build_index(path: Path) -> dict[str, tuple[str, str]]:
+def build_index(path: Path) -> dict[str, list[tuple[str, str, str]]]:
     """
-    Build {hanzi -> (best_word, meaning)} from HSK data at *path*.
+    Build {hanzi -> [(word, meaning, pinyin), ...]} from HSK data at *path*.
 
     Selection rules (in priority order):
     1. Full word ≥ 2 chars whose meaning we have (is_exact=True)
     2. Among those, lowest rank value (= highest real-world frequency)
     """
-    # Tuple stored per char: (word, rank, has_rank, meaning, is_exact)
-    best: dict[str, tuple[str, int, bool, str, bool]] = {}
+    candidates: dict[str, list[tuple[int, bool, str, str, str]]] = {}
 
     for entry in _load_raw(path):
         if not isinstance(entry, dict):
             continue
 
-        word, freq, meaning = _extract_fields(entry)
+        word, freq, meaning, pinyin = _extract_fields(entry)
         if not word or len(word) < 2 or not _is_cjk(word):
             continue
 
         rank = freq if freq is not None else 1_000_000_000
-        has_rank = freq is not None
-        is_exact = True  # every HSK entry is a real word with a meaning
-
         for ch in set(word):
-            prev = best.get(ch)
-            if prev is None:
-                best[ch] = (word, rank, has_rank, meaning, is_exact)
+            candidates.setdefault(ch, []).append((rank, freq is not None, word, meaning, pinyin))
+
+    index: dict[str, list[tuple[str, str, str]]] = {}
+    for ch, rows in candidates.items():
+        rows.sort(key=lambda item: (not item[1], item[0], len(item[2]), item[2]))
+        deduped: list[tuple[str, str, str]] = []
+        seen: set[str] = set()
+        for _, _, word, meaning, pinyin in rows:
+            if word in seen:
                 continue
+            deduped.append((word, meaning, pinyin))
+            seen.add(word)
+        index[ch] = deduped
 
-            _, prev_rank, prev_has_rank, _, prev_exact = prev
-
-            if is_exact and not prev_exact:
-                best[ch] = (word, rank, has_rank, meaning, is_exact)
-            elif is_exact == prev_exact:
-                if has_rank and not prev_has_rank:
-                    best[ch] = (word, rank, has_rank, meaning, is_exact)
-                elif has_rank == prev_has_rank and rank < prev_rank:
-                    best[ch] = (word, rank, has_rank, meaning, is_exact)
-
-    return {ch: (word, meaning) for ch, (word, _, _, meaning, _) in best.items()}
+    return index
 
 
-def lookup(hanzi: str, path: Path) -> tuple[str, str]:
-    """Return (word, meaning) for *hanzi* from HSK data, or ("", "")."""
+def lookup(hanzi: str, path: Path) -> list[tuple[str, str, str]]:
+    """Return [(word, meaning, pinyin), ...] for *hanzi* from HSK data."""
     global _index
     if _index is None:
         _index = build_index(path)
-    return _index.get(hanzi, ("", ""))
+    return _index.get(hanzi, [])

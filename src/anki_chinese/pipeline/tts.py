@@ -98,6 +98,26 @@ def _ssml_mandarin(
 </speak>"""
 
 
+def _ssml_mandarin_text(
+    text: str, pinyin_with_tone: str, *, voice: str | None = None
+) -> str:
+    """Build SSML that forces pronunciation for each hanzi when syllables align."""
+    syllables = pinyin_with_tone.split()
+    v = voice or MANDARIN_VOICE
+    if len(syllables) != len(text):
+        return _ssml_plain(text=text, voice=v, lang="zh-CN")
+
+    phonemes = "".join(
+        f'<phoneme alphabet="sapi" ph="{_to_sapi_pinyin(syllable)}">{char}</phoneme>'
+        for char, syllable in zip(text, syllables, strict=False)
+    )
+    return f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="zh-CN">
+    <voice name="{v}">
+    {phonemes}
+  </voice>
+</speak>"""
+
+
 def _to_sapi_jyutping(jyutping: str) -> str:
     """Ensure jyutping has a space before the tone number for Azure SAPI."""
     jp = jyutping.strip()
@@ -172,7 +192,7 @@ def generate_mandarin(hanzi: str, pinyin: str, *, force: bool = False) -> str:
     if _is_valid_audio(output_path) and not force:
         return f"[sound:{filename}]"
 
-    ssml = _ssml_mandarin(hanzi, pinyin)
+    ssml = _ssml_mandarin_text(hanzi, pinyin)
     try:
         _generate_audio(ssml, output_path)
     except RuntimeError as e:
@@ -203,15 +223,25 @@ def generate_cantonese(hanzi: str, jyutping: str, *, force: bool = False) -> str
     return f"[sound:{filename}]"
 
 
-def generate_example_audio(word: str, *, force: bool = False) -> str:
+def example_audio_filename(word: str, pinyin: str) -> str:
+    safe_pinyin = pinyin.replace(" ", "_")
+    return f"cmn_{word}_{safe_pinyin}.mp3"
+
+
+def generate_example_audio(word: str, pinyin: str, *, force: bool = False) -> str:
     """Generate Mandarin audio for an example word.  Returns '[sound:filename.mp3]' tag."""
-    filename = f"cmn_{word}.mp3"
+    filename = example_audio_filename(word, pinyin)
     output_path = GENERATED_MEDIA_DIR / filename
 
     if _is_valid_audio(output_path) and not force:
         return f"[sound:{filename}]"
 
-    # Let Azure pick natural pronunciation for multi-char words
-    ssml = _ssml_plain(text=word, voice=MANDARIN_VOICE, lang="zh-CN")
-    _generate_audio(ssml, output_path)
+    ssml = _ssml_mandarin_text(word, pinyin)
+    try:
+        _generate_audio(ssml, output_path)
+    except RuntimeError as e:
+        if "Unknown phoneme" not in str(e):
+            raise
+        fallback = _ssml_plain(text=word, voice=MANDARIN_VOICE, lang="zh-CN")
+        _generate_audio(fallback, output_path)
     return f"[sound:{filename}]"

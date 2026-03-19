@@ -60,8 +60,17 @@ def init(
     notes = parse_deck_export(input_file)
     rprint(f"  [green]✓[/green] {len(notes)} notes parsed")
 
-    # Step 2: preserve audio fields from previous enriched data (if any)
-    _AUDIO_FIELDS = ("mandarin_audio", "cantonese_audio", "example_audio")
+    # Step 2: preserve fields from previous enriched data that the fresh parse
+    # may not have (audio filenames, mnemonics added directly in Anki, etc.)
+    # This means you only need to re-export from Anki when you want to pull in
+    # mnemonics you typed there; otherwise enriched.json is the source of truth.
+    _PRESERVE_FIELDS = (
+        "mandarin_audio",
+        "cantonese_audio",
+        "example_pinyin",
+        "example_audio",
+        "mnemonic",  # typed in Anki then exported once → kept forever after
+    )
     if ENRICHED_PATH.exists():
         prev_notes = load_notes(ENRICHED_PATH)
         prev_by_hanzi = {n.hanzi: n for n in prev_notes}
@@ -70,13 +79,13 @@ def init(
             prev = prev_by_hanzi.get(note.hanzi)
             if prev is None:
                 continue
-            for field in _AUDIO_FIELDS:
+            for field in _PRESERVE_FIELDS:
                 if not getattr(note, field) and getattr(prev, field):
                     setattr(note, field, getattr(prev, field))
                     restored += 1
         if restored:
             rprint(
-                f"  [green]✓[/green] Restored {restored} audio references from previous data"
+                f"  [green]✓[/green] Restored {restored} fields from previous data"
             )
 
     # Step 3: enrich
@@ -84,13 +93,16 @@ def init(
     notes = enrich_notes(notes, skip_examples=skip_examples)
 
     # Step 4: clear stale example audio when example_word changed
+    from .pipeline.tts import example_audio_filename
+
     stale_files: list[Path] = []
     for note in notes:
-        if (
-            note.example_audio
-            and note.example_word
-            and note.example_word not in note.example_audio
-        ):
+        expected_audio = (
+            f"[sound:{example_audio_filename(note.example_word, note.example_pinyin)}]"
+            if note.example_word and note.example_pinyin
+            else ""
+        )
+        if note.example_audio and note.example_audio != expected_audio:
             # Audio was for a different word — remove the reference
             # and clean up the orphaned file
             old_file = note.example_audio.replace("[sound:", "").rstrip("]")
@@ -187,9 +199,10 @@ def audio(
                     note.jyutping,
                     force=force,
                 )
-            if note.example_word:
+            if note.example_word and note.example_pinyin:
                 note.example_audio = generate_example_audio(
                     note.example_word,
+                    note.example_pinyin,
                     force=force,
                 )
         except Exception as e:
@@ -279,8 +292,11 @@ def build(
                         note.cantonese_audio = generate_cantonese(
                             note.hanzi, note.jyutping
                         )
-                    if note.example_word:
-                        note.example_audio = generate_example_audio(note.example_word)
+                    if note.example_word and note.example_pinyin:
+                        note.example_audio = generate_example_audio(
+                            note.example_word,
+                            note.example_pinyin,
+                        )
                 except Exception as e:
                     failures.append(f"{note.hanzi} ({note.keyword}): {e}")
             save_notes(notes, ENRICHED_PATH)
@@ -328,6 +344,7 @@ def status():
         ("Cantonese Audio", "cantonese_audio"),
         ("Example Word", "example_word"),
         ("Example Meaning", "example_meaning"),
+        ("Example Pinyin", "example_pinyin"),
         ("Example Audio", "example_audio"),
         ("Stroke Order", "stroke_order"),
         ("Heisig №", "heisig_num"),
@@ -363,6 +380,10 @@ def status():
             issues.append(f"#{i} ({n.hanzi}): audio without pinyin")
         if n.cantonese_audio and not n.jyutping:
             issues.append(f"#{i} ({n.hanzi}): audio without jyutping")
+        if n.example_word and not n.example_pinyin:
+            issues.append(f"#{i} ({n.hanzi}): example word without example pinyin")
+        if n.example_audio and not n.example_pinyin:
+            issues.append(f"#{i} ({n.hanzi}): example audio without example pinyin")
 
     review_count = sum(1 for n in notes if n.needs_review)
 
@@ -479,6 +500,7 @@ def test_tts(
 
     from .pipeline.tts import (
         _ssml_mandarin,
+        _ssml_mandarin_text,
         _ssml_cantonese,
         _ssml_plain,
         _generate_audio,
@@ -542,18 +564,30 @@ def test_tts(
                 )
 
             if note.example_word:
-                fname = f"{voice_tag}_cmn_{note.example_word}.mp3"
-                fpath = TEST_MEDIA_DIR / fname
-                if not fpath.exists() or force:
-                    ssml = _ssml_plain(
-                        text=note.example_word,
-                        voice=use_voice,
-                        lang="zh-CN",
-                    )
-                    _generate_audio(ssml, fpath)
+                if note.example_pinyin:
+                    safe_example_pinyin = note.example_pinyin.replace(" ", "_")
+                    fname = f"{voice_tag}_cmn_{note.example_word}_{safe_example_pinyin}.mp3"
+                    fpath = TEST_MEDIA_DIR / fname
+                    if not fpath.exists() or force:
+                        ssml = _ssml_mandarin_text(
+                            note.example_word,
+                            note.example_pinyin,
+                            voice=use_voice,
+                        )
+                        _generate_audio(ssml, fpath)
+                else:
+                    fname = f"{voice_tag}_cmn_{note.example_word}.mp3"
+                    fpath = TEST_MEDIA_DIR / fname
+                    if not fpath.exists() or force:
+                        ssml = _ssml_plain(
+                            text=note.example_word,
+                            voice=use_voice,
+                            lang="zh-CN",
+                        )
+                        _generate_audio(ssml, fpath)
                 size = fpath.stat().st_size if fpath.exists() else 0
                 table.add_row(
-                    f"Example ({note.example_word})",
+                    f"Example ({note.example_word} · {note.example_pinyin or 'plain'})",
                     fname,
                     f"{size:,} bytes",
                 )
