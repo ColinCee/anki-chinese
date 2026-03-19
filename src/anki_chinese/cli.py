@@ -84,9 +84,7 @@ def init(
                     setattr(note, field, getattr(prev, field))
                     restored += 1
         if restored:
-            rprint(
-                f"  [green]✓[/green] Restored {restored} fields from previous data"
-            )
+            rprint(f"  [green]✓[/green] Restored {restored} fields from previous data")
 
     # Step 3: enrich
     rprint("[blue]Enriching[/blue] ...")
@@ -566,7 +564,9 @@ def test_tts(
             if note.example_word:
                 if note.example_pinyin:
                     safe_example_pinyin = note.example_pinyin.replace(" ", "_")
-                    fname = f"{voice_tag}_cmn_{note.example_word}_{safe_example_pinyin}.mp3"
+                    fname = (
+                        f"{voice_tag}_cmn_{note.example_word}_{safe_example_pinyin}.mp3"
+                    )
                     fpath = TEST_MEDIA_DIR / fname
                     if not fpath.exists() or force:
                         ssml = _ssml_mandarin_text(

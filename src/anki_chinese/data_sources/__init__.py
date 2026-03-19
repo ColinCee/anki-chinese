@@ -59,9 +59,7 @@ def _reading_matches(
         return False
 
     return any(
-        syllables[index] == preferred
-        for index, ch in enumerate(word)
-        if ch == hanzi
+        syllables[index] == preferred for index, ch in enumerate(word) if ch == hanzi
     )
 
 

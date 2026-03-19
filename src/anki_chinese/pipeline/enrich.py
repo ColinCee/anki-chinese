@@ -65,10 +65,10 @@ def enrich_notes(
 
         # ── Example word ──────────────────────────────────────────
         if not skip_examples:
-            if not note.example_word or (
-                note.example_word and not note.example_meaning
-            ) or (
-                note.example_word and not note.example_pinyin
+            if (
+                not note.example_word
+                or (note.example_word and not note.example_meaning)
+                or (note.example_word and not note.example_pinyin)
             ):
                 word, meaning, example_pinyin = lookup_example(
                     note.hanzi,
@@ -82,7 +82,11 @@ def enrich_notes(
         if note.example_word and not note.example_pinyin:
             note.example_pinyin = lookup_pinyin_word(note.example_word)
 
-        if note.example_word and note.example_pinyin and not _example_matches_primary_reading(note):
+        if (
+            note.example_word
+            and note.example_pinyin
+            and not _example_matches_primary_reading(note)
+        ):
             note.needs_review = True
             note.review_reason = (
                 f"Example '{note.example_word}' uses '{note.example_pinyin}', "

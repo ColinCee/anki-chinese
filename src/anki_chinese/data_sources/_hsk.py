@@ -114,7 +114,9 @@ def build_index(path: Path) -> dict[str, list[tuple[str, str, str]]]:
 
         rank = freq if freq is not None else 1_000_000_000
         for ch in set(word):
-            candidates.setdefault(ch, []).append((rank, freq is not None, word, meaning, pinyin))
+            candidates.setdefault(ch, []).append(
+                (rank, freq is not None, word, meaning, pinyin)
+            )
 
     index: dict[str, list[tuple[str, str, str]]] = {}
     for ch, rows in candidates.items():
