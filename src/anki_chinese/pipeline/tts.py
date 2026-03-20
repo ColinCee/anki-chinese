@@ -23,6 +23,14 @@ _REQUEST_INTERVAL = 3.0  # seconds between API calls (20 per 60s)
 
 load_dotenv()
 
+
+class TTSError(RuntimeError):
+    """Base error for speech synthesis failures."""
+
+
+class TTSRateLimitError(TTSError):
+    """Speech synthesis failed because Azure rate limited the request."""
+
 # ---------- diacritical pinyin → Azure SAPI format ----------
 # Azure zh-CN SAPI expects: "yi 1", "zhong 1", "lv 3", "de 5"
 # Our stored pinyin uses tone diacritics: "yī", "zhōng", "lǜ", "de"
@@ -162,7 +170,7 @@ def _generate_audio(ssml: str, output_path: Path) -> bool:
     result = synthesizer.speak_ssml_async(ssml).get()  # type: ignore[union-attr]
 
     if result is None:
-        return False
+        raise TTSError(f"TTS failed for {output_path.name}: no result returned")
 
     if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
         return True
@@ -170,12 +178,12 @@ def _generate_audio(ssml: str, output_path: Path) -> bool:
     if result.reason == speechsdk.ResultReason.Canceled:
         details = result.cancellation_details
         msg = f"TTS failed for {output_path.name}: {details.reason} — {details.error_details}"
-        if "429" in (details.error_details or ""):
-            print(f"    ⚠ Skipping (rate-limited): {output_path.name}")
-            return False
-        raise RuntimeError(msg)
+        error_details = details.error_details or ""
+        if "429" in error_details:
+            raise TTSRateLimitError(msg)
+        raise TTSError(msg)
 
-    return False
+    raise TTSError(f"TTS failed for {output_path.name}: unexpected result")
 
 
 def _is_valid_audio(path: Path) -> bool:
@@ -195,11 +203,13 @@ def generate_mandarin(hanzi: str, pinyin: str, *, force: bool = False) -> str:
     ssml = _ssml_mandarin_text(hanzi, pinyin)
     try:
         _generate_audio(ssml, output_path)
-    except RuntimeError as e:
+    except TTSError as e:
         if "Unknown phoneme" not in str(e):
             raise
         fallback = _ssml_plain(text=hanzi, voice=MANDARIN_VOICE, lang="zh-CN")
         _generate_audio(fallback, output_path)
+    if not _is_valid_audio(output_path):
+        raise TTSError(f"TTS did not create audio for {filename}")
     return f"[sound:{filename}]"
 
 
@@ -215,11 +225,13 @@ def generate_cantonese(hanzi: str, jyutping: str, *, force: bool = False) -> str
     ssml = _ssml_cantonese(hanzi, jyutping)
     try:
         _generate_audio(ssml, output_path)
-    except RuntimeError as e:
+    except TTSError as e:
         if "Unknown phoneme" not in str(e):
             raise
         fallback = _ssml_plain(text=hanzi, voice=CANTONESE_VOICE, lang="zh-HK")
         _generate_audio(fallback, output_path)
+    if not _is_valid_audio(output_path):
+        raise TTSError(f"TTS did not create audio for {filename}")
     return f"[sound:{filename}]"
 
 
@@ -239,9 +251,11 @@ def generate_example_audio(word: str, pinyin: str, *, force: bool = False) -> st
     ssml = _ssml_mandarin_text(word, pinyin)
     try:
         _generate_audio(ssml, output_path)
-    except RuntimeError as e:
+    except TTSError as e:
         if "Unknown phoneme" not in str(e):
             raise
         fallback = _ssml_plain(text=word, voice=MANDARIN_VOICE, lang="zh-CN")
         _generate_audio(fallback, output_path)
+    if not _is_valid_audio(output_path):
+        raise TTSError(f"TTS did not create audio for {filename}")
     return f"[sound:{filename}]"

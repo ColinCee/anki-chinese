@@ -7,6 +7,7 @@ Azure credentials and costs money.
 
 from __future__ import annotations
 
+from pypinyin.contrib.tone_convert import to_normal
 from rich.progress import track
 
 from ..config import OVERRIDES_PATH
@@ -19,19 +20,70 @@ from ..data_sources import (
 from ..models import CharacterNote, apply_overrides, load_overrides
 
 
-def _example_matches_primary_reading(note: CharacterNote) -> bool:
-    if not note.example_word or not note.example_pinyin or not note.pinyin:
-        return True
+def _set_usage_review(note: CharacterNote, reason: str) -> None:
+    note.needs_review = True
+    note.review_reason = reason
+
+
+def _clear_usage_review(note: CharacterNote) -> None:
+    usage_prefixes = (
+        "Could not derive a single reading",
+        "Polyphonic character — no usage-derived reading found",
+    )
+    if note.review_reason.startswith(usage_prefixes):
+        note.needs_review = False
+        note.review_reason = ""
+
+
+def _reading_from_example(note: CharacterNote) -> str:
+    if not note.example_word or not note.example_pinyin:
+        return ""
 
     syllables = note.example_pinyin.split()
     if len(syllables) != len(note.example_word):
-        return False
+        return ""
 
-    return any(
-        syllables[index] == note.pinyin
+    target_syllables = [
+        syllables[index]
         for index, ch in enumerate(note.example_word)
         if ch == note.hanzi
-    )
+    ]
+    if not target_syllables:
+        return ""
+
+    normalized = [
+        to_normal(syllable).lower().replace("u:", "v") for syllable in target_syllables
+    ]
+    unique = list(dict.fromkeys(normalized))
+    if len(unique) == 1:
+        return target_syllables[0]
+    return ""
+
+
+def _normalize_example_pinyin(note: CharacterNote) -> None:
+    if not note.example_word or not note.example_pinyin:
+        fallback = lookup_pinyin_word(note.example_word) if note.example_word else ""
+        if fallback and len(fallback.split()) == len(note.example_word):
+            note.example_pinyin = fallback
+        return
+
+    fallback = lookup_pinyin_word(note.example_word)
+    if not fallback or len(fallback.split()) != len(note.example_word):
+        return
+
+    if len(note.example_pinyin.split()) != len(note.example_word):
+        note.example_pinyin = fallback
+        return
+
+    current = [
+        to_normal(syllable).lower().replace("u:", "v")
+        for syllable in note.example_pinyin.split()
+    ]
+    inferred = [
+        to_normal(syllable).lower().replace("u:", "v") for syllable in fallback.split()
+    ]
+    if current != inferred:
+        note.example_pinyin = fallback
 
 
 def enrich_notes(
@@ -44,16 +96,7 @@ def enrich_notes(
     enriched: list[CharacterNote] = []
 
     for note in track(notes, description="Enriching notes..."):
-        # ── Pinyin ────────────────────────────────────────────────
-        if not note.pinyin:
-            py, is_polyphonic = lookup_pinyin(note.hanzi)
-            note.pinyin = py
-            if is_polyphonic:
-                note.needs_review = True
-                note.review_reason = (
-                    f"Polyphonic character — no pinyin in source, "
-                    f"defaulted to '{py}' — verify reading manually"
-                )
+        override_fields = overrides.get(note.hanzi, {})
 
         # ── Jyutping ─────────────────────────────────────────────
         if not note.jyutping:
@@ -72,7 +115,6 @@ def enrich_notes(
             ):
                 word, meaning, example_pinyin = lookup_example(
                     note.hanzi,
-                    preferred_pinyin=note.pinyin,
                 )
                 if word:
                     note.example_word = word
@@ -81,16 +123,33 @@ def enrich_notes(
 
         if note.example_word and not note.example_pinyin:
             note.example_pinyin = lookup_pinyin_word(note.example_word)
+        _normalize_example_pinyin(note)
 
-        if (
+        example_reading = _reading_from_example(note)
+
+        # ── Pinyin (usage-first) ─────────────────────────────────
+        if example_reading and "pinyin" not in override_fields:
+            note.pinyin = example_reading
+            _clear_usage_review(note)
+        elif not note.pinyin:
+            py, is_polyphonic = lookup_pinyin(note.hanzi)
+            note.pinyin = py
+            if is_polyphonic:
+                _set_usage_review(
+                    note,
+                    f"Polyphonic character — no usage-derived reading found, "
+                    f"defaulted to '{py}' — verify manually",
+                )
+        elif (
             note.example_word
             and note.example_pinyin
-            and not _example_matches_primary_reading(note)
+            and "pinyin" not in override_fields
+            and not note.needs_review
         ):
-            note.needs_review = True
-            note.review_reason = (
-                f"Example '{note.example_word}' uses '{note.example_pinyin}', "
-                f"which does not match primary reading '{note.pinyin}'"
+            _set_usage_review(
+                note,
+                f"Could not derive a single reading for '{note.hanzi}' from "
+                f"example '{note.example_word}' / '{note.example_pinyin}'",
             )
 
         # ── Apply manual overrides (always last) ──────────────────
@@ -98,6 +157,23 @@ def enrich_notes(
 
         if note.example_word and not note.example_pinyin:
             note.example_pinyin = lookup_pinyin_word(note.example_word)
+        _normalize_example_pinyin(note)
+
+        example_reading = _reading_from_example(note)
+        if example_reading and "pinyin" not in override_fields:
+            note.pinyin = example_reading
+            _clear_usage_review(note)
+        elif (
+            note.example_word
+            and note.example_pinyin
+            and "pinyin" not in override_fields
+            and not note.needs_review
+        ):
+            _set_usage_review(
+                note,
+                f"Could not derive a single reading for '{note.hanzi}' from "
+                f"example '{note.example_word}' / '{note.example_pinyin}'",
+            )
 
         enriched.append(note)
 

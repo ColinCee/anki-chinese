@@ -80,6 +80,9 @@ def init(
             if prev is None:
                 continue
             for field in _PRESERVE_FIELDS:
+                if field in {"example_pinyin", "example_audio"}:
+                    if not note.example_word or note.example_word != prev.example_word:
+                        continue
                 if not getattr(note, field) and getattr(prev, field):
                     setattr(note, field, getattr(prev, field))
                     restored += 1
@@ -90,11 +93,35 @@ def init(
     rprint("[blue]Enriching[/blue] ...")
     notes = enrich_notes(notes, skip_examples=skip_examples)
 
-    # Step 4: clear stale example audio when example_word changed
+    # Step 4: clear stale audio when pronunciation or example usage changed
     from .pipeline.tts import example_audio_filename
 
     stale_files: list[Path] = []
     for note in notes:
+        expected_mandarin_audio = (
+            f"[sound:cmn_{note.hanzi}_{note.pinyin.replace(' ', '_')}.mp3]"
+            if note.hanzi and note.pinyin
+            else ""
+        )
+        if note.mandarin_audio and note.mandarin_audio != expected_mandarin_audio:
+            old_file = note.mandarin_audio.replace("[sound:", "").rstrip("]")
+            stale_files.extend(
+                p for p in [GENERATED_MEDIA_DIR / old_file] if p.exists()
+            )
+            note.mandarin_audio = ""
+
+        expected_cantonese_audio = (
+            f"[sound:yue_{note.hanzi}_{note.jyutping.replace(' ', '_')}.mp3]"
+            if note.hanzi and note.jyutping
+            else ""
+        )
+        if note.cantonese_audio and note.cantonese_audio != expected_cantonese_audio:
+            old_file = note.cantonese_audio.replace("[sound:", "").rstrip("]")
+            stale_files.extend(
+                p for p in [GENERATED_MEDIA_DIR / old_file] if p.exists()
+            )
+            note.cantonese_audio = ""
+
         expected_audio = (
             f"[sound:{example_audio_filename(note.example_word, note.example_pinyin)}]"
             if note.example_word and note.example_pinyin
@@ -160,6 +187,7 @@ def audio(
     """
     from .models import load_notes, save_notes
     from .pipeline.tts import (
+        TTSRateLimitError,
         generate_mandarin,
         generate_cantonese,
         generate_example_audio,
@@ -203,6 +231,15 @@ def audio(
                     note.example_pinyin,
                     force=force,
                 )
+        except TTSRateLimitError as e:
+            failures.append(f"{note.hanzi} ({note.keyword}): {e}")
+            rprint(f"    [yellow]⚠[/yellow] {e}")
+            if char or limit > 0:
+                updated = {n.hanzi: n for n in targets}
+                all_notes = [updated.get(n.hanzi, n) for n in all_notes]
+            save_notes(all_notes, ENRICHED_PATH)
+            rprint("[yellow]Stopped on Azure rate limit. Re-run the same audio command later.[/yellow]")
+            raise typer.Exit(2)
         except Exception as e:
             failures.append(f"{note.hanzi} ({note.keyword}): {e}")
             rprint(f"    [red]✗[/red] {e}")
@@ -275,6 +312,7 @@ def build(
         if not skip_audio:
             rprint("\n[bold]Step 2/3 · Audio[/bold]")
             from .pipeline.tts import (
+                TTSRateLimitError,
                 generate_mandarin,
                 generate_cantonese,
                 generate_example_audio,
@@ -295,6 +333,12 @@ def build(
                             note.example_word,
                             note.example_pinyin,
                         )
+                except TTSRateLimitError as e:
+                    failures.append(f"{note.hanzi} ({note.keyword}): {e}")
+                    save_notes(notes, ENRICHED_PATH)
+                    rprint(f"  [yellow]⚠[/yellow] {e}")
+                    rprint("  [yellow]Stopped on Azure rate limit. Re-run audio later, then build.[/yellow]")
+                    raise typer.Exit(2)
                 except Exception as e:
                     failures.append(f"{note.hanzi} ({note.keyword}): {e}")
             save_notes(notes, ENRICHED_PATH)
