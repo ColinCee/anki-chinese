@@ -52,7 +52,7 @@ def run_review(runtime: AppRuntime) -> None:
 
     runtime.console.print(review_table(flagged))
     runtime.console.print(
-        "\n[bold]To fix:[/bold] add corrections to [bold]data/overrides.json[/bold]:"
+        "\n[bold]To fix:[/bold] add corrections to [bold]data/manual/overrides.json[/bold]:"
     )
     runtime.console.print('  [dim]{ "行": { "pinyin": "xíng" } }[/dim]')
     runtime.console.print("Then re-run [bold]anki-chinese init[/bold].\n")

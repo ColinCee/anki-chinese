@@ -59,7 +59,7 @@ uv run anki-chinese init
 uv run anki-chinese build
 ```
 
-Output: `output/chinese_rsh.apkg`
+Output: `data/build/decks/chinese_rsh.apkg`
 
 ## Core workflow
 
@@ -69,15 +69,15 @@ Run the commands in this order:
 2. `status` — inspect coverage and validation
 3. `review` — inspect notes flagged for manual correction
 4. `audio` — optionally generate Mandarin/Cantonese/example audio
-5. `build` — create the final `output/chinese_rsh.apkg`
+5. `build` — create the final `data/build/decks/chinese_rsh.apkg`
 
 Important notes:
 
-- `build` needs `data/enriched.json`, so `init` comes first.
+- `build` needs `data/state/enriched.json`, so `init` comes first.
 - `audio` is optional; you can build and study without it.
 - `audio` can be slow on free-tier Azure because of low rate limits.
-- Example words are auto-generated when missing; manual overrides still come from `data/example_words.json`.
-- Default source input is `data/All Decks.txt`.
+- Example words are auto-generated when missing; manual overrides still come from `data/manual/example_words.json`.
+- Default source input is `data/source/All Decks.txt`.
 
 ### Common commands
 
@@ -142,12 +142,16 @@ The main code lives under `src/anki_chinese/`:
 
 The rest of the repo is kept intentionally simple:
 
+- At the root, the meaningful product folders are just `src/`, `tests/`, `data/`, and `docs/`.
 - `tests/` — automated tests, mirrored by feature plus small `regressions/` and `integration/` areas
-- `templates/` — card HTML/CSS templates
-- `data/` — inputs plus derived data
-  - `All Decks.txt`, `example_words.json`, and `overrides.json` are hand-maintained
-  - `enriched.json` and `hsk_complete.min.json` are derived/cache artifacts
-- `media/`, `output/`, and `dist/` — generated runtime/build outputs
+- `data/` — split by purpose
+  - `source/` — deck imports such as `All Decks.txt`
+  - `manual/` — hand-maintained overrides and example-word data
+  - `reference/` — canonical lookup corpora kept for deterministic offline use; optional local extras like `SUBTLEX_CH.xlsx` also live here
+  - `state/` — workflow state such as `enriched.json`
+  - `build/` — generated audio, sample audio, and built decks
+- `src/anki_chinese/cards/` — packaged card HTML/CSS files
+- `dist/` — Python packaging output, ignored in normal workflow
 - `docs/CUSTOMIZATION.md` — non-default tweaking only
 
 ## Learning flow

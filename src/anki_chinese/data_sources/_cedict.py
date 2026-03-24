@@ -11,8 +11,8 @@ Download URL (ZIP):
 The .zip contains a single .txt file with one entry per non-comment line:
     Traditional Simplified [pīn yīn] /meaning 1/meaning 2/.../
 
-On first use this module automatically downloads and caches the file at
-data/cedict_1_0_ts_utf-8_mdbg.txt.
+When the local file is absent this module automatically downloads and caches it at
+data/reference/cedict_1_0_ts_utf-8_mdbg.txt.
 
 Selection strategy per character:
     1. Prefer exact 2-character words (most useful as flashcard examples)

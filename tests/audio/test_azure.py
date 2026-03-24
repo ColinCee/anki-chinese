@@ -23,7 +23,7 @@ def test_ssml_mandarin_text_falls_back_to_plain_when_lengths_do_not_match() -> N
 
 
 def test_example_audio_filename_and_valid_audio_tag(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr(audio_files, 'GENERATED_MEDIA_DIR', tmp_path)
+    monkeypatch.setattr(audio_files, 'GENERATED_AUDIO_DIR', tmp_path)
     filename = audio_files.example_audio_filename('你好', 'nǐ hǎo')
     (tmp_path / filename).write_bytes(b'ID3')
 
@@ -47,7 +47,7 @@ def test_azure_provider_reports_capabilities() -> None:
 
 
 def test_generate_mandarin_uses_existing_valid_file_without_sdk_call(tmp_path: Path) -> None:
-    provider = tts.AzureTTSProvider(generated_media_dir=tmp_path)
+    provider = tts.AzureTTSProvider(generated_audio_dir=tmp_path)
     existing = tmp_path / 'cmn_一_yī.mp3'
     existing.write_bytes(b'ID3')
 

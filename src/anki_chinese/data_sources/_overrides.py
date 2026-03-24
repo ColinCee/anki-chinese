@@ -1,7 +1,7 @@
 """
 Manual example-word overrides loader.
 
-Reads data/example_words.json — a hand-curated dict of
+Reads data/manual/example_words.json — a hand-curated dict of
 {hanzi: {"word": "...", "meaning": "...", "pinyin": "..."}} that always wins over any
 auto-detected example in the lookup chain.
 

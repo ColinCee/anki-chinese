@@ -9,7 +9,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from ..config import CANTONESE_VOICE, GENERATED_MEDIA_DIR, MANDARIN_VOICE
+from ..config import CANTONESE_VOICE, GENERATED_AUDIO_DIR, MANDARIN_VOICE
 from .files import example_audio_filename, is_valid_audio_file, is_valid_audio_tag
 from .provider import ProviderCapabilities
 from .retry import DEFAULT_RETRY_POLICY, RetryPolicy
@@ -213,10 +213,10 @@ class AzureTTSProvider:
     def __init__(
         self,
         *,
-        generated_media_dir: Path = GENERATED_MEDIA_DIR,
+        generated_audio_dir: Path = GENERATED_AUDIO_DIR,
         retry_policy: RetryPolicy = DEFAULT_RETRY_POLICY,
     ) -> None:
-        self.generated_media_dir = generated_media_dir
+        self.generated_audio_dir = generated_audio_dir
         self.retry_policy = retry_policy
 
     def capabilities(self) -> ProviderCapabilities:
@@ -228,12 +228,12 @@ class AzureTTSProvider:
         )
 
     def is_valid_audio_tag(self, tag: str) -> bool:
-        return is_valid_audio_tag(tag, generated_media_dir=self.generated_media_dir)
+        return is_valid_audio_tag(tag, generated_audio_dir=self.generated_audio_dir)
 
     def generate_mandarin(self, hanzi: str, pinyin: str, *, force: bool = False) -> str:
         safe_pinyin = pinyin.replace(" ", "_")
         filename = f"cmn_{hanzi}_{safe_pinyin}.mp3"
-        output_path = self.generated_media_dir / filename
+        output_path = self.generated_audio_dir / filename
 
         if is_valid_audio_file(output_path) and not force:
             return f"[sound:{filename}]"
@@ -255,7 +255,7 @@ class AzureTTSProvider:
     ) -> str:
         safe_jyutping = jyutping.replace(" ", "_")
         filename = f"yue_{hanzi}_{safe_jyutping}.mp3"
-        output_path = self.generated_media_dir / filename
+        output_path = self.generated_audio_dir / filename
 
         if is_valid_audio_file(output_path) and not force:
             return f"[sound:{filename}]"
@@ -276,7 +276,7 @@ class AzureTTSProvider:
         self, word: str, pinyin: str, *, force: bool = False
     ) -> str:
         filename = example_audio_filename(word, pinyin)
-        output_path = self.generated_media_dir / filename
+        output_path = self.generated_audio_dir / filename
 
         if is_valid_audio_file(output_path) and not force:
             return f"[sound:{filename}]"

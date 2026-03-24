@@ -4,10 +4,10 @@ Public API for all data-source lookups.
 Callers import from here — never from the private _*.py modules directly.
 
 Lookup chain for example words:
-    1. Manual overrides  (data/example_words.json)
-    2. HSK 3.0 vocab     (data/hsk_complete.min.json  — auto-downloaded)
-    3. CC-CEDICT         (data/cedict_1_0_ts_utf-8_mdbg.txt — auto-downloaded)
-       scored by SUBTLEX-CH frequency when data/SUBTLEX_CH.xlsx is present
+    1. Manual overrides  (data/manual/example_words.json)
+    2. HSK 3.0 vocab     (data/reference/hsk_complete.min.json  — auto-downloaded if absent)
+    3. CC-CEDICT         (data/reference/cedict_1_0_ts_utf-8_mdbg.txt — auto-downloaded if absent)
+       scored by SUBTLEX-CH frequency when data/reference/SUBTLEX_CH.xlsx is present
 """
 
 from __future__ import annotations

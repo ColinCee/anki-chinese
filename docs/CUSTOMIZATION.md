@@ -4,7 +4,7 @@ This document only covers non-default tweaks. Normal install, workflow, repo lay
 
 ## Override specific character data
 
-Edit `data/overrides.json` to force fields per character:
+Edit `data/manual/overrides.json` to force fields per character:
 
 ```json
 {
@@ -19,9 +19,9 @@ Then rerun:
 uv run anki-chinese init
 ```
 
-## Edit card templates
+## Edit card files
 
-Files in `templates/` control card UI:
+Files in `src/anki_chinese/cards/` control card UI:
 
 - `style.css`
 - `recognition_front.html`
@@ -29,7 +29,7 @@ Files in `templates/` control card UI:
 - `recall_front.html` (listening front: audio + optional example phrase)
 - `recall_back.html`
 
-After editing templates:
+After editing card files:
 
 ```bash
 uv run anki-chinese build
@@ -72,7 +72,7 @@ For now, voice names still come from `src/anki_chinese/config.py`:
 
 ## Add example words
 
-Edit `data/example_words.json`:
+Edit `data/manual/example_words.json`:
 
 ```json
 {
@@ -86,7 +86,7 @@ Then rerun `init`.
 Notes:
 
 - If a character has no manual example, the tool tries to auto-pick a common 2-character word.
-- Manual entries in `data/example_words.json` always override auto-generated examples.
+- Manual entries in `data/manual/example_words.json` always override auto-generated examples.
 - If `pinyin` is omitted for a manual example, the tool derives it automatically before TTS.
 - Auto-pick policy is frequency-based from Complete HSK Vocabulary (`complete.min.json`): lower `frequency` rank means more common.
 - Listening front shows the example only when `ExampleWord` is present (no placeholder when missing).

@@ -6,13 +6,13 @@ from anki_chinese.notes import CharacterNote
 
 
 def test_build_deck_writes_apkg_file(tmp_path: Path, monkeypatch) -> None:
-    media_dir = tmp_path / "generated-media"
-    media_dir.mkdir()
-    (media_dir / "cmn_一_yī.mp3").write_bytes(b"ID3")
+    audio_dir = tmp_path / "data" / "build" / "audio" / "generated"
+    audio_dir.mkdir(parents=True)
+    (audio_dir / "cmn_一_yī.mp3").write_bytes(b"ID3")
 
-    output_dir = tmp_path / "output"
-    monkeypatch.setattr(deck_module, "GENERATED_MEDIA_DIR", media_dir)
-    monkeypatch.setattr(deck_module, "OUTPUT_DIR", output_dir)
+    deck_output_dir = tmp_path / "data" / "build" / "decks"
+    monkeypatch.setattr(deck_module, "GENERATED_AUDIO_DIR", audio_dir)
+    monkeypatch.setattr(deck_module, "DECK_OUTPUT_DIR", deck_output_dir)
 
     note = CharacterNote(
         hanzi="一",
@@ -25,6 +25,6 @@ def test_build_deck_writes_apkg_file(tmp_path: Path, monkeypatch) -> None:
 
     output_path = build_deck([note])
 
-    assert output_path == output_dir / "chinese_rsh.apkg"
+    assert output_path == deck_output_dir / "chinese_rsh.apkg"
     assert output_path.exists()
     assert output_path.stat().st_size > 0

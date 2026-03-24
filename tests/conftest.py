@@ -121,9 +121,10 @@ def runtime_factory(tmp_path: Path):
         tts_provider: StubTTSProvider | None = None,
         build_bytes: bytes = b"deck",
     ) -> AppRuntime:
-        source_deck_path = tmp_path / "deck.txt"
+        source_deck_path = tmp_path / "data" / "source" / "deck.txt"
+        source_deck_path.parent.mkdir(parents=True, exist_ok=True)
         source_deck_path.write_text("placeholder\n", encoding="utf-8")
-        note_store = JsonNoteStore(tmp_path / "enriched.json")
+        note_store = JsonNoteStore(tmp_path / "data" / "state" / "enriched.json")
         if saved_notes is not None:
             note_store.save(deepcopy(saved_notes))
 
@@ -132,7 +133,7 @@ def runtime_factory(tmp_path: Path):
             enriched_notes
             or [CharacterNote(hanzi="一", keyword="one", pinyin="yī", jyutping="jat1")]
         )
-        output_path = tmp_path / "deck.apkg"
+        output_path = tmp_path / "data" / "build" / "decks" / "deck.apkg"
         console = Console(file=StringIO(), force_terminal=False, color_system=None)
 
         def parse_deck_export(path: Path) -> list[CharacterNote]:
@@ -145,14 +146,15 @@ def runtime_factory(tmp_path: Path):
             return deepcopy(enriched)
 
         def build_deck(notes: list[CharacterNote]) -> Path:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_bytes(build_bytes)
             return output_path
 
         return AppRuntime(
             source_deck_path=source_deck_path,
             note_store=note_store,
-            generated_media_dir=tmp_path / "generated-media",
-            test_media_dir=tmp_path / "test-media",
+            generated_audio_dir=tmp_path / "data" / "build" / "audio" / "generated",
+            sample_audio_dir=tmp_path / "data" / "build" / "audio" / "samples",
             parse_deck_export=parse_deck_export,
             enrich_notes=enrich_notes,
             build_deck=build_deck,

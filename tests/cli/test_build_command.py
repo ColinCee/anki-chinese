@@ -22,7 +22,8 @@ def test_run_build_full_passes_options_through_init_audio_and_build(monkeypatch,
 
     def fake_build(notes):
         calls['build'] = notes
-        output_path = runtime.source_deck_path.parent / 'deck.apkg'
+        output_path = runtime.note_store.path.parent.parent / 'build' / 'decks' / 'deck.apkg'
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(b'deck')
         return output_path
 
@@ -38,7 +39,7 @@ def test_run_build_full_passes_options_through_init_audio_and_build(monkeypatch,
         audio_start_rsh=120,
     )
 
-    assert result == runtime.source_deck_path.parent / 'deck.apkg'
+    assert result == runtime.note_store.path.parent.parent / 'build' / 'decks' / 'deck.apkg'
     assert calls['init'] == (runtime, runtime.source_deck_path, True)
     assert calls['audio'] == (runtime, init_notes, 3, 120, False, False)
     assert calls['build'] == audio_notes
@@ -62,7 +63,8 @@ def test_run_build_full_skips_audio_when_requested(monkeypatch, runtime_factory)
 
     def fake_build(notes):
         calls['build'] = notes
-        output_path = runtime.source_deck_path.parent / 'deck.apkg'
+        output_path = runtime.note_store.path.parent.parent / 'build' / 'decks' / 'deck.apkg'
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(b'deck')
         return output_path
 
@@ -70,5 +72,5 @@ def test_run_build_full_skips_audio_when_requested(monkeypatch, runtime_factory)
 
     result = build_module.run_build(runtime, full=True, skip_audio=True)
 
-    assert result == runtime.source_deck_path.parent / 'deck.apkg'
+    assert result == runtime.note_store.path.parent.parent / 'build' / 'decks' / 'deck.apkg'
     assert calls['build'] == init_notes

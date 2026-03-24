@@ -13,10 +13,8 @@ wheels/
 .env
 
 # Generated runtime artifacts
-output/*.apkg
-media/generated/
-media/test/
+data/build/
 
-# Derived data and cache files
-data/hsk_complete.min.json
-data/enriched.json
+# Derived state
+data/state/enriched.json
+

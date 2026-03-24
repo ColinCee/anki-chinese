@@ -7,7 +7,7 @@ usage frequency rather than curriculum-based HSK rankings.
 
 Download:
     https://crr.ugent.be/subtlex-ch/SUBTLEX_CH_131_30.zip
-    Save the extracted .xlsx file as:  data/SUBTLEX_CH.xlsx
+    Save the extracted .xlsx file as:  data/reference/SUBTLEX_CH.xlsx
 
 If the file is absent this module returns an empty table silently — the
 lookup chain simply falls back to word-length heuristics.

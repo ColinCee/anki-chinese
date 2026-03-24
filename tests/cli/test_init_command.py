@@ -56,10 +56,10 @@ def test_restore_cached_fields_skips_example_data_when_example_word_changed() ->
 
 
 def test_clear_stale_audio_removes_files_and_clears_tags(tmp_path: Path) -> None:
-    media_dir = tmp_path / 'generated'
-    media_dir.mkdir()
+    audio_dir = tmp_path / 'generated'
+    audio_dir.mkdir()
     for filename in ['cmn_行_old.mp3', 'yue_行_old.mp3', 'cmn_银行_old.mp3']:
-        (media_dir / filename).write_bytes(b'ID3')
+        (audio_dir / filename).write_bytes(b'ID3')
 
     note = CharacterNote(
         hanzi='行',
@@ -75,7 +75,7 @@ def test_clear_stale_audio_removes_files_and_clears_tags(tmp_path: Path) -> None
 
     removed = _clear_stale_audio(
         [note],
-        generated_media_dir=media_dir,
+        generated_audio_dir=audio_dir,
         is_valid_audio_tag=lambda tag: False,
     )
 
@@ -83,4 +83,4 @@ def test_clear_stale_audio_removes_files_and_clears_tags(tmp_path: Path) -> None
     assert note.mandarin_audio == ''
     assert note.cantonese_audio == ''
     assert note.example_audio == ''
-    assert not any(path.exists() for path in media_dir.iterdir())
+    assert not any(path.exists() for path in audio_dir.iterdir())

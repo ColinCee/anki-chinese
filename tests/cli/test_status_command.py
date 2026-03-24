@@ -33,6 +33,6 @@ def test_run_review_prints_fix_guidance_for_flagged_notes(runtime_factory) -> No
     run_review(runtime)
 
     output = runtime.console.file.getvalue()
-    assert 'data/overrides.json' in output
+    assert 'data/manual/overrides.json' in output
     assert '行' in output
     assert 'Polyphonic character' in output

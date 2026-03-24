@@ -80,9 +80,9 @@ def test_audio_tasks_for_note_force_regenerates_available_audio() -> None:
     assert tasks == ['mandarin', 'cantonese']
 
 
-def test_is_valid_audio_tag_uses_passed_media_directory(tmp_path: Path, monkeypatch) -> None:
+def test_is_valid_audio_tag_uses_passed_audio_directory(tmp_path: Path, monkeypatch) -> None:
     filename = example_audio_filename('你好', 'nǐ hǎo')
     (tmp_path / filename).write_bytes(b'ID3')
-    monkeypatch.setattr(audio_files, 'GENERATED_MEDIA_DIR', tmp_path / 'wrong')
+    monkeypatch.setattr(audio_files, 'GENERATED_AUDIO_DIR', tmp_path / 'wrong')
 
-    assert is_valid_audio_tag(f'[sound:{filename}]', generated_media_dir=tmp_path)
+    assert is_valid_audio_tag(f'[sound:{filename}]', generated_audio_dir=tmp_path)

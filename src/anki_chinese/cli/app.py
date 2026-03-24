@@ -12,7 +12,7 @@ from rich.console import Console
 
 from ..audio.azure import AzureTTSProvider
 from ..audio.provider import TTSProvider
-from ..config import ENRICHED_PATH, GENERATED_MEDIA_DIR, SOURCE_DECK_PATH, TEST_MEDIA_DIR
+from ..config import ENRICHED_PATH, GENERATED_AUDIO_DIR, SAMPLE_AUDIO_DIR, SOURCE_DECK_PATH
 from ..deck import build_deck
 from ..notes import CharacterNote, JsonNoteStore
 from ..notes.enrich import enrich_notes
@@ -23,8 +23,8 @@ from ..notes.parser import parse_deck_export
 class AppRuntime:
     source_deck_path: Path
     note_store: JsonNoteStore
-    generated_media_dir: Path
-    test_media_dir: Path
+    generated_audio_dir: Path
+    sample_audio_dir: Path
     parse_deck_export: Callable[[Path], list[CharacterNote]]
     enrich_notes: Callable[..., list[CharacterNote]]
     build_deck: Callable[[list[CharacterNote]], Path]
@@ -36,12 +36,12 @@ def build_runtime() -> AppRuntime:
     return AppRuntime(
         source_deck_path=SOURCE_DECK_PATH,
         note_store=JsonNoteStore(ENRICHED_PATH),
-        generated_media_dir=GENERATED_MEDIA_DIR,
-        test_media_dir=TEST_MEDIA_DIR,
+        generated_audio_dir=GENERATED_AUDIO_DIR,
+        sample_audio_dir=SAMPLE_AUDIO_DIR,
         parse_deck_export=parse_deck_export,
         enrich_notes=enrich_notes,
         build_deck=build_deck,
-        tts_provider=AzureTTSProvider(generated_media_dir=GENERATED_MEDIA_DIR),
+        tts_provider=AzureTTSProvider(generated_audio_dir=GENERATED_AUDIO_DIR),
     )
 
 

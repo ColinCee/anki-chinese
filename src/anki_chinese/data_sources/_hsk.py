@@ -2,7 +2,7 @@
 HSK vocabulary data source.
 
 Loads the Complete HSK 3.0 vocabulary list (hsk_complete.min.json), auto-
-downloading it on first use.  Builds a per-character index so callers can ask
+downloading it on first use when the file is absent. Builds a per-character index so callers can ask
 "what is the most common HSK word containing character X?".
 
 Lower `q` (rank/frequency) value in the HSK data means the word appears

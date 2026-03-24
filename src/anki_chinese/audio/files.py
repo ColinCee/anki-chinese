@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from ..config import GENERATED_MEDIA_DIR
+from ..config import GENERATED_AUDIO_DIR
 from ..notes.model import CharacterNote
 
 
@@ -36,12 +36,12 @@ def is_valid_audio_file(path: Path) -> bool:
     return path.exists() and path.stat().st_size > 0
 
 
-def is_valid_audio_tag(tag: str, generated_media_dir: Path | None = None) -> bool:
+def is_valid_audio_tag(tag: str, generated_audio_dir: Path | None = None) -> bool:
     if not tag.startswith("[sound:") or not tag.endswith("]"):
         return False
     filename = tag.replace("[sound:", "", 1).rstrip("]")
-    media_dir = generated_media_dir or GENERATED_MEDIA_DIR
-    return is_valid_audio_file(media_dir / filename)
+    audio_dir = generated_audio_dir or GENERATED_AUDIO_DIR
+    return is_valid_audio_file(audio_dir / filename)
 
 
 def audio_tasks_for_note(

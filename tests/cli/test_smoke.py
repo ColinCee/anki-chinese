@@ -26,4 +26,4 @@ def test_build_command_loads_saved_notes_and_builds_package(runtime_factory, run
     result = runner.invoke(app, ['build'])
 
     assert result.exit_code == 0
-    assert (runtime.source_deck_path.parent / 'deck.apkg').exists()
+    assert (runtime.note_store.path.parent.parent / 'build' / 'decks' / 'deck.apkg').exists()

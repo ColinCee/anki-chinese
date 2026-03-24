@@ -29,7 +29,7 @@ def run_test_tts(
         runtime.console.print("[red]✗[/red] Pass --char or --word (or both).")
         raise typer.Exit(1)
 
-    runtime.test_media_dir.mkdir(parents=True, exist_ok=True)
+    runtime.sample_audio_dir.mkdir(parents=True, exist_ok=True)
     use_voice = voice or MANDARIN_VOICE
     voice_tag = use_voice.split("-", 2)[-1] if "-" in use_voice else use_voice
     if voice:
@@ -52,7 +52,7 @@ def run_test_tts(
             if note.pinyin:
                 safe_pinyin = note.pinyin.replace(" ", "_")
                 filename = f"{voice_tag}_cmn_{note.hanzi}_{safe_pinyin}.mp3"
-                output_path = runtime.test_media_dir / filename
+                output_path = runtime.sample_audio_dir / filename
                 if not output_path.exists() or force:
                     ssml = _ssml_mandarin(note.hanzi, note.pinyin, voice=use_voice)
                     _generate_audio(ssml, output_path)
@@ -61,7 +61,7 @@ def run_test_tts(
             if note.jyutping:
                 safe_jyutping = note.jyutping.replace(" ", "_")
                 filename = f"{voice_tag}_yue_{note.hanzi}_{safe_jyutping}.mp3"
-                output_path = runtime.test_media_dir / filename
+                output_path = runtime.sample_audio_dir / filename
                 if not output_path.exists() or force:
                     ssml = _ssml_cantonese(note.hanzi, note.jyutping)
                     _generate_audio(ssml, output_path)
@@ -71,7 +71,7 @@ def run_test_tts(
                 if note.example_pinyin:
                     safe_example_pinyin = note.example_pinyin.replace(" ", "_")
                     filename = f"{voice_tag}_cmn_{note.example_word}_{safe_example_pinyin}.mp3"
-                    output_path = runtime.test_media_dir / filename
+                    output_path = runtime.sample_audio_dir / filename
                     if not output_path.exists() or force:
                         ssml = _ssml_mandarin_text(
                             note.example_word,
@@ -81,7 +81,7 @@ def run_test_tts(
                         _generate_audio(ssml, output_path)
                 else:
                     filename = f"{voice_tag}_cmn_{note.example_word}.mp3"
-                    output_path = runtime.test_media_dir / filename
+                    output_path = runtime.sample_audio_dir / filename
                     if not output_path.exists() or force:
                         ssml = _ssml_plain(
                             text=note.example_word,
@@ -101,7 +101,7 @@ def run_test_tts(
                 f"[yellow]⚠[/yellow] '{char}' not in enriched data — generating plain Mandarin audio only."
             )
             filename = f"{voice_tag}_test_{char}.mp3"
-            output_path = runtime.test_media_dir / filename
+            output_path = runtime.sample_audio_dir / filename
             ssml = _ssml_plain(text=char, voice=use_voice, lang="zh-CN")
             _generate_audio(ssml, output_path)
             runtime.console.print(f"  → {output_path} ({output_path.stat().st_size:,} bytes)")
@@ -109,7 +109,7 @@ def run_test_tts(
     if word:
         runtime.console.print(f"[blue]Testing word[/blue] {word}")
         filename = f"{voice_tag}_test_{word}.mp3"
-        output_path = runtime.test_media_dir / filename
+        output_path = runtime.sample_audio_dir / filename
 
         if output_path.exists() and not force:
             runtime.console.print(

@@ -9,28 +9,34 @@ Anki will treat the next import as a brand new deck/model.
 from pathlib import Path
 
 # ── Paths ──────────────────────────────────────────────────────────────
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PACKAGE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = PACKAGE_DIR.parent.parent
+
+CARDS_DIR = PACKAGE_DIR / "cards"
+
 DATA_DIR = PROJECT_ROOT / "data"
-MEDIA_DIR = PROJECT_ROOT / "media"
-GENERATED_MEDIA_DIR = MEDIA_DIR / "generated"
-TEST_MEDIA_DIR = MEDIA_DIR / "test"
-TEMPLATE_DIR = PROJECT_ROOT / "templates"
-OUTPUT_DIR = PROJECT_ROOT / "output"
+SOURCE_DATA_DIR = DATA_DIR / "source"
+MANUAL_DATA_DIR = DATA_DIR / "manual"
+REFERENCE_DATA_DIR = DATA_DIR / "reference"
+STATE_DATA_DIR = DATA_DIR / "state"
+BUILD_DATA_DIR = DATA_DIR / "build"
+BUILD_AUDIO_DIR = BUILD_DATA_DIR / "audio"
+GENERATED_AUDIO_DIR = BUILD_AUDIO_DIR / "generated"
+SAMPLE_AUDIO_DIR = BUILD_AUDIO_DIR / "samples"
+DECK_OUTPUT_DIR = BUILD_DATA_DIR / "decks"
 
-SOURCE_DECK_PATH = DATA_DIR / "All Decks.txt"
-# Backward-compatible alias for existing imports.
-OLD_DECK_PATH = SOURCE_DECK_PATH
-OVERRIDES_PATH = DATA_DIR / "overrides.json"
-ENRICHED_PATH = DATA_DIR / "enriched.json"
+SOURCE_DECK_PATH = SOURCE_DATA_DIR / "All Decks.txt"
+OVERRIDES_PATH = MANUAL_DATA_DIR / "overrides.json"
+ENRICHED_PATH = STATE_DATA_DIR / "enriched.json"
 
-# ── data_sources paths ────────────────────────────────────────────────
-EXAMPLE_WORDS_PATH = DATA_DIR / "example_words.json"
-HSK_VOCAB_PATH = DATA_DIR / "hsk_complete.min.json"
+# ── Data sources ─────────────────────────────────────────────────────
+EXAMPLE_WORDS_PATH = MANUAL_DATA_DIR / "example_words.json"
+HSK_VOCAB_PATH = REFERENCE_DATA_DIR / "hsk_complete.min.json"
 # CC-CEDICT: auto-downloaded on first use by data_sources._cedict
-CEDICT_PATH = DATA_DIR / "cedict_1_0_ts_utf-8_mdbg.txt"
-# SUBTLEX-CH: optional — place SUBTLEX_CH.xlsx in data/ to enable frequency scoring
+CEDICT_PATH = REFERENCE_DATA_DIR / "cedict_1_0_ts_utf-8_mdbg.txt"
+# SUBTLEX-CH: optional — place SUBTLEX_CH.xlsx in data/reference/ to enable frequency scoring
 # Download: https://crr.ugent.be/subtlex-ch/SUBTLEX_CH_131_30.zip
-SUBTLEX_PATH = DATA_DIR / "SUBTLEX_CH.xlsx"
+SUBTLEX_PATH = REFERENCE_DATA_DIR / "SUBTLEX_CH.xlsx"
 
 # ── genanki IDs (generated once, never change) ────────────────────────
 MODEL_ID = 1_704_328_571  # Unique ID for the note type
@@ -42,7 +48,7 @@ MODEL_NAME = "Chinese RSH"
 
 # ── Field order (index into the fields list) ──────────────────────────
 # If you add/remove/reorder fields, update this AND the FIELDS list AND
-# the card templates.  The CLI 'validate' command will catch mismatches.
+# the card files under `src/anki_chinese/cards/`. The CLI will catch mismatches.
 FIELDS = [
     "Hanzi",
     "Keyword",
