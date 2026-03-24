@@ -192,7 +192,9 @@ def _generate_audio(ssml: str, output_path: Path) -> bool:
             result = synthesizer.speak_ssml_async(ssml).get()  # type: ignore[union-attr]
         except Exception as exc:
             _cleanup_partial_audio(output_path)
-            if attempt < _RATE_LIMIT_MAX_ATTEMPTS and _is_rate_limited_message(str(exc)):
+            if attempt < _RATE_LIMIT_MAX_ATTEMPTS and _is_rate_limited_message(
+                str(exc)
+            ):
                 continue
             raise
 

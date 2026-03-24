@@ -191,9 +191,7 @@ def init(
                 removed_stale_files += 1
             except OSError:
                 pass
-        rprint(
-            f"  [yellow]⚠[/yellow] Removed {removed_stale_files} stale audio files"
-        )
+        rprint(f"  [yellow]⚠[/yellow] Removed {removed_stale_files} stale audio files")
 
     _report_init_summary(
         notes=notes,
@@ -275,7 +273,9 @@ def audio(
 
     pending: list[tuple[CharacterNote, list[str]]] = []
     for note in targets:
-        tasks = _audio_tasks_for_note(note, force=force, is_valid_audio_tag=is_valid_audio_tag)
+        tasks = _audio_tasks_for_note(
+            note, force=force, is_valid_audio_tag=is_valid_audio_tag
+        )
         if tasks:
             pending.append((note, tasks))
 
@@ -375,7 +375,7 @@ def audio(
                     changed_chars=changed_chars,
                 )
                 rprint(
-                    f"[yellow]Stopped on Azure rate limit at {note.hanzi} (RSH #{_heisig_index(note) or '?' }). Re-run the same audio command later.[/yellow]"
+                    f"[yellow]Stopped on Azure rate limit at {note.hanzi} (RSH #{_heisig_index(note) or '?'}). Re-run the same audio command later.[/yellow]"
                 )
                 raise typer.Exit(2)
             except Exception as e:
@@ -858,18 +858,32 @@ def _expected_example_audio_tag(note: CharacterNote) -> str:
     return f"[sound:cmn_{note.example_word}_{safe_pinyin}.mp3]"
 
 
-def _audio_tasks_for_note(note: CharacterNote, *, force: bool, is_valid_audio_tag) -> list[str]:  # type: ignore[no-untyped-def]
+def _audio_tasks_for_note(
+    note: CharacterNote, *, force: bool, is_valid_audio_tag
+) -> list[str]:  # type: ignore[no-untyped-def]
     tasks: list[str] = []
     mandarin_tag = _expected_mandarin_audio_tag(note)
-    if mandarin_tag and (force or note.mandarin_audio != mandarin_tag or not is_valid_audio_tag(mandarin_tag)):
+    if mandarin_tag and (
+        force
+        or note.mandarin_audio != mandarin_tag
+        or not is_valid_audio_tag(mandarin_tag)
+    ):
         tasks.append("mandarin")
 
     cantonese_tag = _expected_cantonese_audio_tag(note)
-    if cantonese_tag and (force or note.cantonese_audio != cantonese_tag or not is_valid_audio_tag(cantonese_tag)):
+    if cantonese_tag and (
+        force
+        or note.cantonese_audio != cantonese_tag
+        or not is_valid_audio_tag(cantonese_tag)
+    ):
         tasks.append("cantonese")
 
     example_tag = _expected_example_audio_tag(note)
-    if example_tag and (force or note.example_audio != example_tag or not is_valid_audio_tag(example_tag)):
+    if example_tag and (
+        force
+        or note.example_audio != example_tag
+        or not is_valid_audio_tag(example_tag)
+    ):
         tasks.append("example")
 
     return tasks
@@ -900,7 +914,9 @@ def _report_init_summary(
     )
     for note in notes:
         prev = prev_by_hanzi.get(note.hanzi)
-        if prev and any(getattr(note, field) != getattr(prev, field) for field in tracked_fields):
+        if prev and any(
+            getattr(note, field) != getattr(prev, field) for field in tracked_fields
+        ):
             changed_existing += 1
 
     rprint("\n[bold]Init Summary[/bold]")
@@ -914,7 +930,9 @@ def _report_init_summary(
     if removed:
         preview = ", ".join(removed[:12])
         suffix = "" if len(removed) <= 12 else f" … +{len(removed) - 12} more"
-        rprint(f"  [yellow]•[/yellow] {len(removed)} characters removed: {preview}{suffix}")
+        rprint(
+            f"  [yellow]•[/yellow] {len(removed)} characters removed: {preview}{suffix}"
+        )
     if restored_fields:
         rprint(f"  [green]•[/green] {restored_fields} cached fields reused")
     if removed_stale_files:
@@ -937,7 +955,9 @@ def _report_audio_summary(
         if repaired_total:
             rprint(f"  [green]•[/green] {repaired_total} new audio files generated")
         if synced_total:
-            rprint(f"  [green]•[/green] {synced_total} existing audio files linked to notes")
+            rprint(
+                f"  [green]•[/green] {synced_total} existing audio files linked to notes"
+            )
 
         table = Table(show_header=True, box=None, padding=(0, 2))
         table.add_column("Audio Type")
@@ -949,7 +969,9 @@ def _report_audio_summary(
         console.print(table)
     if changed_chars:
         preview = ", ".join(changed_chars[:12])
-        suffix = "" if len(changed_chars) <= 12 else f" … +{len(changed_chars) - 12} more"
+        suffix = (
+            "" if len(changed_chars) <= 12 else f" … +{len(changed_chars) - 12} more"
+        )
         rprint(f"  [green]•[/green] Updated characters: {preview}{suffix}")
 
 
