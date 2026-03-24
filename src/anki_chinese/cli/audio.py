@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-from ..audio.azure import TTSRateLimitError
+from ..audio.errors import TTSRateLimitError
 from ..audio.files import (
     audio_tasks_for_note,
     expected_cantonese_audio_tag,
@@ -138,7 +138,7 @@ def run_audio(
                 )
                 runtime.console.print(f"[yellow]⚠[/yellow] {error}")
                 runtime.console.print(
-                    f"[yellow]Stopped on Azure rate limit at {note.hanzi} "
+                    f"[yellow]Stopped on TTS provider rate limit at {note.hanzi} "
                     f"(RSH #{heisig_index(note) or '?'}). Re-run the same audio command later.[/yellow]"
                 )
                 raise typer.Exit(2)
@@ -203,7 +203,7 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             help="Stop immediately on first TTS error.",
         ),
     ) -> None:
-        """Generate pronunciation audio via Azure TTS."""
+        """Generate pronunciation audio via the configured TTS provider."""
         run_audio(
             runtime,
             char=char,

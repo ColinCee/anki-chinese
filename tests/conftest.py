@@ -8,7 +8,7 @@ import pytest
 from rich.console import Console
 from typer.testing import CliRunner
 
-from anki_chinese.audio.azure import TTSRateLimitError
+from anki_chinese.audio.errors import TTSRateLimitError
 from anki_chinese.audio.provider import ProviderCapabilities
 from anki_chinese.cli import AppRuntime
 from anki_chinese.notes import CharacterNote, JsonNoteStore
@@ -42,6 +42,13 @@ class StubTTSProvider:
         tag = f"[sound:cmn_{hanzi}_{pinyin.replace(' ', '_')}.mp3]"
         self.valid_audio_tags.add(tag)
         self.calls.append(("mandarin", hanzi, pinyin, force))
+        return tag
+
+    def generate_plain_mandarin(self, text: str, *, force: bool = False) -> str:
+        self._maybe_rate_limit("mandarin", text)
+        tag = f"[sound:preview_cmn_{text.replace(' ', '_')}.mp3]"
+        self.valid_audio_tags.add(tag)
+        self.calls.append(("plain-mandarin", text, "", force))
         return tag
 
     def generate_cantonese(
@@ -150,6 +157,8 @@ def runtime_factory(tmp_path: Path):
             output_path.write_bytes(build_bytes)
             return output_path
 
+        active_tts_provider = tts_provider or StubTTSProvider()
+
         return AppRuntime(
             source_deck_path=source_deck_path,
             note_store=note_store,
@@ -158,7 +167,8 @@ def runtime_factory(tmp_path: Path):
             parse_deck_export=parse_deck_export,
             enrich_notes=enrich_notes,
             build_deck=build_deck,
-            tts_provider=tts_provider or StubTTSProvider(),
+            tts_provider_factory=lambda generated_audio_dir: active_tts_provider,
+            tts_provider=active_tts_provider,
             console=console,
         )
 

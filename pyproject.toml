@@ -9,7 +9,6 @@ dependencies = [
     "pypinyin>=0.53.0",
     "pycantonese>=3.4.0",
     "tojyutping>=0.3.0",
-    "azure-cognitiveservices-speech>=1.40.0",
     "typer>=0.15.0",
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",

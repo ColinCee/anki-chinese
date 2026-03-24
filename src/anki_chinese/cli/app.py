@@ -10,7 +10,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-from ..audio.azure import AzureTTSProvider
+from ..audio.factory import build_tts_provider
 from ..audio.provider import TTSProvider
 from ..config import ENRICHED_PATH, GENERATED_AUDIO_DIR, SAMPLE_AUDIO_DIR, SOURCE_DECK_PATH
 from ..deck import build_deck
@@ -28,6 +28,7 @@ class AppRuntime:
     parse_deck_export: Callable[[Path], list[CharacterNote]]
     enrich_notes: Callable[..., list[CharacterNote]]
     build_deck: Callable[[list[CharacterNote]], Path]
+    tts_provider_factory: Callable[[Path], TTSProvider]
     tts_provider: TTSProvider
     console: Console = field(default_factory=Console)
 
@@ -41,7 +42,10 @@ def build_runtime() -> AppRuntime:
         parse_deck_export=parse_deck_export,
         enrich_notes=enrich_notes,
         build_deck=build_deck,
-        tts_provider=AzureTTSProvider(generated_audio_dir=GENERATED_AUDIO_DIR),
+        tts_provider_factory=lambda generated_audio_dir: build_tts_provider(
+            generated_audio_dir=generated_audio_dir
+        ),
+        tts_provider=build_tts_provider(generated_audio_dir=GENERATED_AUDIO_DIR),
     )
 
 

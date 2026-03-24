@@ -14,6 +14,11 @@ def example_audio_filename(word: str, pinyin: str) -> str:
     return f"cmn_{word}_{safe_pinyin}.mp3"
 
 
+def preview_mandarin_filename(text: str) -> str:
+    safe_text = text.translate(str.maketrans({"/": "_", "\\": "_", ":": "_", " ": "_"}))
+    return f"preview_cmn_{safe_text}.mp3"
+
+
 def expected_mandarin_audio_tag(note: CharacterNote) -> str:
     if not note.hanzi or not note.pinyin:
         return ""

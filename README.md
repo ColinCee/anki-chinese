@@ -75,7 +75,7 @@ Important notes:
 
 - `build` needs `data/state/enriched.json`, so `init` comes first.
 - `audio` is optional; you can build and study without it.
-- `audio` can be slow on free-tier Azure because of low rate limits.
+- `audio` is network-bound and can still take a while on larger batches.
 - Example words are auto-generated when missing; manual overrides still come from `data/manual/example_words.json`.
 - Default source input is `data/source/All Decks.txt`.
 
@@ -167,28 +167,40 @@ The deck stays opinionated:
 
 Stable GUIDs are based on each character, so re-importing updates existing notes instead of creating duplicates.
 
-## Azure TTS setup (optional)
+## MiniMax TTS setup (optional)
 
-1. Create an Azure Speech resource.
+1. Create a MiniMax API key in the console.
 2. Copy `.env.example` to `.env`.
 3. Set:
 
 ```dotenv
-AZURE_SPEECH_KEY=your-key
-AZURE_SPEECH_REGION=eastus
+MINIMAX_API_KEY=your-key
 ```
 
-## TTS roadmap
+The repo default model and voice IDs live in `src/anki_chinese/audio/minimax.py`, not in `.env`.
 
-Azure is still the current provider, but it now sits behind `src/anki_chinese/audio/provider.py` and `src/anki_chinese/audio/azure.py`. That keeps a future provider switch much smaller than before.
+Only add env overrides when you intentionally need them:
 
-Current shortlist for a future pivot:
+- `MINIMAX_API_HOST=https://api.minimaxi.com` for mainland-region keys
+- `MINIMAX_TTS_MODEL=...` if you want a different MiniMax speech model
+- `MINIMAX_MANDARIN_VOICE_ID=...` or `MINIMAX_CANTONESE_VOICE_ID=...` if you want different voices
 
-- **Amazon Polly** — strongest near-term candidate for Mandarin + Cantonese with explicit pronunciation control
-- **Google Cloud Text-to-Speech** — strong Mandarin/API maturity option; Cantonese fit still needs direct sample testing
-- **ElevenLabs** — promising for naturalness, but still needs proof on exact-pronunciation Mandarin/Cantonese study audio
+You can then smoke-test audio generation with:
 
-The next provider decision should be based on side-by-side samples from this repo's real characters and example words, not vendor marketing.
+```bash
+uv run anki-chinese test-tts --char 一
+```
+
+## TTS provider
+
+The repo now ships one runtime TTS implementation: MiniMax `speech-2.8-turbo`, wired behind the narrow `src/anki_chinese/audio/provider.py` boundary.
+
+- `audio` and `test-tts` now use provider-neutral CLI wording.
+- `test-tts` uses the configured provider defaults instead of reaching into provider internals.
+- The public CLI/runtime path is provider-agnostic, but intentionally narrow: it covers the exact Mandarin, Cantonese, example, preview, and file-tag operations this repo needs.
+- Secrets stay in `.env`; stable repo defaults stay in code.
+
+For the migration rationale, workload math, and account setup notes, see [docs/TTS_RESEARCH.md](docs/TTS_RESEARCH.md).
 
 ## Docs
 

@@ -8,6 +8,7 @@ from anki_chinese.audio.files import (
     expected_example_audio_tag,
     expected_mandarin_audio_tag,
     is_valid_audio_tag,
+    preview_mandarin_filename,
 )
 from anki_chinese.notes import CharacterNote
 
@@ -86,3 +87,7 @@ def test_is_valid_audio_tag_uses_passed_audio_directory(tmp_path: Path, monkeypa
     monkeypatch.setattr(audio_files, 'GENERATED_AUDIO_DIR', tmp_path / 'wrong')
 
     assert is_valid_audio_tag(f'[sound:{filename}]', generated_audio_dir=tmp_path)
+
+
+def test_preview_mandarin_filename_sanitizes_path_separators() -> None:
+    assert preview_mandarin_filename('你/好 test') == 'preview_cmn_你_好_test.mp3'

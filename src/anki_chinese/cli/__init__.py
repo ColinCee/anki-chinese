@@ -71,14 +71,12 @@ def review() -> None:
 def test_tts(
     char: str = "",
     word: str = "",
-    voice: str = "",
     force: bool = False,
 ) -> None:
     run_test_tts(
         build_runtime(),
         char=char,
         word=word,
-        voice=voice,
         force=force,
     )
 
