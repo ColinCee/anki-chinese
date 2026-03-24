@@ -18,8 +18,12 @@ from dotenv import load_dotenv
 from ..config import CANTONESE_VOICE, GENERATED_MEDIA_DIR, MANDARIN_VOICE
 
 # ── Rate limiter ──────────────────────────────────────────────────────
-# Azure F0 tier: 20 transactions per 60 seconds.
-_REQUEST_INTERVAL = 3.0  # seconds between API calls (20 per 60s)
+# Azure F0 is nominally 20 transactions per 60 seconds, but running exactly at
+# 3.0s/request leaves no headroom for rolling-window enforcement or connection
+# setup overhead. A slightly slower hardcoded default is more reliable.
+_REQUEST_INTERVAL = 4.0
+_RATE_LIMIT_RETRY_DELAY = 30.0
+_RATE_LIMIT_MAX_ATTEMPTS = 5
 
 load_dotenv()
 
@@ -30,6 +34,16 @@ class TTSError(RuntimeError):
 
 class TTSRateLimitError(TTSError):
     """Speech synthesis failed because Azure rate limited the request."""
+
+
+def _cleanup_partial_audio(output_path: Path) -> None:
+    if output_path.exists() and output_path.stat().st_size == 0:
+        output_path.unlink()
+
+
+def _is_rate_limited_message(message: str) -> bool:
+    lowered = message.lower()
+    return "429" in lowered or "too many requests" in lowered
 
 
 # ---------- diacritical pinyin → Azure SAPI format ----------
@@ -86,10 +100,14 @@ def _get_speech_config():  # type: ignore[no-untyped-def]
     import azure.cognitiveservices.speech as speechsdk
 
     key = os.getenv("AZURE_SPEECH_KEY")
-    region = os.getenv("AZURE_SPEECH_REGION", "eastus")
+    region = os.getenv("AZURE_SPEECH_REGION")
     if not key:
         raise RuntimeError(
             "AZURE_SPEECH_KEY not set. Copy .env.example to .env and add your key."
+        )
+    if not region:
+        raise RuntimeError(
+            "AZURE_SPEECH_REGION not set. Add your Speech resource region to .env."
         )
     return speechsdk.SpeechConfig(subscription=key, region=region)
 
@@ -157,51 +175,56 @@ def _generate_audio(ssml: str, output_path: Path) -> bool:
     import azure.cognitiveservices.speech as speechsdk
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    if output_path.exists() and output_path.stat().st_size == 0:
-        output_path.unlink()
-    time.sleep(_REQUEST_INTERVAL)
+    for attempt in range(1, _RATE_LIMIT_MAX_ATTEMPTS + 1):
+        _cleanup_partial_audio(output_path)
+        time.sleep(_REQUEST_INTERVAL if attempt == 1 else _RATE_LIMIT_RETRY_DELAY)
 
-    config = _get_speech_config()
-    config.set_speech_synthesis_output_format(
-        speechsdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3
+        config = _get_speech_config()
+        config.set_speech_synthesis_output_format(
+            speechsdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3
+        )
+        audio_config = speechsdk.audio.AudioOutputConfig(filename=str(output_path))
+        synthesizer = speechsdk.SpeechSynthesizer(
+            speech_config=config, audio_config=audio_config
+        )
+
+        try:
+            result = synthesizer.speak_ssml_async(ssml).get()  # type: ignore[union-attr]
+        except Exception as exc:
+            _cleanup_partial_audio(output_path)
+            if attempt < _RATE_LIMIT_MAX_ATTEMPTS and _is_rate_limited_message(str(exc)):
+                continue
+            raise
+
+        if result is None:
+            _cleanup_partial_audio(output_path)
+            raise TTSError(f"TTS failed for {output_path.name}: no result returned")
+
+        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+            if not _is_valid_audio(output_path):
+                _cleanup_partial_audio(output_path)
+                raise TTSError(f"TTS did not create audio for {output_path.name}")
+            return True
+
+        if result.reason == speechsdk.ResultReason.Canceled:
+            details = result.cancellation_details
+            msg = f"TTS failed for {output_path.name}: {details.reason} — {details.error_details}"
+            error_details = details.error_details or ""
+            _cleanup_partial_audio(output_path)
+            if _is_rate_limited_message(error_details):
+                if attempt < _RATE_LIMIT_MAX_ATTEMPTS:
+                    continue
+                raise TTSRateLimitError(
+                    f"{msg} (after {attempt} attempts with linear retry)"
+                )
+            raise TTSError(msg)
+
+        _cleanup_partial_audio(output_path)
+        raise TTSError(f"TTS failed for {output_path.name}: unexpected result")
+
+    raise TTSRateLimitError(
+        f"TTS failed for {output_path.name}: rate limited after {_RATE_LIMIT_MAX_ATTEMPTS} attempts"
     )
-    audio_config = speechsdk.audio.AudioOutputConfig(filename=str(output_path))
-    synthesizer = speechsdk.SpeechSynthesizer(
-        speech_config=config, audio_config=audio_config
-    )
-
-    try:
-        result = synthesizer.speak_ssml_async(ssml).get()  # type: ignore[union-attr]
-    except Exception:
-        if output_path.exists() and output_path.stat().st_size == 0:
-            output_path.unlink()
-        raise
-
-    if result is None:
-        if output_path.exists() and output_path.stat().st_size == 0:
-            output_path.unlink()
-        raise TTSError(f"TTS failed for {output_path.name}: no result returned")
-
-    if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-        if not _is_valid_audio(output_path):
-            if output_path.exists() and output_path.stat().st_size == 0:
-                output_path.unlink()
-            raise TTSError(f"TTS did not create audio for {output_path.name}")
-        return True
-
-    if result.reason == speechsdk.ResultReason.Canceled:
-        details = result.cancellation_details
-        msg = f"TTS failed for {output_path.name}: {details.reason} — {details.error_details}"
-        error_details = details.error_details or ""
-        if output_path.exists() and output_path.stat().st_size == 0:
-            output_path.unlink()
-        if "429" in error_details:
-            raise TTSRateLimitError(msg)
-        raise TTSError(msg)
-
-    if output_path.exists() and output_path.stat().st_size == 0:
-        output_path.unlink()
-    raise TTSError(f"TTS failed for {output_path.name}: unexpected result")
 
 
 def is_valid_audio_tag(tag: str) -> bool:

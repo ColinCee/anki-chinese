@@ -17,6 +17,15 @@ import re
 import typer
 from rich import print as rprint
 from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from rich.table import Table
 
 from .config import (
@@ -37,6 +46,15 @@ console = Console()
 def _heisig_index(note: CharacterNote) -> int | None:
     match = re.search(r"\d+", note.heisig_num)
     return int(match.group(0)) if match else None
+
+
+def _format_audio_task_labels(tasks: list[str]) -> str:
+    labels = {
+        "mandarin": "Mandarin",
+        "cantonese": "Cantonese",
+        "example": "Example",
+    }
+    return ", ".join(labels[task] for task in tasks if task in labels)
 
 
 def _filter_from_rsh(notes: list[CharacterNote], start_rsh: int) -> list[CharacterNote]:
@@ -82,6 +100,7 @@ def init(
         "example_audio",
         "mnemonic",  # typed in Anki then exported once → kept forever after
     )
+    prev_by_hanzi: dict[str, CharacterNote] = {}
     if ENRICHED_PATH.exists():
         prev_notes = load_notes(ENRICHED_PATH)
         prev_by_hanzi = {n.hanzi: n for n in prev_notes}
@@ -164,16 +183,24 @@ def init(
             stale_files.extend(p for p in candidates if p.exists())
             note.example_audio = ""
 
+    removed_stale_files = 0
     if stale_files:
-        removed = 0
         for p in stale_files:
             try:
                 p.unlink()
-                removed += 1
+                removed_stale_files += 1
             except OSError:
                 pass
-        rprint(f"  [yellow]⚠[/yellow] Removed {removed} stale example audio files")
+        rprint(
+            f"  [yellow]⚠[/yellow] Removed {removed_stale_files} stale audio files"
+        )
 
+    _report_init_summary(
+        notes=notes,
+        prev_by_hanzi=prev_by_hanzi,
+        restored_fields=restored if ENRICHED_PATH.exists() else 0,
+        removed_stale_files=removed_stale_files,
+    )
     _report_review_items(notes)
 
     save_notes(notes, ENRICHED_PATH)
@@ -225,6 +252,7 @@ def audio(
         generate_mandarin,
         generate_cantonese,
         generate_example_audio,
+        is_valid_audio_tag,
     )
 
     all_notes = load_notes(ENRICHED_PATH)
@@ -245,49 +273,117 @@ def audio(
     elif limit > 0:
         targets = all_notes[:limit]
 
-    rprint(f"[blue]Generating audio[/blue] for {len(targets)} notes ...")
+    pending: list[tuple[CharacterNote, list[str]]] = []
+    for note in targets:
+        tasks = _audio_tasks_for_note(note, force=force, is_valid_audio_tag=is_valid_audio_tag)
+        if tasks:
+            pending.append((note, tasks))
+
+    if not pending:
+        rprint(f"[green]✓[/green] Audio already up to date for {len(targets)} notes")
+        return
+
+    skipped = len(targets) - len(pending)
+    rprint(f"[blue]Audio[/blue] {len(pending)} notes need updates")
+    if skipped:
+        rprint(f"  [dim]{skipped} notes already had valid audio[/dim]")
+
     # Intentionally serial by default: Free (F0) TTS has low per-minute limits,
     # and bursty parallel requests are more likely to trigger 429 throttling.
     failures: list[str] = []
+    repaired = {"mandarin": 0, "cantonese": 0, "example": 0}
+    synced = {"mandarin": 0, "cantonese": 0, "example": 0}
+    changed_chars: list[str] = []
 
-    for i, note in enumerate(targets, 1):
-        rprint(f"  [{i}/{len(targets)}] {note.hanzi} ({note.keyword})")
+    progress = Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        TextColumn("[dim]{task.fields[current]}[/dim]"),
+        console=console,
+    )
 
-        try:
-            if note.pinyin:
-                note.mandarin_audio = generate_mandarin(
-                    note.hanzi,
-                    note.pinyin,
-                    force=force,
-                )
-            if note.jyutping:
-                note.cantonese_audio = generate_cantonese(
-                    note.hanzi,
-                    note.jyutping,
-                    force=force,
-                )
-            if note.example_word and note.example_pinyin:
-                note.example_audio = generate_example_audio(
-                    note.example_word,
-                    note.example_pinyin,
-                    force=force,
-                )
-        except TTSRateLimitError as e:
-            failures.append(f"{note.hanzi} ({note.keyword}): {e}")
-            rprint(f"    [yellow]⚠[/yellow] {e}")
-            if char or limit > 0 or start_rsh > 0:
-                updated = {n.hanzi: n for n in targets}
-                all_notes = [updated.get(n.hanzi, n) for n in all_notes]
-            save_notes(all_notes, ENRICHED_PATH)
-            rprint(
-                "[yellow]Stopped on Azure rate limit. Re-run the same audio command later.[/yellow]"
+    with progress:
+        task_id = progress.add_task(
+            "Audio",
+            total=len(pending),
+            current="Preparing...",
+        )
+
+        for i, (note, tasks) in enumerate(pending, 1):
+            note_changed = False
+            progress.update(
+                task_id,
+                current=(
+                    f"{note.hanzi} ({note.keyword}) · {_format_audio_task_labels(tasks)}"
+                ),
             )
-            raise typer.Exit(2)
-        except Exception as e:
-            failures.append(f"{note.hanzi} ({note.keyword}): {e}")
-            rprint(f"    [red]✗[/red] {e}")
-            if fail_fast:
-                raise
+
+            try:
+                if "mandarin" in tasks and note.pinyin:
+                    expected = _expected_mandarin_audio_tag(note)
+                    had_valid_audio = bool(expected and is_valid_audio_tag(expected))
+                    note.mandarin_audio = generate_mandarin(
+                        note.hanzi,
+                        note.pinyin,
+                        force=force,
+                    )
+                    repaired["mandarin"] += 0 if had_valid_audio and not force else 1
+                    synced["mandarin"] += 1 if had_valid_audio and not force else 0
+                    note_changed = True
+                if "cantonese" in tasks and note.jyutping:
+                    expected = _expected_cantonese_audio_tag(note)
+                    had_valid_audio = bool(expected and is_valid_audio_tag(expected))
+                    note.cantonese_audio = generate_cantonese(
+                        note.hanzi,
+                        note.jyutping,
+                        force=force,
+                    )
+                    repaired["cantonese"] += 0 if had_valid_audio and not force else 1
+                    synced["cantonese"] += 1 if had_valid_audio and not force else 0
+                    note_changed = True
+                if "example" in tasks and note.example_word and note.example_pinyin:
+                    expected = _expected_example_audio_tag(note)
+                    had_valid_audio = bool(expected and is_valid_audio_tag(expected))
+                    note.example_audio = generate_example_audio(
+                        note.example_word,
+                        note.example_pinyin,
+                        force=force,
+                    )
+                    repaired["example"] += 0 if had_valid_audio and not force else 1
+                    synced["example"] += 1 if had_valid_audio and not force else 0
+                    note_changed = True
+                if note_changed:
+                    changed_chars.append(note.hanzi)
+                progress.advance(task_id)
+            except TTSRateLimitError as e:
+                progress.stop()
+                failures.append(f"{note.hanzi} ({note.keyword}): {e}")
+                rprint(f"[yellow]⚠[/yellow] {e}")
+                if char or limit > 0 or start_rsh > 0:
+                    updated = {n.hanzi: n for n in targets}
+                    all_notes = [updated.get(n.hanzi, n) for n in all_notes]
+                save_notes(all_notes, ENRICHED_PATH)
+                _report_audio_summary(
+                    processed=i - 1,
+                    total=len(pending),
+                    repaired=repaired,
+                    synced=synced,
+                    changed_chars=changed_chars,
+                )
+                rprint(
+                    f"[yellow]Stopped on Azure rate limit at {note.hanzi} (RSH #{_heisig_index(note) or '?' }). Re-run the same audio command later.[/yellow]"
+                )
+                raise typer.Exit(2)
+            except Exception as e:
+                failures.append(f"{note.hanzi} ({note.keyword}): {e}")
+                rprint(f"[red]✗[/red] {note.hanzi} ({note.keyword}): {e}")
+                progress.advance(task_id)
+                if fail_fast:
+                    raise
 
     # Merge filtered results back into the full list
     if char or limit > 0 or start_rsh > 0:
@@ -295,7 +391,14 @@ def audio(
         all_notes = [updated.get(n.hanzi, n) for n in all_notes]
 
     save_notes(all_notes, ENRICHED_PATH)
-    rprint(f"[green]✓[/green] Audio done for {len(targets)} notes")
+    _report_audio_summary(
+        processed=len(pending),
+        total=len(pending),
+        repaired=repaired,
+        synced=synced,
+        changed_chars=changed_chars,
+    )
+    rprint(f"[green]✓[/green] Audio done")
     if failures:
         rprint(
             f"[yellow]⚠ {len(failures)} notes failed during audio generation[/yellow]"
@@ -734,6 +837,120 @@ def _report_review_items(notes: list[CharacterNote]) -> None:
     if len(review) > 15:
         rprint(f"  … and {len(review) - 15} more")
     rprint("[dim]Run 'anki-chinese review' to see details and verify them.[/dim]")
+
+
+def _expected_mandarin_audio_tag(note: CharacterNote) -> str:
+    if not note.hanzi or not note.pinyin:
+        return ""
+    return f"[sound:cmn_{note.hanzi}_{note.pinyin.replace(' ', '_')}.mp3]"
+
+
+def _expected_cantonese_audio_tag(note: CharacterNote) -> str:
+    if not note.hanzi or not note.jyutping:
+        return ""
+    return f"[sound:yue_{note.hanzi}_{note.jyutping.replace(' ', '_')}.mp3]"
+
+
+def _expected_example_audio_tag(note: CharacterNote) -> str:
+    if not note.example_word or not note.example_pinyin:
+        return ""
+    safe_pinyin = note.example_pinyin.replace(" ", "_")
+    return f"[sound:cmn_{note.example_word}_{safe_pinyin}.mp3]"
+
+
+def _audio_tasks_for_note(note: CharacterNote, *, force: bool, is_valid_audio_tag) -> list[str]:  # type: ignore[no-untyped-def]
+    tasks: list[str] = []
+    mandarin_tag = _expected_mandarin_audio_tag(note)
+    if mandarin_tag and (force or note.mandarin_audio != mandarin_tag or not is_valid_audio_tag(mandarin_tag)):
+        tasks.append("mandarin")
+
+    cantonese_tag = _expected_cantonese_audio_tag(note)
+    if cantonese_tag and (force or note.cantonese_audio != cantonese_tag or not is_valid_audio_tag(cantonese_tag)):
+        tasks.append("cantonese")
+
+    example_tag = _expected_example_audio_tag(note)
+    if example_tag and (force or note.example_audio != example_tag or not is_valid_audio_tag(example_tag)):
+        tasks.append("example")
+
+    return tasks
+
+
+def _report_init_summary(
+    *,
+    notes: list[CharacterNote],
+    prev_by_hanzi: dict[str, CharacterNote],
+    restored_fields: int,
+    removed_stale_files: int,
+) -> None:
+    prev_hanzi = set(prev_by_hanzi)
+    added = [note.hanzi for note in notes if note.hanzi not in prev_hanzi]
+    removed = sorted(prev_hanzi - {note.hanzi for note in notes})
+    changed_existing = 0
+    tracked_fields = (
+        "keyword",
+        "pinyin",
+        "jyutping",
+        "example_word",
+        "example_meaning",
+        "example_pinyin",
+        "mandarin_audio",
+        "cantonese_audio",
+        "example_audio",
+        "mnemonic",
+    )
+    for note in notes:
+        prev = prev_by_hanzi.get(note.hanzi)
+        if prev and any(getattr(note, field) != getattr(prev, field) for field in tracked_fields):
+            changed_existing += 1
+
+    rprint("\n[bold]Init Summary[/bold]")
+    rprint(f"  [green]•[/green] {len(notes)} notes ready")
+    if added:
+        preview = ", ".join(added[:12])
+        suffix = "" if len(added) <= 12 else f" … +{len(added) - 12} more"
+        rprint(f"  [green]•[/green] {len(added)} new characters: {preview}{suffix}")
+    if changed_existing:
+        rprint(f"  [green]•[/green] {changed_existing} existing characters updated")
+    if removed:
+        preview = ", ".join(removed[:12])
+        suffix = "" if len(removed) <= 12 else f" … +{len(removed) - 12} more"
+        rprint(f"  [yellow]•[/yellow] {len(removed)} characters removed: {preview}{suffix}")
+    if restored_fields:
+        rprint(f"  [green]•[/green] {restored_fields} cached fields reused")
+    if removed_stale_files:
+        rprint(f"  [yellow]•[/yellow] {removed_stale_files} stale audio files removed")
+
+
+def _report_audio_summary(
+    *,
+    processed: int,
+    total: int,
+    repaired: dict[str, int],
+    synced: dict[str, int],
+    changed_chars: list[str],
+) -> None:
+    repaired_total = sum(repaired.values())
+    synced_total = sum(synced.values())
+    rprint("\n[bold]Audio Summary[/bold]")
+    rprint(f"  [green]•[/green] {processed}/{total} notes processed")
+    if repaired_total or synced_total:
+        if repaired_total:
+            rprint(f"  [green]•[/green] {repaired_total} new audio files generated")
+        if synced_total:
+            rprint(f"  [green]•[/green] {synced_total} existing audio files linked to notes")
+
+        table = Table(show_header=True, box=None, padding=(0, 2))
+        table.add_column("Audio Type")
+        table.add_column("Generated", justify="right")
+        table.add_column("Linked Existing", justify="right")
+        table.add_row("Mandarin", str(repaired["mandarin"]), str(synced["mandarin"]))
+        table.add_row("Cantonese", str(repaired["cantonese"]), str(synced["cantonese"]))
+        table.add_row("Example", str(repaired["example"]), str(synced["example"]))
+        console.print(table)
+    if changed_chars:
+        preview = ", ".join(changed_chars[:12])
+        suffix = "" if len(changed_chars) <= 12 else f" … +{len(changed_chars) - 12} more"
+        rprint(f"  [green]•[/green] Updated characters: {preview}{suffix}")
 
 
 if __name__ == "__main__":
