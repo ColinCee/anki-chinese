@@ -27,6 +27,7 @@ from .files import (
     preview_mandarin_filename,
 )
 from .provider import ProviderCapabilities
+from .rate_limit import RateLimiter, SlidingWindowRateLimiter
 from .retry import RetryPolicy
 
 load_dotenv()
@@ -37,8 +38,9 @@ DEFAULT_MINIMAX_API_HOST = "https://api.minimax.io"
 DEFAULT_MINIMAX_MODEL = "speech-2.8-turbo"
 DEFAULT_MINIMAX_MANDARIN_VOICE_ID = "Chinese (Mandarin)_Cute_Spirit"
 DEFAULT_MINIMAX_CANTONESE_VOICE_ID = "Cantonese_GentleLady"
+DEFAULT_MINIMAX_MAX_REQUESTS_PER_WINDOW = 60
+DEFAULT_MINIMAX_RATE_LIMIT_WINDOW_SECONDS = 60.0
 DEFAULT_MINIMAX_RETRY_POLICY = RetryPolicy(
-    request_interval=1.1,
     rate_limit_retry_delay=15.0,
     max_attempts=5,
 )
@@ -203,11 +205,15 @@ class MiniMaxTTSProvider:
         generated_audio_dir: Path = GENERATED_AUDIO_DIR,
         settings: MiniMaxSettings | None = None,
         retry_policy: RetryPolicy = DEFAULT_MINIMAX_RETRY_POLICY,
+        rate_limiter: RateLimiter | None = None,
     ) -> None:
         self.generated_audio_dir = generated_audio_dir
         self.settings = settings or MiniMaxSettings.from_env()
         self.retry_policy = retry_policy
-        self._last_request_started_at: float | None = None
+        self.rate_limiter = rate_limiter or SlidingWindowRateLimiter(
+            max_requests=DEFAULT_MINIMAX_MAX_REQUESTS_PER_WINDOW,
+            window_seconds=DEFAULT_MINIMAX_RATE_LIMIT_WINDOW_SECONDS,
+        )
 
     def capabilities(self) -> ProviderCapabilities:
         return ProviderCapabilities(
@@ -309,8 +315,7 @@ class MiniMaxTTSProvider:
                 time.sleep(self.retry_policy.rate_limit_retry_delay)
 
             _cleanup_partial_audio(output_path)
-            self._wait_for_request_slot()
-            self._last_request_started_at = time.monotonic()
+            self.rate_limiter.acquire()
 
             try:
                 response = _post_t2a_request(
@@ -342,14 +347,6 @@ class MiniMaxTTSProvider:
             "MiniMax rate limited audio generation "
             f"after {self.retry_policy.max_attempts} attempts"
         )
-
-    def _wait_for_request_slot(self) -> None:
-        if self._last_request_started_at is None:
-            return
-        elapsed = time.monotonic() - self._last_request_started_at
-        remaining = self.retry_policy.request_interval - elapsed
-        if remaining > 0:
-            time.sleep(remaining)
 
     def _extract_audio_bytes(self, response: dict[str, Any]) -> bytes:
         status_code, status_message = _extract_status_details(response)

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from anki_chinese.audio import minimax as tts
+from anki_chinese.audio.rate_limit import NoOpRateLimiter
 from anki_chinese.audio.retry import RetryPolicy
 
 
@@ -62,7 +63,8 @@ def test_generate_mandarin_posts_expected_request_and_writes_audio(
             cantonese_voice_id="cantonese-voice",
             timeout_seconds=5.0,
         ),
-        retry_policy=RetryPolicy(request_interval=0.0, rate_limit_retry_delay=0.0, max_attempts=1),
+        retry_policy=RetryPolicy(rate_limit_retry_delay=0.0, max_attempts=1),
+        rate_limiter=NoOpRateLimiter(),
     )
     captured: dict[str, object] = {}
 
@@ -123,7 +125,8 @@ def test_generate_cantonese_uses_yue_language_boost(
             mandarin_voice_id="mandarin-voice",
             cantonese_voice_id="cantonese-voice",
         ),
-        retry_policy=RetryPolicy(request_interval=0.0, rate_limit_retry_delay=0.0, max_attempts=1),
+        retry_policy=RetryPolicy(rate_limit_retry_delay=0.0, max_attempts=1),
+        rate_limiter=NoOpRateLimiter(),
     )
     captured: dict[str, object] = {}
 
@@ -156,7 +159,8 @@ def test_generate_plain_mandarin_uses_preview_filename(
 ) -> None:
     provider = tts.MiniMaxTTSProvider(
         generated_audio_dir=tmp_path,
-        retry_policy=RetryPolicy(request_interval=0.0, rate_limit_retry_delay=0.0, max_attempts=1),
+        retry_policy=RetryPolicy(rate_limit_retry_delay=0.0, max_attempts=1),
+        rate_limiter=NoOpRateLimiter(),
     )
 
     def fake_post_t2a_request(

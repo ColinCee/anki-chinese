@@ -12,9 +12,13 @@ from .files import (
     preview_mandarin_filename,
 )
 from .provider import ProviderCapabilities, TTSProvider
+from .rate_limit import NoOpRateLimiter, RateLimiter, SlidingWindowRateLimiter
 
 __all__ = [
+    "NoOpRateLimiter",
     "ProviderCapabilities",
+    "RateLimiter",
+    "SlidingWindowRateLimiter",
     "TTSProvider",
     "TTSConfigurationError",
     "TTSRateLimitError",
