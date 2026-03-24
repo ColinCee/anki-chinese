@@ -46,6 +46,28 @@ Important:
 
 - Do not change `MODEL_ID` or `DECK_ID` after first import, or Anki may create duplicates.
 
+## TTS provider notes
+
+Today the project still uses Azure, but the code is now split so provider-specific logic lives in:
+
+- `src/anki_chinese/audio/provider.py`
+- `src/anki_chinese/audio/azure.py`
+- `src/anki_chinese/audio/retry.py`
+- `src/anki_chinese/audio/files.py`
+
+That means future provider changes should mostly stay inside `src/anki_chinese/audio/` instead of leaking across the CLI and note pipeline.
+
+Shortlist for replacing Azure:
+
+- **Amazon Polly** — best current fit for Mandarin + Cantonese plus explicit pronunciation control
+- **Google Cloud Text-to-Speech** — strong API maturity and Mandarin quality; Cantonese still needs direct evaluation for this deck
+- **ElevenLabs** — promising naturalness, but should be tested carefully on exact-pronunciation Chinese study content before adopting it
+
+For now, voice names still come from `src/anki_chinese/config.py`:
+
+- `MANDARIN_VOICE`
+- `CANTONESE_VOICE`
+
 ## Add example words
 
 Edit `data/example_words.json`:

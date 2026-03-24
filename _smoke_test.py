@@ -22,6 +22,9 @@ cedict = build_index(cedict_path)
 print(f"HSK index: {len(hsk)} chars  |  CC-CEDICT index: {len(cedict)} chars")
 print()
 for ch in ["昭", "刃", "丁", "乙", "孔", "九"]:
-    h = hsk.get(ch, ("—", ""))
-    c = cedict.get(ch, ("—", ""))
-    print(f"  {ch}:  HSK={h[0]:<8}  CEDICT={c[0]:<8}  ({c[1][:45]})")
+    h_entries = hsk.get(ch, [])
+    c_entries = cedict.get(ch, [])
+    h_word = h_entries[0][0] if h_entries else "—"
+    c_word = c_entries[0][0] if c_entries else "—"
+    c_meaning = c_entries[0][1] if c_entries else ""
+    print(f"  {ch}:  HSK={h_word:<8}  CEDICT={c_word:<8}  ({c_meaning[:45]})")

@@ -20,11 +20,23 @@ Key columns used:
 
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 
 # Module-level cache: word -> frequency (higher = more common)
 _freq_table: dict[str, float] | None = None
 _loaded_path: Path | None = None
+
+
+def _coerce_frequency(value: object) -> float:
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float, Decimal, str)):
+        try:
+            return float(value)
+        except ValueError:
+            return 0.0
+    return 0.0
 
 
 def _load(path: Path) -> dict[str, float]:
@@ -68,10 +80,7 @@ def _load(path: Path) -> dict[str, float]:
         freq = row[freq_col]
         if not isinstance(word, str) or not word:
             continue
-        try:
-            table[word] = float(freq) if freq is not None else 0.0
-        except (TypeError, ValueError):
-            table[word] = 0.0
+        table[word] = _coerce_frequency(freq)
 
     wb.close()
     return table

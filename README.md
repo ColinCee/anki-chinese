@@ -28,6 +28,15 @@ git clone <repo-url> && cd anki-chinese
 uv sync
 ```
 
+For development checks:
+
+```bash
+uv sync --group dev
+uv run pyright
+uv run pytest
+uv run python _smoke_test.py
+```
+
 ### Minimal run (no audio)
 
 ```bash
@@ -70,6 +79,29 @@ uv run anki-chinese audio
 uv run anki-chinese build
 ```
 
+## Current code layout
+
+The repo is now organized around a few concrete feature areas instead of one very large CLI file:
+
+- `src/anki_chinese/cli/` — the Typer app, one file per command, plus shared Rich UI helpers
+- `src/anki_chinese/notes/` — note model, parsing, enrichment, persistence, and reporting helpers
+- `src/anki_chinese/audio/` — audio tags/files, Azure provider code, retry policy, and provider interface
+- `src/anki_chinese/data_sources/` — pinyin/jyutping/example-word lookup data and cached lookup service
+- `src/anki_chinese/deck.py` — Anki package creation
+
+The older `models.py` and `pipeline/` modules still exist as compatibility wrappers, but the main implementation now lives in the feature modules above.
+
+## Validation
+
+Current validation commands:
+
+```bash
+uv run pyright
+uv run pytest
+uv run python _smoke_test.py
+uv run anki-chinese --help
+```
+
 ## Azure TTS setup (optional)
 
 1. Create Azure Speech resource.
@@ -80,6 +112,18 @@ uv run anki-chinese build
 AZURE_SPEECH_KEY=your-key
 AZURE_SPEECH_REGION=eastus
 ```
+
+## TTS roadmap
+
+Azure is still the current provider, but it now sits behind a provider boundary in `src/anki_chinese/audio/provider.py` and `src/anki_chinese/audio/azure.py`. That makes a future swap much smaller than before.
+
+Current shortlist for a future pivot:
+
+- **Amazon Polly** — strongest near-term candidate for this project because it supports Mandarin and Cantonese and has mature SSML + lexicon support
+- **Google Cloud Text-to-Speech** — strong Mandarin/API maturity option; Cantonese fit still needs direct sample testing for this workflow
+- **ElevenLabs** — worth evaluating for naturalness, but should be proven on exact-pronunciation Mandarin/Cantonese cases before trusting it for study audio
+
+The next provider decision should be based on side-by-side samples from this repo's real characters and example words, not just marketing claims.
 
 ## Docs
 

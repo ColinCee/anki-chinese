@@ -12,56 +12,14 @@ Lookup chain for example words:
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from .. import config
+from ..notes.pronunciation import normalize_pinyin, reading_matches
+from .cache import MemoizedLoader
 from ._jyutping import lookup_jyutping, lookup_jyutping_word
 from ._overrides import load_example_overrides
 from ._pinyin import lookup_pinyin, lookup_pinyin_word
-
-# Module-level lazy indexes — built once on first use
-_hsk_index: dict[str, list[tuple[str, str, str]]] | None = None
-_cedict_index: dict[str, list[tuple[str, str, str]]] | None = None
-
-
-def _get_hsk_index() -> dict[str, list[tuple[str, str, str]]]:
-    global _hsk_index
-    if _hsk_index is None:
-        from . import _hsk
-
-        _hsk_index = _hsk.build_index(config.HSK_VOCAB_PATH)
-    return _hsk_index
-
-
-def _get_cedict_index() -> dict[str, list[tuple[str, str, str]]]:
-    global _cedict_index
-    if _cedict_index is None:
-        from . import _cedict
-
-        _cedict_index = _cedict.build_index(config.CEDICT_PATH, config.SUBTLEX_PATH)
-    return _cedict_index
-
-
-def _normalize_pinyin(text: str) -> str:
-    return " ".join(text.strip().lower().split())
-
-
-def _reading_matches(
-    hanzi: str,
-    word: str,
-    word_pinyin: str,
-    preferred_pinyin: str,
-) -> bool:
-    preferred = _normalize_pinyin(preferred_pinyin)
-    if not preferred or hanzi not in word:
-        return True
-
-    syllables = word_pinyin.split()
-    if len(syllables) != len(word):
-        return False
-
-    return any(
-        syllables[index] == preferred for index, ch in enumerate(word) if ch == hanzi
-    )
-
 
 def _pick_example(
     candidates: list[tuple[str, str, str]],
@@ -73,50 +31,96 @@ def _pick_example(
         return "", "", ""
 
     for word, meaning, pinyin in candidates:
-        if _reading_matches(hanzi, word, pinyin, preferred_pinyin):
+        if reading_matches(hanzi, word, pinyin, preferred_pinyin):
             return word, meaning, pinyin
 
     return candidates[0]
 
 
+class LookupService:
+    """Owns cached indexes and lookup paths for example selection."""
+
+    def __init__(
+        self,
+        *,
+        example_words_path: Path,
+        hsk_vocab_path: Path,
+        cedict_path: Path,
+        subtlex_path: Path | None,
+    ) -> None:
+        self.example_words_path = example_words_path
+        self.hsk_vocab_path = hsk_vocab_path
+        self.cedict_path = cedict_path
+        self.subtlex_path = subtlex_path
+        self._hsk_indexes = MemoizedLoader[Path, dict[str, list[tuple[str, str, str]]]]()
+        self._cedict_indexes = MemoizedLoader[
+            tuple[Path, Path | None], dict[str, list[tuple[str, str, str]]]
+        ]()
+
+    def _get_hsk_index(self) -> dict[str, list[tuple[str, str, str]]]:
+        from . import _hsk
+
+        return self._hsk_indexes.get_or_load(
+            self.hsk_vocab_path,
+            lambda: _hsk.build_index(self.hsk_vocab_path),
+        )
+
+    def _get_cedict_index(self) -> dict[str, list[tuple[str, str, str]]]:
+        from . import _cedict
+
+        cache_key = (self.cedict_path, self.subtlex_path)
+        return self._cedict_indexes.get_or_load(
+            cache_key,
+            lambda: _cedict.build_index(self.cedict_path, self.subtlex_path),
+        )
+
+    def lookup_example(
+        self,
+        hanzi: str,
+        preferred_pinyin: str = "",
+    ) -> tuple[str, str, str]:
+        overrides = load_example_overrides(self.example_words_path)
+        entry = overrides.get(hanzi, {})
+        word = entry.get("word", "")
+        if word:
+            pinyin = entry.get("pinyin", "") or lookup_pinyin_word(word)
+            return word, entry.get("meaning", ""), normalize_pinyin(pinyin)
+
+        hsk_word, hsk_meaning, hsk_pinyin = _pick_example(
+            self._get_hsk_index().get(hanzi, []),
+            hanzi=hanzi,
+            preferred_pinyin=preferred_pinyin,
+        )
+        if hsk_word:
+            return hsk_word, hsk_meaning, hsk_pinyin
+
+        cedict_word, cedict_meaning, cedict_pinyin = _pick_example(
+            self._get_cedict_index().get(hanzi, []),
+            hanzi=hanzi,
+            preferred_pinyin=preferred_pinyin,
+        )
+        if cedict_word:
+            return cedict_word, cedict_meaning, cedict_pinyin
+
+        return "", "", ""
+
+
+DEFAULT_LOOKUP_SERVICE = LookupService(
+    example_words_path=config.EXAMPLE_WORDS_PATH,
+    hsk_vocab_path=config.HSK_VOCAB_PATH,
+    cedict_path=config.CEDICT_PATH,
+    subtlex_path=config.SUBTLEX_PATH,
+)
+
+
 def lookup_example(hanzi: str, preferred_pinyin: str = "") -> tuple[str, str, str]:
-    """Return (example_word, example_meaning, example_pinyin) for *hanzi*.
-
-    Consults sources in priority order:
-        1. Manual overrides (example_words.json) — always wins
-        2. HSK 3.0 vocabulary — best 2-char word by frequency rank
-        3. CC-CEDICT + optional SUBTLEX-CH scoring
-    """
-    # 1. Manual overrides
-    overrides = load_example_overrides(config.EXAMPLE_WORDS_PATH)
-    entry = overrides.get(hanzi, {})
-    word = entry.get("word", "")
-    if word:
-        pinyin = entry.get("pinyin", "") or lookup_pinyin_word(word)
-        return word, entry.get("meaning", ""), _normalize_pinyin(pinyin)
-
-    # 2. HSK
-    hsk_word, hsk_meaning, hsk_pinyin = _pick_example(
-        _get_hsk_index().get(hanzi, []),
-        hanzi=hanzi,
-        preferred_pinyin=preferred_pinyin,
-    )
-    if hsk_word:
-        return hsk_word, hsk_meaning, hsk_pinyin
-
-    # 3. CC-CEDICT (with optional SUBTLEX scoring)
-    cedict_word, cedict_meaning, cedict_pinyin = _pick_example(
-        _get_cedict_index().get(hanzi, []),
-        hanzi=hanzi,
-        preferred_pinyin=preferred_pinyin,
-    )
-    if cedict_word:
-        return cedict_word, cedict_meaning, cedict_pinyin
-
-    return "", "", ""
+    """Return (example_word, example_meaning, example_pinyin) for *hanzi*."""
+    return DEFAULT_LOOKUP_SERVICE.lookup_example(hanzi, preferred_pinyin)
 
 
 __all__ = [
+    "DEFAULT_LOOKUP_SERVICE",
+    "LookupService",
     "lookup_example",
     "lookup_jyutping",
     "lookup_jyutping_word",
