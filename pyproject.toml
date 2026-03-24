@@ -29,7 +29,7 @@ packages = ["src/anki_chinese"]
 [tool.pyright]
 pythonVersion = "3.13"
 typeCheckingMode = "standard"
-include = ["src", "main.py", "_smoke_test.py"]
+include = ["src"]
 venvPath = "."
 venv = ".venv"
 

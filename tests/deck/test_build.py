@@ -2,7 +2,7 @@ from pathlib import Path
 
 from anki_chinese.deck import build_deck
 import anki_chinese.deck as deck_module
-from anki_chinese.models import CharacterNote
+from anki_chinese.notes import CharacterNote
 
 
 def test_build_deck_writes_apkg_file(tmp_path: Path, monkeypatch) -> None:

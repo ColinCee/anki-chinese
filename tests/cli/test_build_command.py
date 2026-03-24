@@ -1,0 +1,74 @@
+from importlib import import_module
+
+from anki_chinese.notes import CharacterNote
+
+
+build_module = import_module("anki_chinese.cli.build")
+
+
+def test_run_build_full_passes_options_through_init_audio_and_build(monkeypatch, runtime_factory) -> None:
+    runtime = runtime_factory()
+    init_notes = [CharacterNote(hanzi='一', keyword='one', pinyin='yī')]
+    audio_notes = [CharacterNote(hanzi='一', keyword='one', pinyin='yī', mandarin_audio='[sound:cmn_一_yī.mp3]')]
+    calls: dict[str, object] = {}
+
+    def fake_init(runtime_arg, input_file, *, skip_examples=False):
+        calls['init'] = (runtime_arg, input_file, skip_examples)
+        return init_notes
+
+    def fake_audio(runtime_arg, *, all_notes=None, limit=0, start_rsh=0, force=False, fail_fast=False):
+        calls['audio'] = (runtime_arg, all_notes, limit, start_rsh, force, fail_fast)
+        return audio_notes
+
+    def fake_build(notes):
+        calls['build'] = notes
+        output_path = runtime.source_deck_path.parent / 'deck.apkg'
+        output_path.write_bytes(b'deck')
+        return output_path
+
+    monkeypatch.setattr(build_module, 'run_init', fake_init)
+    monkeypatch.setattr(build_module, 'run_audio', fake_audio)
+    runtime.build_deck = fake_build
+
+    result = build_module.run_build(
+        runtime,
+        full=True,
+        skip_examples=True,
+        audio_limit=3,
+        audio_start_rsh=120,
+    )
+
+    assert result == runtime.source_deck_path.parent / 'deck.apkg'
+    assert calls['init'] == (runtime, runtime.source_deck_path, True)
+    assert calls['audio'] == (runtime, init_notes, 3, 120, False, False)
+    assert calls['build'] == audio_notes
+
+
+def test_run_build_full_skips_audio_when_requested(monkeypatch, runtime_factory) -> None:
+    runtime = runtime_factory()
+    init_notes = [CharacterNote(hanzi='一', keyword='one', pinyin='yī')]
+    calls: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        build_module,
+        'run_init',
+        lambda runtime_arg, input_file, *, skip_examples=False: init_notes,
+    )
+
+    def fail_audio(*args, **kwargs):
+        raise AssertionError('run_audio should not be called when --skip-audio is set')
+
+    monkeypatch.setattr(build_module, 'run_audio', fail_audio)
+
+    def fake_build(notes):
+        calls['build'] = notes
+        output_path = runtime.source_deck_path.parent / 'deck.apkg'
+        output_path.write_bytes(b'deck')
+        return output_path
+
+    runtime.build_deck = fake_build
+
+    result = build_module.run_build(runtime, full=True, skip_audio=True)
+
+    assert result == runtime.source_deck_path.parent / 'deck.apkg'
+    assert calls['build'] == init_notes

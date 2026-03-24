@@ -1,4 +1,4 @@
-# Python-generated files
+# Python cache and build artifacts
 __pycache__/
 *.py[oc]
 build/
@@ -6,15 +6,17 @@ dist/
 wheels/
 *.egg-info
 
-# Virtual environments
+# Virtual environment
 .venv
 
-# Project-specific
+# Local configuration
 .env
+
+# Generated runtime artifacts
 output/*.apkg
 media/generated/
 media/test/
- 
-# Downloaded HSK vocabulary cache
+
+# Derived data and cache files
 data/hsk_complete.min.json
 data/enriched.json

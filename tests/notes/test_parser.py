@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from anki_chinese.pipeline.parser import parse_deck_export
+from anki_chinese.notes import parse_deck_export
 
 
 def _write_export(path: Path, rows: list[list[str]], *, headers: list[str] | None = None) -> None:

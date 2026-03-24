@@ -31,5 +31,7 @@ jobs:
       - name: Run tests
         run: uv run pytest
 
-      - name: Run smoke test
-        run: uv run python _smoke_test.py
+      - name: Verify CLI entrypoints
+        run: |
+          uv run anki-chinese --help
+          uv run python -m anki_chinese.cli --help

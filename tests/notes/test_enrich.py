@@ -1,5 +1,5 @@
-from anki_chinese.models import CharacterNote
-from anki_chinese.notes import enrich as enrich_module
+from anki_chinese.notes import CharacterNote
+import anki_chinese.notes.enrich as enrich_module
 
 
 def test_enrich_uses_example_reading_for_polyphonic_character(

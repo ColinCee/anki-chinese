@@ -1,5 +1,7 @@
 # Customization Guide
 
+This document only covers non-default tweaks. Normal install, workflow, repo layout, and validation all live in `README.md`.
+
 ## Override specific character data
 
 Edit `data/overrides.json` to force fields per character:
@@ -55,7 +57,7 @@ Today the project still uses Azure, but the code is now split so provider-specif
 - `src/anki_chinese/audio/retry.py`
 - `src/anki_chinese/audio/files.py`
 
-That means future provider changes should mostly stay inside `src/anki_chinese/audio/` instead of leaking across the CLI and note pipeline.
+That means future provider changes should mostly stay inside `src/anki_chinese/audio/` instead of leaking across the CLI and note logic.
 
 Shortlist for replacing Azure:
 
@@ -83,8 +85,8 @@ Then rerun `init`.
 
 Notes:
 
-- If a character has no manual example, the pipeline now tries to auto-pick a common 2-character word.
+- If a character has no manual example, the tool tries to auto-pick a common 2-character word.
 - Manual entries in `data/example_words.json` always override auto-generated examples.
-- If `pinyin` is omitted for a manual example, the pipeline derives it automatically before TTS.
+- If `pinyin` is omitted for a manual example, the tool derives it automatically before TTS.
 - Auto-pick policy is frequency-based from Complete HSK Vocabulary (`complete.min.json`): lower `frequency` rank means more common.
 - Listening front shows the example only when `ExampleWord` is present (no placeholder when missing).
