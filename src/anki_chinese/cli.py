@@ -40,9 +40,7 @@ def _heisig_index(note: CharacterNote) -> int | None:
 
 
 def _filter_from_rsh(notes: list[CharacterNote], start_rsh: int) -> list[CharacterNote]:
-    return [
-        note for note in notes if (_heisig_index(note) or 0) >= start_rsh
-    ]
+    return [note for note in notes if (_heisig_index(note) or 0) >= start_rsh]
 
 
 # ── init ──────────────────────────────────────────────────────────────
@@ -66,6 +64,7 @@ def init(
     from .pipeline.parser import parse_deck_export
     from .models import load_notes, save_notes
     from .pipeline.enrich import enrich_notes
+    from .pipeline.tts import example_audio_filename, is_valid_audio_tag
 
     # Step 1: parse
     rprint(f"[blue]Parsing[/blue] {input_file} ...")
@@ -95,8 +94,11 @@ def init(
                 if field in {"example_pinyin", "example_audio"}:
                     if not note.example_word or note.example_word != prev.example_word:
                         continue
-                if not getattr(note, field) and getattr(prev, field):
-                    setattr(note, field, getattr(prev, field))
+                prev_value = getattr(prev, field)
+                if not getattr(note, field) and prev_value:
+                    if field.endswith("_audio") and not is_valid_audio_tag(prev_value):
+                        continue
+                    setattr(note, field, prev_value)
                     restored += 1
         if restored:
             rprint(f"  [green]✓[/green] Restored {restored} fields from previous data")
@@ -106,8 +108,6 @@ def init(
     notes = enrich_notes(notes, skip_examples=skip_examples)
 
     # Step 4: clear stale audio when pronunciation or example usage changed
-    from .pipeline.tts import example_audio_filename
-
     stale_files: list[Path] = []
     for note in notes:
         expected_mandarin_audio = (
@@ -116,6 +116,12 @@ def init(
             else ""
         )
         if note.mandarin_audio and note.mandarin_audio != expected_mandarin_audio:
+            old_file = note.mandarin_audio.replace("[sound:", "").rstrip("]")
+            stale_files.extend(
+                p for p in [GENERATED_MEDIA_DIR / old_file] if p.exists()
+            )
+            note.mandarin_audio = ""
+        elif note.mandarin_audio and not is_valid_audio_tag(note.mandarin_audio):
             old_file = note.mandarin_audio.replace("[sound:", "").rstrip("]")
             stale_files.extend(
                 p for p in [GENERATED_MEDIA_DIR / old_file] if p.exists()
@@ -133,6 +139,12 @@ def init(
                 p for p in [GENERATED_MEDIA_DIR / old_file] if p.exists()
             )
             note.cantonese_audio = ""
+        elif note.cantonese_audio and not is_valid_audio_tag(note.cantonese_audio):
+            old_file = note.cantonese_audio.replace("[sound:", "").rstrip("]")
+            stale_files.extend(
+                p for p in [GENERATED_MEDIA_DIR / old_file] if p.exists()
+            )
+            note.cantonese_audio = ""
 
         expected_audio = (
             f"[sound:{example_audio_filename(note.example_word, note.example_pinyin)}]"
@@ -142,6 +154,11 @@ def init(
         if note.example_audio and note.example_audio != expected_audio:
             # Audio was for a different word — remove the reference
             # and clean up the orphaned file
+            old_file = note.example_audio.replace("[sound:", "").rstrip("]")
+            candidates = [GENERATED_MEDIA_DIR / old_file]
+            stale_files.extend(p for p in candidates if p.exists())
+            note.example_audio = ""
+        elif note.example_audio and not is_valid_audio_tag(note.example_audio):
             old_file = note.example_audio.replace("[sound:", "").rstrip("]")
             candidates = [GENERATED_MEDIA_DIR / old_file]
             stale_files.extend(p for p in candidates if p.exists())
@@ -349,9 +366,13 @@ def build(
                 generate_example_audio,
             )
 
-            targets = _filter_from_rsh(notes, audio_start_rsh) if audio_start_rsh else notes
+            targets = (
+                _filter_from_rsh(notes, audio_start_rsh) if audio_start_rsh else notes
+            )
             if audio_start_rsh and not targets:
-                rprint(f"  [red]✗[/red] No notes found at or after RSH #{audio_start_rsh}")
+                rprint(
+                    f"  [red]✗[/red] No notes found at or after RSH #{audio_start_rsh}"
+                )
                 raise typer.Exit(1)
             if audio_limit:
                 targets = targets[:audio_limit]

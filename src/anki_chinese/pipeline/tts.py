@@ -157,6 +157,8 @@ def _generate_audio(ssml: str, output_path: Path) -> bool:
     import azure.cognitiveservices.speech as speechsdk
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_path.exists() and output_path.stat().st_size == 0:
+        output_path.unlink()
     time.sleep(_REQUEST_INTERVAL)
 
     config = _get_speech_config()
@@ -168,23 +170,46 @@ def _generate_audio(ssml: str, output_path: Path) -> bool:
         speech_config=config, audio_config=audio_config
     )
 
-    result = synthesizer.speak_ssml_async(ssml).get()  # type: ignore[union-attr]
+    try:
+        result = synthesizer.speak_ssml_async(ssml).get()  # type: ignore[union-attr]
+    except Exception:
+        if output_path.exists() and output_path.stat().st_size == 0:
+            output_path.unlink()
+        raise
 
     if result is None:
+        if output_path.exists() and output_path.stat().st_size == 0:
+            output_path.unlink()
         raise TTSError(f"TTS failed for {output_path.name}: no result returned")
 
     if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+        if not _is_valid_audio(output_path):
+            if output_path.exists() and output_path.stat().st_size == 0:
+                output_path.unlink()
+            raise TTSError(f"TTS did not create audio for {output_path.name}")
         return True
 
     if result.reason == speechsdk.ResultReason.Canceled:
         details = result.cancellation_details
         msg = f"TTS failed for {output_path.name}: {details.reason} — {details.error_details}"
         error_details = details.error_details or ""
+        if output_path.exists() and output_path.stat().st_size == 0:
+            output_path.unlink()
         if "429" in error_details:
             raise TTSRateLimitError(msg)
         raise TTSError(msg)
 
+    if output_path.exists() and output_path.stat().st_size == 0:
+        output_path.unlink()
     raise TTSError(f"TTS failed for {output_path.name}: unexpected result")
+
+
+def is_valid_audio_tag(tag: str) -> bool:
+    """Return True if an Anki [sound:...] tag points to a non-empty local file."""
+    if not tag.startswith("[sound:") or not tag.endswith("]"):
+        return False
+    filename = tag.replace("[sound:", "", 1).rstrip("]")
+    return _is_valid_audio(GENERATED_MEDIA_DIR / filename)
 
 
 def _is_valid_audio(path: Path) -> bool:
