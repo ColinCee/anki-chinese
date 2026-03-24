@@ -31,6 +31,7 @@ class TTSError(RuntimeError):
 class TTSRateLimitError(TTSError):
     """Speech synthesis failed because Azure rate limited the request."""
 
+
 # ---------- diacritical pinyin → Azure SAPI format ----------
 # Azure zh-CN SAPI expects: "yi 1", "zhong 1", "lv 3", "de 5"
 # Our stored pinyin uses tone diacritics: "yī", "zhōng", "lǜ", "de"

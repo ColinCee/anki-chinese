@@ -12,6 +12,7 @@ Commands:
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 import typer
 from rich import print as rprint
@@ -31,6 +32,17 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+
+
+def _heisig_index(note: CharacterNote) -> int | None:
+    match = re.search(r"\d+", note.heisig_num)
+    return int(match.group(0)) if match else None
+
+
+def _filter_from_rsh(notes: list[CharacterNote], start_rsh: int) -> list[CharacterNote]:
+    return [
+        note for note in notes if (_heisig_index(note) or 0) >= start_rsh
+    ]
 
 
 # ── init ──────────────────────────────────────────────────────────────
@@ -168,6 +180,11 @@ def audio(
         "-l",
         help="Process only the first N notes (0 = all).",
     ),
+    start_rsh: int = typer.Option(
+        0,
+        "--start-rsh",
+        help="Start audio generation from this Heisig/RSH number onward.",
+    ),
     force: bool = typer.Option(
         False,
         "--force",
@@ -201,6 +218,13 @@ def audio(
         if not targets:
             rprint(f"[red]✗[/red] Character '{char}' not found")
             raise typer.Exit(1)
+    elif start_rsh > 0:
+        targets = _filter_from_rsh(all_notes, start_rsh)
+        if not targets:
+            rprint(f"[red]✗[/red] No notes found at or after RSH #{start_rsh}")
+            raise typer.Exit(1)
+        if limit > 0:
+            targets = targets[:limit]
     elif limit > 0:
         targets = all_notes[:limit]
 
@@ -234,11 +258,13 @@ def audio(
         except TTSRateLimitError as e:
             failures.append(f"{note.hanzi} ({note.keyword}): {e}")
             rprint(f"    [yellow]⚠[/yellow] {e}")
-            if char or limit > 0:
+            if char or limit > 0 or start_rsh > 0:
                 updated = {n.hanzi: n for n in targets}
                 all_notes = [updated.get(n.hanzi, n) for n in all_notes]
             save_notes(all_notes, ENRICHED_PATH)
-            rprint("[yellow]Stopped on Azure rate limit. Re-run the same audio command later.[/yellow]")
+            rprint(
+                "[yellow]Stopped on Azure rate limit. Re-run the same audio command later.[/yellow]"
+            )
             raise typer.Exit(2)
         except Exception as e:
             failures.append(f"{note.hanzi} ({note.keyword}): {e}")
@@ -247,7 +273,7 @@ def audio(
                 raise
 
     # Merge filtered results back into the full list
-    if char or limit > 0:
+    if char or limit > 0 or start_rsh > 0:
         updated = {n.hanzi: n for n in targets}
         all_notes = [updated.get(n.hanzi, n) for n in all_notes]
 
@@ -288,6 +314,11 @@ def build(
         "--audio-limit",
         help="When using --full, limit audio generation to N notes.",
     ),
+    audio_start_rsh: int = typer.Option(
+        0,
+        "--audio-start-rsh",
+        help="When using --full, start audio generation from this Heisig/RSH number.",
+    ),
 ):
     """Build the .apkg deck from enriched data.
 
@@ -318,7 +349,12 @@ def build(
                 generate_example_audio,
             )
 
-            targets = notes[:audio_limit] if audio_limit else notes
+            targets = _filter_from_rsh(notes, audio_start_rsh) if audio_start_rsh else notes
+            if audio_start_rsh and not targets:
+                rprint(f"  [red]✗[/red] No notes found at or after RSH #{audio_start_rsh}")
+                raise typer.Exit(1)
+            if audio_limit:
+                targets = targets[:audio_limit]
             failures: list[str] = []
             for note in targets:
                 try:
@@ -337,7 +373,9 @@ def build(
                     failures.append(f"{note.hanzi} ({note.keyword}): {e}")
                     save_notes(notes, ENRICHED_PATH)
                     rprint(f"  [yellow]⚠[/yellow] {e}")
-                    rprint("  [yellow]Stopped on Azure rate limit. Re-run audio later, then build.[/yellow]")
+                    rprint(
+                        "  [yellow]Stopped on Azure rate limit. Re-run audio later, then build.[/yellow]"
+                    )
                     raise typer.Exit(2)
                 except Exception as e:
                     failures.append(f"{note.hanzi} ({note.keyword}): {e}")
