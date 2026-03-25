@@ -33,6 +33,7 @@ def _build_model() -> genanki.Model:
         MODEL_ID,
         MODEL_NAME,
         fields=[{"name": field_name} for field_name in FIELDS],
+        sort_field_index=FIELDS.index("HeisigNum"),
         templates=[
             {
                 "name": "Recognition",
