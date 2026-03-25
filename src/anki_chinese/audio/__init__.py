@@ -1,7 +1,7 @@
 """Audio generation, provider boundaries, and file/tag helpers."""
 
 from .errors import TTSConfigurationError, TTSRateLimitError, TTSError
-from .factory import build_tts_provider
+from .factory import PROVIDER_NAMES, build_tts_provider
 from .files import (
     audio_tasks_for_note,
     example_audio_filename,
@@ -16,6 +16,7 @@ from .rate_limit import NoOpRateLimiter, RateLimiter, SlidingWindowRateLimiter
 
 __all__ = [
     "NoOpRateLimiter",
+    "PROVIDER_NAMES",
     "ProviderCapabilities",
     "RateLimiter",
     "SlidingWindowRateLimiter",

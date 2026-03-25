@@ -71,13 +71,13 @@ def review() -> None:
 def test_tts(
     char: str = "",
     word: str = "",
-    force: bool = False,
+    provider_name: str = "minimax",
 ) -> None:
     run_test_tts(
         build_runtime(),
         char=char,
         word=word,
-        force=force,
+        provider_name=provider_name,
     )
 
 
