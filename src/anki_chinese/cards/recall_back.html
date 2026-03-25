@@ -1,14 +1,10 @@
-<div class="hanzi back-hanzi">{{Hanzi}}</div>
-<div class="keyword">{{Keyword}}</div>
-
-<div class="pronunciations">
-    <div class="pronunciation">
-        <span class="label">Mandarin</span>
+<div class="hero">
+    <div class="hanzi">{{Hanzi}}</div>
+    <div class="keyword">{{Keyword}}</div>
+    <div class="pronunciations">
         <span class="pinyin" data-tone-type="pinyin">{{Pinyin}}</span>
         {{MandarinAudio}}
-    </div>
-    <div class="pronunciation">
-        <span class="label">Cantonese</span>
+        <span class="sep">·</span>
         <span class="jyutping" data-tone-type="jyutping">{{Jyutping}}</span>
         <span class="cantonese-audio-data" style="display:none">{{CantoneseAudio}}</span>
         <button class="play-cantonese" onclick="return false;" aria-label="Play Cantonese">🔊</button>
@@ -16,20 +12,20 @@
 </div>
 
 {{#ExampleWord}}
-<hr class="divider">
-<div class="example">
+<div class="example-panel">
     <span class="word">{{ExampleWord}}</span>
+    <span class="example-detail">
+        {{#ExamplePinyin}}<span class="example-pinyin">{{ExamplePinyin}}</span>{{/ExamplePinyin}}
+        {{#ExampleMeaning}}<span class="example-meaning">{{ExampleMeaning}}</span>{{/ExampleMeaning}}
+    </span>
     {{ExampleAudio}}
-    {{#ExamplePinyin}}<span class="example-pinyin">{{ExamplePinyin}}</span>{{/ExamplePinyin}}
-    {{#ExampleMeaning}}<span class="example-meaning">{{ExampleMeaning}}</span>{{/ExampleMeaning}}
 </div>
 {{/ExampleWord}}
 
 {{#StrokeOrder}}
-<hr class="divider">
 <div class="stroke-order">{{StrokeOrder}}</div>
 {{/StrokeOrder}}
 
 {{#Story}}
-<div class="story">💡 {{Story}}</div>
+<div class="story">{{Story}}</div>
 {{/Story}}

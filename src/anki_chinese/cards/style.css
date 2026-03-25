@@ -6,7 +6,7 @@
     text-align: center;
     color: #2c3e50;
     background-color: #fafafa;
-    padding: 20px;
+    padding: 24px 20px;
     line-height: 1.6;
 }
 
@@ -18,96 +18,84 @@
 .tone4 { color: #2980b9; }   /* blue */
 .tone5 { color: #999999; }   /* grey — neutral tone */
 
-/* ── Hanzi ────────────────────────────────────────────────────── */
+/* ── Hero section (character + keyword + pronunciations) ──────── */
+
+.hero {
+    margin-bottom: 20px;
+}
 
 .hanzi {
     font-size: 96px;
     font-weight: bold;
-    margin: 20px 0;
-}
-
-.back-hanzi {
-    font-size: 72px;
     margin: 10px 0 4px;
+    line-height: 1.1;
 }
-
-.front-example {
-    font-size: 36px;
-    font-weight: 600;
-    color: #34495e;
-    margin: -6px 0 8px;
-}
-
-/* ── Keyword ──────────────────────────────────────────────────── */
 
 .keyword {
-    font-size: 28px;
-    font-weight: 600;
-    margin: 4px 0 12px;
-    color: #34495e;
+    font-size: 24px;
+    font-weight: 500;
+    color: #5a6c7d;
+    margin: 0 0 10px;
 }
-
-/* ── Pronunciations (Mandarin + Cantonese side by side) ───────── */
 
 .pronunciations {
     display: flex;
-    justify-content: center;
-    gap: 32px;
-    margin: 12px 0;
-}
-
-.pronunciation {
-    display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 2px;
-}
-
-.pronunciation .label {
-    font-size: 11px;
-    color: #95a5a6;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-}
-
-.pronunciation .pinyin,
-.pronunciation .jyutping {
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 0;
     font-size: 22px;
     font-weight: 500;
 }
 
-/* ── Divider ──────────────────────────────────────────────────── */
-
-.divider {
-    border: none;
-    border-top: 1px solid #ecf0f1;
-    margin: 14px auto;
-    width: 50%;
+.pronunciations .sep {
+    color: #bdc3c7;
+    font-weight: 300;
 }
 
-/* ── Example word ─────────────────────────────────────────────── */
+/* ── Recognition front ────────────────────────────────────────── */
 
-.example {
+.front-example {
+    font-size: 32px;
+    font-weight: 600;
+    color: #34495e;
+    margin: -4px 0 4px;
+}
+
+/* ── Example panel ────────────────────────────────────────────── */
+
+.example-panel {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    margin: 8px 0;
+    gap: 4px;
+    background: #f0f4f8;
+    border-radius: 10px;
+    padding: 14px 20px;
+    margin: 0 0 16px;
 }
 
-.example .word {
-    font-size: 30px;
+.example-panel .word {
+    font-size: 28px;
     font-weight: 600;
     color: #2c3e50;
 }
 
+.example-detail {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
 .example-pinyin {
-    font-size: 15px;
+    font-size: 16px;
     color: #7f8c8d;
 }
 
 .example-meaning {
-    font-size: 15px;
+    font-size: 16px;
     color: #7f8c8d;
     font-style: italic;
 }
@@ -126,35 +114,26 @@
 /* ── Story ─────────────────────────────────────────────────────── */
 
 .story {
-    font-size: 15px;
+    font-size: 14px;
     color: #8e44ad;
     font-style: italic;
-    margin-top: 12px;
-    padding: 8px 12px;
+    margin: 12px 0 0;
+    padding: 10px 14px;
     background: #f5f0f8;
-    border-radius: 6px;
-}
-
-/* ── Meta (lesson number) ─────────────────────────────────────── */
-
-.meta {
-    font-size: 13px;
-    color: #bdc3c7;
-    margin-top: 16px;
+    border-radius: 8px;
+    text-align: left;
+    line-height: 1.5;
 }
 
 /* ── Listening card front ─────────────────────────────────────── */
 
 .listen-prompt {
-    font-size: 18px;
-    font-weight: 600;
-    color: #7f8c8d;
-    letter-spacing: 0.5px;
-    margin-top: 8px;
+    font-size: 48px;
+    margin: 20px 0 8px;
 }
 
 .listen-audio {
-    margin: 12px 0;
+    margin: 8px 0 16px;
 }
 
 .listen-example {
@@ -162,9 +141,9 @@
 }
 
 .hint-box {
-    margin-top: 14px;
-    font-size: 14px;
-    color: #7f8c8d;
+    margin-top: 16px;
+    font-size: 15px;
+    color: #95a5a6;
 }
 
 .hint-box summary {
@@ -174,33 +153,33 @@
 
 .hint-text {
     margin-top: 6px;
-    font-size: 18px;
+    font-size: 20px;
+    color: #2c3e50;
 }
 
-/* ── Play Cantonese button ─────────────────────────────────────── */
+/* ── Play Cantonese button ────────────────────────────────────── */
 
 .play-cantonese {
     background: none;
-    border: 1px solid #bdc3c7;
+    border: 1px solid #cfd8dc;
     border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    font-size: 16px;
-    line-height: 32px;
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+    line-height: 30px;
     padding: 0;
     cursor: pointer;
-    color: #7f8c8d;
-    margin-top: 2px;
+    color: #90a4ae;
     transition: background 0.15s, color 0.15s;
 }
 
 .play-cantonese:hover {
-    background: #ecf0f1;
+    background: #eceff1;
     color: #2c3e50;
 }
 
 .play-cantonese:active {
-    background: #d5dbdb;
+    background: #cfd8dc;
 }
 
 /* ── Night mode ───────────────────────────────────────────────── */
@@ -213,7 +192,7 @@
 
 .night_mode .keyword,
 .nightMode .keyword {
-    color: #ccc;
+    color: #a0aec0;
 }
 
 .night_mode .front-example,
@@ -221,18 +200,18 @@
     color: #dfe6ee;
 }
 
-.night_mode .pronunciation .label,
-.nightMode .pronunciation .label {
-    color: #6b7b8d;
+.night_mode .pronunciations .sep,
+.nightMode .pronunciations .sep {
+    color: #4a5568;
 }
 
-.night_mode .divider,
-.nightMode .divider {
-    border-top-color: #2a2a4a;
+.night_mode .example-panel,
+.nightMode .example-panel {
+    background: #1e2a3a;
 }
 
-.night_mode .example .word,
-.nightMode .example .word {
+.night_mode .example-panel .word,
+.nightMode .example-panel .word {
     color: #f2f5f8;
 }
 
@@ -254,9 +233,9 @@
     color: #6b7b8d;
 }
 
-.night_mode .meta,
-.nightMode .meta {
-    color: #4a5568;
+.night_mode .hint-text,
+.nightMode .hint-text {
+    color: #e0e0e0;
 }
 
 .night_mode .play-cantonese,
