@@ -177,6 +177,32 @@
     font-size: 18px;
 }
 
+/* ── Play Cantonese button ─────────────────────────────────────── */
+
+.play-cantonese {
+    background: none;
+    border: 1px solid #bdc3c7;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    line-height: 32px;
+    padding: 0;
+    cursor: pointer;
+    color: #7f8c8d;
+    margin-top: 2px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.play-cantonese:hover {
+    background: #ecf0f1;
+    color: #2c3e50;
+}
+
+.play-cantonese:active {
+    background: #d5dbdb;
+}
+
 /* ── Night mode ───────────────────────────────────────────────── */
 
 .night_mode .card,
@@ -231,4 +257,16 @@
 .night_mode .meta,
 .nightMode .meta {
     color: #4a5568;
+}
+
+.night_mode .play-cantonese,
+.nightMode .play-cantonese {
+    border-color: #4a5568;
+    color: #8899aa;
+}
+
+.night_mode .play-cantonese:hover,
+.nightMode .play-cantonese:hover {
+    background: #2a2a4a;
+    color: #e0e0e0;
 }

@@ -36,5 +36,20 @@
     document.querySelectorAll('.jyutping').forEach(function(el) {
         el.className += ' tone' + jyutpingToneClass(getJyutpingTone(el.textContent));
     });
+
+    // Click-to-play Cantonese audio (not auto-played)
+    document.querySelectorAll('.play-cantonese').forEach(function(btn) {
+        var container = btn.parentElement;
+        var dataSpan = container.querySelector('.cantonese-audio-data');
+        if (!dataSpan) return;
+        var m = dataSpan.textContent.match(/\[sound:([^\]]+)\]/);
+        if (!m) { btn.style.display = 'none'; return; }
+        var file = m[1];
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var audio = new Audio(file);
+            audio.play();
+        });
+    });
 })();
 </script>
