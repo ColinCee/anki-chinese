@@ -37,18 +37,23 @@
         el.className += ' tone' + jyutpingToneClass(getJyutpingTone(el.textContent));
     });
 
-    // Click-to-play Cantonese audio (not auto-played)
+    // Click-to-play Cantonese audio — filename derived from Hanzi + Jyutping
+    // to avoid [sound:] tags that Anki would auto-play
     document.querySelectorAll('.play-cantonese').forEach(function(btn) {
-        var container = btn.parentElement;
-        var dataSpan = container.querySelector('.cantonese-audio-data');
-        if (!dataSpan) return;
-        var m = dataSpan.textContent.match(/\[sound:([^\]]+)\]/);
-        if (!m) { btn.style.display = 'none'; return; }
-        var file = m[1];
+        var container = btn.closest('.pronunciations');
+        if (!container) return;
+        var hanziEl = container.closest('.hero');
+        if (!hanziEl) return;
+        var hanzi = hanziEl.querySelector('.hanzi');
+        var jyutping = container.querySelector('.jyutping');
+        if (!hanzi || !jyutping) { btn.style.display = 'none'; return; }
+        var h = hanzi.textContent.trim();
+        var j = jyutping.textContent.trim().replace(/\s+/g, '_');
+        if (!h || !j) { btn.style.display = 'none'; return; }
+        var file = 'yue_' + h + '_' + j + '.mp3';
         btn.addEventListener('click', function(e) {
             e.preventDefault();
-            var audio = new Audio(file);
-            audio.play();
+            new Audio(file).play();
         });
     });
 })();
