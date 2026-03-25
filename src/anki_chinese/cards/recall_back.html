@@ -1,28 +1,28 @@
-<div class="hanzi">{{Hanzi}}</div>
-
+<div class="hanzi back-hanzi">{{Hanzi}}</div>
 <div class="keyword">{{Keyword}}</div>
 
-<div class="pronunciation">
-    <span class="label">Mandarin</span><br>
-    <span id="pinyin-display">{{Pinyin}}</span>
-    {{MandarinAudio}}
+<div class="pronunciations">
+    <div class="pronunciation">
+        <span class="label">Mandarin</span>
+        <span class="pinyin" data-tone-type="pinyin">{{Pinyin}}</span>
+        {{MandarinAudio}}
+    </div>
+    <div class="pronunciation">
+        <span class="label">Cantonese</span>
+        <span class="jyutping" data-tone-type="jyutping">{{Jyutping}}</span>
+        {{CantoneseAudio}}
+    </div>
 </div>
 
 {{#ExampleWord}}
 <hr class="divider">
 <div class="example">
     <span class="word">{{ExampleWord}}</span>
-    {{ExampleAudio}}<br>
-    {{#ExamplePinyin}}<span class="meaning">{{ExamplePinyin}}</span><br>{{/ExamplePinyin}}
-    <span class="meaning">{{ExampleMeaning}}</span>
+    {{ExampleAudio}}
+    {{#ExamplePinyin}}<span class="example-pinyin">{{ExamplePinyin}}</span>{{/ExamplePinyin}}
+    {{#ExampleMeaning}}<span class="example-meaning">{{ExampleMeaning}}</span>{{/ExampleMeaning}}
 </div>
 {{/ExampleWord}}
-
-<div class="pronunciation">
-    <span class="label">Cantonese</span><br>
-    <span id="jyutping-display">{{Jyutping}}</span>
-    {{CantoneseAudio}}
-</div>
 
 {{#StrokeOrder}}
 <hr class="divider">
@@ -32,47 +32,3 @@
 {{#Mnemonic}}
 <div class="mnemonic">💡 {{Mnemonic}}</div>
 {{/Mnemonic}}
-
-<script>
-(function() {
-    var toneMap = {
-        'ā':1,'á':2,'ǎ':3,'à':4,
-        'ē':1,'é':2,'ě':3,'è':4,
-        'ī':1,'í':2,'ǐ':3,'ì':4,
-        'ō':1,'ó':2,'ǒ':3,'ò':4,
-        'ū':1,'ú':2,'ǔ':3,'ù':4,
-        'ǖ':1,'ǘ':2,'ǚ':3,'ǜ':4
-    };
-
-    function getPinyinTone(s) {
-        for (var i = 0; i < s.length; i++) {
-            if (toneMap[s[i]]) return toneMap[s[i]];
-        }
-        return 5;
-    }
-
-    function getJyutpingTone(s) {
-        var m = s.match(/(\d)$/);
-        return m ? parseInt(m[1]) : 5;
-    }
-
-    function jyutpingToneClass(t) {
-        if (t <= 4) return t;
-        if (t === 5) return 2;
-        if (t === 6) return 4;
-        return 5;
-    }
-
-    var py = document.getElementById('pinyin-display');
-    if (py) {
-        var tone = getPinyinTone(py.textContent);
-        py.className = 'tone' + tone;
-    }
-
-    var jp = document.getElementById('jyutping-display');
-    if (jp) {
-        var tone = getJyutpingTone(jp.textContent);
-        jp.className = 'tone' + jyutpingToneClass(tone);
-    }
-})();
-</script>

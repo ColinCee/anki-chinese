@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from ..config import GENERATED_AUDIO_DIR
 from .provider import TTSProvider
 
 PROVIDER_NAMES = ("minimax", "google")
+DEFAULT_PROVIDER = "google"
 
 
 def build_tts_provider(
@@ -16,11 +16,11 @@ def build_tts_provider(
     generated_audio_dir: Path = GENERATED_AUDIO_DIR,
     provider_name: str | None = None,
 ) -> TTSProvider:
-    """Build a TTS provider by name, falling back to the TTS_PROVIDER env var.
+    """Build a TTS provider by name.
 
-    Supported values: "minimax" (default), "google".
+    Supported values: "google" (default), "minimax".
     """
-    name = (provider_name or os.getenv("TTS_PROVIDER", "minimax")).strip().lower()
+    name = (provider_name or DEFAULT_PROVIDER).strip().lower()
 
     if name == "google":
         from .google_tts import GoogleTTSProvider

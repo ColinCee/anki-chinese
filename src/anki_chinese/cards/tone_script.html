@@ -1,0 +1,40 @@
+<script>
+(function() {
+    var toneMap = {
+        'ā':1,'á':2,'ǎ':3,'à':4,
+        'ē':1,'é':2,'ě':3,'è':4,
+        'ī':1,'í':2,'ǐ':3,'ì':4,
+        'ō':1,'ó':2,'ǒ':3,'ò':4,
+        'ū':1,'ú':2,'ǔ':3,'ù':4,
+        'ǖ':1,'ǘ':2,'ǚ':3,'ǜ':4
+    };
+
+    function getPinyinTone(s) {
+        for (var i = 0; i < s.length; i++) {
+            if (toneMap[s[i]]) return toneMap[s[i]];
+        }
+        return 5;
+    }
+
+    function getJyutpingTone(s) {
+        var m = s.match(/(\d)$/);
+        return m ? parseInt(m[1]) : 5;
+    }
+
+    // Map jyutping tones 1-6 to our 5 CSS tone classes
+    function jyutpingToneClass(t) {
+        if (t <= 4) return t;
+        if (t === 5) return 2;  // low rising → rising color
+        if (t === 6) return 4;  // low level → falling color
+        return 5;
+    }
+
+    document.querySelectorAll('.pinyin').forEach(function(el) {
+        el.className += ' tone' + getPinyinTone(el.textContent);
+    });
+
+    document.querySelectorAll('.jyutping').forEach(function(el) {
+        el.className += ' tone' + jyutpingToneClass(getJyutpingTone(el.textContent));
+    });
+})();
+</script>

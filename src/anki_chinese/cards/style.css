@@ -18,12 +18,17 @@
 .tone4 { color: #2980b9; }   /* blue */
 .tone5 { color: #999999; }   /* grey — neutral tone */
 
-/* ── Layout ───────────────────────────────────────────────────── */
+/* ── Hanzi ────────────────────────────────────────────────────── */
 
 .hanzi {
     font-size: 72px;
     font-weight: bold;
     margin: 20px 0;
+}
+
+.back-hanzi {
+    font-size: 56px;
+    margin: 10px 0 4px;
 }
 
 .front-example {
@@ -33,12 +38,112 @@
     margin: -6px 0 8px;
 }
 
+/* ── Keyword ──────────────────────────────────────────────────── */
+
 .keyword {
     font-size: 28px;
     font-weight: 600;
-    margin: 10px 0;
+    margin: 4px 0 12px;
     color: #34495e;
 }
+
+/* ── Pronunciations (Mandarin + Cantonese side by side) ───────── */
+
+.pronunciations {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin: 12px 0;
+}
+
+.pronunciation {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.pronunciation .label {
+    font-size: 11px;
+    color: #95a5a6;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.pronunciation .pinyin,
+.pronunciation .jyutping {
+    font-size: 22px;
+    font-weight: 500;
+}
+
+/* ── Divider ──────────────────────────────────────────────────── */
+
+.divider {
+    border: none;
+    border-top: 1px solid #ecf0f1;
+    margin: 14px auto;
+    width: 50%;
+}
+
+/* ── Example word ─────────────────────────────────────────────── */
+
+.example {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    margin: 8px 0;
+}
+
+.example .word {
+    font-size: 24px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.example-pinyin {
+    font-size: 15px;
+    color: #7f8c8d;
+}
+
+.example-meaning {
+    font-size: 15px;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+/* ── Stroke order ─────────────────────────────────────────────── */
+
+.stroke-order {
+    margin: 12px 0;
+}
+
+.stroke-order img {
+    max-width: 120px;
+    max-height: 120px;
+}
+
+/* ── Mnemonic ─────────────────────────────────────────────────── */
+
+.mnemonic {
+    font-size: 15px;
+    color: #8e44ad;
+    font-style: italic;
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #f5f0f8;
+    border-radius: 6px;
+}
+
+/* ── Meta (lesson number) ─────────────────────────────────────── */
+
+.meta {
+    font-size: 13px;
+    color: #bdc3c7;
+    margin-top: 16px;
+}
+
+/* ── Listening card front ─────────────────────────────────────── */
 
 .listen-prompt {
     font-size: 18px;
@@ -50,13 +155,6 @@
 
 .listen-audio {
     margin: 12px 0;
-}
-
-.listen-keyword {
-    font-size: 24px;
-    font-weight: 600;
-    color: #34495e;
-    margin-top: 4px;
 }
 
 .listen-example {
@@ -79,67 +177,7 @@
     font-size: 18px;
 }
 
-.pronunciation {
-    font-size: 22px;
-    margin: 8px 0;
-}
-
-.pronunciation .label {
-    font-size: 14px;
-    color: #95a5a6;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.divider {
-    border: none;
-    border-top: 1px solid #ecf0f1;
-    margin: 16px auto;
-    width: 60%;
-}
-
-.example {
-    font-size: 18px;
-    color: #555;
-    margin: 12px 0;
-}
-
-.example .word {
-    font-size: 24px;
-    font-weight: 600;
-    color: #2c3e50;
-}
-
-.example .meaning {
-    font-size: 16px;
-    color: #7f8c8d;
-    font-style: italic;
-}
-
-.stroke-order {
-    margin: 16px 0;
-}
-
-.stroke-order img {
-    max-width: 120px;
-    max-height: 120px;
-}
-
-.meta {
-    font-size: 13px;
-    color: #bdc3c7;
-    margin-top: 16px;
-}
-
-.mnemonic {
-    font-size: 16px;
-    color: #8e44ad;
-    font-style: italic;
-    margin-top: 12px;
-    padding: 8px;
-    background: #f5f0f8;
-    border-radius: 6px;
-}
+/* ── Night mode ───────────────────────────────────────────────── */
 
 .night_mode .card,
 .nightMode .card {
@@ -157,18 +195,40 @@
     color: #dfe6ee;
 }
 
+.night_mode .pronunciation .label,
+.nightMode .pronunciation .label {
+    color: #6b7b8d;
+}
+
+.night_mode .divider,
+.nightMode .divider {
+    border-top-color: #2a2a4a;
+}
+
+.night_mode .example .word,
+.nightMode .example .word {
+    color: #f2f5f8;
+}
+
+.night_mode .example-pinyin,
+.nightMode .example-pinyin,
+.night_mode .example-meaning,
+.nightMode .example-meaning {
+    color: #8899aa;
+}
+
 .night_mode .mnemonic,
 .nightMode .mnemonic {
     background: #2a2040;
     color: #c39bd3;
 }
 
-.night_mode .example,
-.nightMode .example {
-    color: #d0d6de;
+.night_mode .hint-box,
+.nightMode .hint-box {
+    color: #6b7b8d;
 }
 
-.night_mode .example .word,
-.nightMode .example .word {
-    color: #f2f5f8;
+.night_mode .meta,
+.nightMode .meta {
+    color: #4a5568;
 }
