@@ -21,18 +21,18 @@
 /* ── Hanzi ────────────────────────────────────────────────────── */
 
 .hanzi {
-    font-size: 72px;
+    font-size: 96px;
     font-weight: bold;
     margin: 20px 0;
 }
 
 .back-hanzi {
-    font-size: 56px;
+    font-size: 72px;
     margin: 10px 0 4px;
 }
 
 .front-example {
-    font-size: 28px;
+    font-size: 36px;
     font-weight: 600;
     color: #34495e;
     margin: -6px 0 8px;
@@ -96,7 +96,7 @@
 }
 
 .example .word {
-    font-size: 24px;
+    font-size: 30px;
     font-weight: 600;
     color: #2c3e50;
 }
