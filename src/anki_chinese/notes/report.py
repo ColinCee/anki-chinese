@@ -36,7 +36,7 @@ def coverage_rows(notes: list[CharacterNote]) -> list[tuple[str, int, int, float
         ("Stroke Order", "stroke_order"),
         ("Heisig №", "heisig_num"),
         ("Lesson", "lesson"),
-        ("Mnemonic", "mnemonic"),
+        ("Story", "story"),
     ]:
         filled = sum(1 for note in notes if getattr(note, attr))
         missing = len(notes) - filled

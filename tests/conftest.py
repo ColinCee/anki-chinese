@@ -107,7 +107,7 @@ def full_note() -> CharacterNote:
         stroke_order="stroke-order",
         heisig_num="RSH 144",
         lesson="Lesson 12",
-        mnemonic="walk",
+        story="walk",
         needs_review=True,
         review_reason="Verify manually",
     )

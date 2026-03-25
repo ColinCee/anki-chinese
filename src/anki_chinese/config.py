@@ -63,5 +63,5 @@ FIELDS = [
     "StrokeOrder",
     "HeisigNum",
     "Lesson",
-    "Mnemonic",
+    "Story",
 ]

@@ -4,7 +4,7 @@ from anki_chinese.cli.init import _clear_stale_audio, _restore_cached_fields
 from anki_chinese.notes import CharacterNote
 
 
-def test_restore_cached_fields_reuses_valid_audio_example_and_mnemonic() -> None:
+def test_restore_cached_fields_reuses_valid_audio_example_and_story() -> None:
     current = [CharacterNote(hanzi='行', keyword='go', pinyin='xíng', jyutping='haang4', example_word='银行')]
     previous = [
         CharacterNote(
@@ -17,7 +17,7 @@ def test_restore_cached_fields_reuses_valid_audio_example_and_mnemonic() -> None
             example_word='银行',
             example_pinyin='yín háng',
             example_audio='[sound:cmn_银行_yín_háng.mp3]',
-            mnemonic='walk',
+            story='walk',
         )
     ]
 
@@ -33,7 +33,7 @@ def test_restore_cached_fields_reuses_valid_audio_example_and_mnemonic() -> None
     assert note.cantonese_audio == '[sound:yue_行_haang4.mp3]'
     assert note.example_pinyin == 'yín háng'
     assert note.example_audio == '[sound:cmn_银行_yín_háng.mp3]'
-    assert note.mnemonic == 'walk'
+    assert note.story == 'walk'
 
 
 def test_restore_cached_fields_skips_example_data_when_example_word_changed() -> None:

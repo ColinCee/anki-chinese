@@ -27,7 +27,7 @@ class CharacterNote:
     stroke_order: str = ""
     heisig_num: str = ""
     lesson: str = ""
-    mnemonic: str = ""
+    story: str = ""
 
     needs_review: bool = field(default=False, repr=False)
     review_reason: str = field(default="", repr=False)
@@ -47,7 +47,7 @@ class CharacterNote:
             self.stroke_order,
             self.heisig_num,
             self.lesson,
-            self.mnemonic,
+            self.story,
         ]
 
     def to_dict(self) -> dict[str, Any]:

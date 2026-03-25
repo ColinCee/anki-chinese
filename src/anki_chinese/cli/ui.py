@@ -74,7 +74,7 @@ def report_init_summary(
         "mandarin_audio",
         "cantonese_audio",
         "example_audio",
-        "mnemonic",
+        "story",
     )
     for note in notes:
         previous = prev_by_hanzi.get(note.hanzi)

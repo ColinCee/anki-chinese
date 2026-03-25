@@ -123,9 +123,9 @@
     max-height: 120px;
 }
 
-/* ── Mnemonic ─────────────────────────────────────────────────── */
+/* ── Story ─────────────────────────────────────────────────────── */
 
-.mnemonic {
+.story {
     font-size: 15px;
     color: #8e44ad;
     font-style: italic;
@@ -217,8 +217,8 @@
     color: #8899aa;
 }
 
-.night_mode .mnemonic,
-.nightMode .mnemonic {
+.night_mode .story,
+.nightMode .story {
     background: #2a2040;
     color: #c39bd3;
 }

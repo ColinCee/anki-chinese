@@ -66,7 +66,7 @@ def _parse_legacy_row(row: list[str]) -> CharacterNote:
         stroke_order=row[4].strip(),
         heisig_num=row[10].strip(),
         lesson=row[11].strip(),
-        mnemonic=row[5].strip(),
+        story=row[5].strip(),
     )
 
 
@@ -80,11 +80,12 @@ def _parse_exported_row(row: list[str]) -> CharacterNote:
         cantonese_audio=_extract_sound(row[8]) if row[8].strip() else "",
         example_word=row[9].strip(),
         example_meaning=row[10].strip(),
-        example_audio=_extract_sound(row[11]) if row[11].strip() else "",
-        stroke_order=row[12].strip(),
-        heisig_num=row[13].strip(),
-        lesson=row[14].strip(),
-        mnemonic=row[15].strip(),
+        example_pinyin=row[11].strip(),
+        example_audio=_extract_sound(row[12]) if row[12].strip() else "",
+        stroke_order=row[13].strip(),
+        heisig_num=row[14].strip(),
+        lesson=row[15].strip(),
+        story=row[16].strip() if len(row) > 16 else "",
     )
 
 

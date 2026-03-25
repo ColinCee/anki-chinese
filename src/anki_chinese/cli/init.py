@@ -21,7 +21,7 @@ _PRESERVE_FIELDS = (
     "cantonese_audio",
     "example_pinyin",
     "example_audio",
-    "mnemonic",
+    "story",
 )
 
 
