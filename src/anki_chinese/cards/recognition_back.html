@@ -12,12 +12,10 @@
 
 {{#ExampleWord}}
 <div class="example-panel">
+    {{#ExamplePinyin}}<span class="example-pinyin">{{ExamplePinyin}}</span>{{/ExamplePinyin}}
     <span class="word">{{ExampleWord}}</span>
-    <span class="example-detail">
-        {{#ExamplePinyin}}<span class="example-pinyin">{{ExamplePinyin}}</span>{{/ExamplePinyin}}
-        {{#ExampleMeaning}}<span class="example-meaning">{{ExampleMeaning}}</span>{{/ExampleMeaning}}
-    </span>
     {{ExampleAudio}}
+    {{#ExampleMeaning}}<span class="example-meaning">{{ExampleMeaning}}</span>{{/ExampleMeaning}}
 </div>
 {{/ExampleWord}}
 
