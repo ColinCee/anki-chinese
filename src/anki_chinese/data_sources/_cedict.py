@@ -54,6 +54,10 @@ def _cedict_pinyin_to_diacritical(text: str) -> str:
     return _normalize_pinyin(to_tone(text.replace("u:", "v").lower()))
 
 
+def _looks_like_proper_noun_pinyin(text: str) -> bool:
+    return text != text.lower()
+
+
 def _download_and_cache(path: Path) -> str:
     """Download CC-CEDICT zip, extract the .txt, and cache it at *path*."""
     try:
@@ -102,7 +106,7 @@ def build_index(
         if _subtlex.is_available(subtlex_path):
             freq_table = _subtlex.get_freq_table(subtlex_path)
 
-    candidates: dict[str, list[tuple[int, float, int, str, str, str]]] = {}
+    candidates: dict[str, list[tuple[int, bool, float, int, str, str, str]]] = {}
 
     for line in text.splitlines():
         if line.startswith("#") or not line.strip():
@@ -112,6 +116,7 @@ def build_index(
             continue
 
         simplified = m.group(2)
+        raw_pinyin = m.group(3)
         pinyin = _cedict_pinyin_to_diacritical(m.group(3))
         definitions = m.group(4).split("/")
         meaning = definitions[0].strip() if definitions else ""
@@ -124,18 +129,19 @@ def build_index(
 
         freq = freq_table.get(simplified, 0.0)
         tier = 0 if wlen == 2 else 1
+        proper_noun = _looks_like_proper_noun_pinyin(raw_pinyin)
 
         for ch in set(simplified):
             candidates.setdefault(ch, []).append(
-                (tier, -freq, wlen, simplified, meaning, pinyin)
+                (tier, proper_noun, -freq, wlen, simplified, meaning, pinyin)
             )
 
     index: dict[str, list[tuple[str, str, str]]] = {}
     for ch, rows in candidates.items():
-        rows.sort(key=lambda item: (item[0], item[1], item[2], item[3]))
+        rows.sort(key=lambda item: (item[0], item[1], item[2], item[3], item[4]))
         deduped: list[tuple[str, str, str]] = []
         seen: set[str] = set()
-        for _, _, _, word, meaning, pinyin in rows:
+        for _, _, _, _, word, meaning, pinyin in rows:
             if word in seen:
                 continue
             deduped.append((word, meaning, pinyin))

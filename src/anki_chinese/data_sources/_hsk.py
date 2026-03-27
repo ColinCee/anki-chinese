@@ -61,6 +61,10 @@ def _normalize_pinyin(text: str) -> str:
     return " ".join(text.lower().split())
 
 
+def _looks_like_proper_noun_pinyin(text: str) -> bool:
+    return text != text.lower()
+
+
 def _extract_fields(entry: dict) -> tuple[str, int | None, str, str]:
     """Return (simplified_word, frequency_rank, first_meaning, pinyin)."""
     word = entry.get("s") or entry.get("simplified") or ""
@@ -70,16 +74,34 @@ def _extract_fields(entry: dict) -> tuple[str, int | None, str, str]:
     pinyin = ""
     forms = entry.get("f") or entry.get("forms")
     if isinstance(forms, list) and forms:
-        first_form = forms[0]
-        if isinstance(first_form, dict):
-            meanings = first_form.get("m") or first_form.get("meanings")
+        best_score: tuple[bool, bool, int] | None = None
+        for index, form in enumerate(forms):
+            if not isinstance(form, dict):
+                continue
+
+            form_meaning = ""
+            meanings = form.get("m") or form.get("meanings")
             if isinstance(meanings, list) and meanings and isinstance(meanings[0], str):
-                meaning = meanings[0]
-            info = first_form.get("i")
+                form_meaning = meanings[0]
+
+            form_pinyin = ""
+            raw_pinyin = ""
+            info = form.get("i")
             if isinstance(info, dict):
-                raw_pinyin = info.get("y")
-                if isinstance(raw_pinyin, str):
-                    pinyin = _normalize_pinyin(raw_pinyin)
+                raw_pinyin_value = info.get("y")
+                if isinstance(raw_pinyin_value, str):
+                    raw_pinyin = raw_pinyin_value
+                    form_pinyin = _normalize_pinyin(raw_pinyin_value)
+
+            score = (
+                _looks_like_proper_noun_pinyin(raw_pinyin),
+                not bool(form_meaning),
+                index,
+            )
+            if best_score is None or score < best_score:
+                best_score = score
+                meaning = form_meaning
+                pinyin = form_pinyin
 
     if not isinstance(word, str):
         return "", None, "", ""
