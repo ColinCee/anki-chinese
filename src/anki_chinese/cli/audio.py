@@ -36,15 +36,12 @@ def run_audio(
         if not targets:
             runtime.console.print(f"[red]✗[/red] Character '{char}' not found")
             raise typer.Exit(1)
-    elif start_rsh > 0:
-        targets = filter_from_rsh(notes, start_rsh)
-        if not targets:
-            runtime.console.print(f"[red]✗[/red] No notes found at or after RSH #{start_rsh}")
-            raise typer.Exit(1)
-        if limit > 0:
-            targets = targets[:limit]
-    elif limit > 0:
-        targets = targets[:limit]
+    else:
+        if start_rsh > 0:
+            targets = filter_from_rsh(targets, start_rsh)
+            if not targets:
+                runtime.console.print(f"[red]✗[/red] No notes found at or after RSH #{start_rsh}")
+                raise typer.Exit(1)
 
     pending: list[tuple[CharacterNote, list[str]]] = []
     for note in targets:
@@ -55,6 +52,8 @@ def run_audio(
         )
         if tasks:
             pending.append((note, tasks))
+            if limit > 0 and len(pending) >= limit:
+                break
 
     if not pending:
         runtime.console.print(

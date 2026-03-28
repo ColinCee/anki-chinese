@@ -41,15 +41,13 @@ def run_sentences(
         if not targets:
             runtime.console.print(f"[red]✗[/red] Character '{char}' not found")
             raise typer.Exit(1)
-    elif start_rsh > 0:
-        targets = filter_from_rsh(notes, start_rsh)
+    else:
+        if start_rsh > 0:
+            targets = filter_from_rsh(targets, start_rsh)
+        if not force:
+            targets = [n for n in targets if not n.sentence]
         if limit > 0:
             targets = targets[:limit]
-    elif limit > 0:
-        targets = targets[:limit]
-
-    if not force:
-        targets = [n for n in targets if not n.sentence]
 
     if not targets:
         runtime.console.print(
