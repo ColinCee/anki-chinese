@@ -5,7 +5,8 @@ from __future__ import annotations
 import typer
 from rich.table import Table
 
-from ..notes.report import coverage_rows, flagged_notes, validation_issues
+from ..config import LEARNED_CHARS_PATH
+from ..notes.report import coverage_rows, flagged_notes, load_learned_hanzi, validation_issues
 from .app import AppRuntime
 from .ui import review_table
 
@@ -24,6 +25,23 @@ def run_status(runtime: AppRuntime) -> None:
         table.add_row(label, str(filled), str(missing), f"[{color}]{pct:.0f}%[/{color}]")
 
     runtime.console.print(table)
+
+    # Learned characters progress
+    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
+    if learned:
+        learned_notes = [n for n in notes if n.hanzi in learned]
+        total = len(learned_notes)
+        with_sentence = sum(1 for n in learned_notes if n.sentence)
+        with_audio = sum(1 for n in learned_notes if n.sentence_audio)
+        runtime.console.print(
+            f"\n[bold]Learned characters[/bold] · {total} of {len(learned)}"
+        )
+        sent_color = "green" if with_sentence == total else "yellow"
+        audio_color = "green" if with_audio == total else "yellow"
+        runtime.console.print(
+            f"  Sentences: [{sent_color}]{with_sentence}/{total}[/{sent_color}]  "
+            f"Audio: [{audio_color}]{with_audio}/{total}[/{audio_color}]"
+        )
 
     issues = validation_issues(notes)
     review_count = len(flagged_notes(notes))
