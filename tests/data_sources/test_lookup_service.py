@@ -48,7 +48,9 @@ def test_hsk_extract_fields_prefers_common_sense_over_proper_noun() -> None:
     assert (word, freq, meaning, pinyin) == ("温泉", 7424, "hot spring", "wēn quán")
 
 
-def test_cedict_build_index_prefers_common_sense_over_proper_noun(tmp_path: Path) -> None:
+def test_cedict_build_index_prefers_common_sense_over_proper_noun(
+    tmp_path: Path,
+) -> None:
     cedict_path = tmp_path / "cedict.txt"
     cedict_path.write_text(
         "\n".join(
