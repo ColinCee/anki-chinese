@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import csv
 import re
+from pathlib import Path
 
 from .model import CharacterNote
 
@@ -14,6 +16,28 @@ def heisig_index(note: CharacterNote) -> int | None:
 
 def filter_from_rsh(notes: list[CharacterNote], start_rsh: int) -> list[CharacterNote]:
     return [note for note in notes if (heisig_index(note) or 0) >= start_rsh]
+
+
+def load_learned_hanzi(path: Path) -> set[str]:
+    """Load the set of learned characters from an Anki text export."""
+    if not path.exists():
+        return set()
+    learned: set[str] = set()
+    with open(path, encoding="utf-8") as f:
+        lines = [line for line in f if not line.startswith("#") and line.strip()]
+    for row in csv.reader(lines, delimiter="\t"):
+        if len(row) > 3 and row[3].strip():
+            learned.add(row[3].strip())
+    return learned
+
+
+def prioritize_learned(
+    notes: list[CharacterNote], learned: set[str]
+) -> list[CharacterNote]:
+    """Sort notes so learned characters come first, preserving relative order."""
+    first = [n for n in notes if n.hanzi in learned]
+    rest = [n for n in notes if n.hanzi not in learned]
+    return first + rest
 
 
 def flagged_notes(notes: list[CharacterNote]) -> list[CharacterNote]:
@@ -29,10 +53,6 @@ def coverage_rows(notes: list[CharacterNote]) -> list[tuple[str, int, int, float
         ("Jyutping", "jyutping"),
         ("Mandarin Audio", "mandarin_audio"),
         ("Cantonese Audio", "cantonese_audio"),
-        ("Example Word", "example_word"),
-        ("Example Meaning", "example_meaning"),
-        ("Example Pinyin", "example_pinyin"),
-        ("Example Audio", "example_audio"),
         ("Sentence", "sentence"),
         ("Sentence Pinyin", "sentence_pinyin"),
         ("Sentence English", "sentence_english"),

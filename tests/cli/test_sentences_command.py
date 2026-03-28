@@ -121,7 +121,7 @@ class TestResultPopulation:
         assert note.sentence == "我喝水。"
         assert note.sentence_pinyin == "wǒ hē shuǐ."
         assert note.sentence_english == "I drink water."
-        assert note.sentence_keyword == "water"
+        assert note.keyword == "water"  # sentence_keyword merged into keyword
 
     def test_saves_to_store_after_generation(self, runtime_factory):
         notes = [CharacterNote(hanzi="水", keyword="water")]

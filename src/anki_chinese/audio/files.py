@@ -133,14 +133,6 @@ def audio_tasks_for_note(
     ):
         tasks.append("cantonese")
 
-    example_tag = expected_example_audio_tag(note)
-    if example_tag and (
-        force
-        or note.example_audio != example_tag
-        or not is_valid_audio_tag_fn(example_tag)
-    ):
-        tasks.append("example")
-
     sentence_tag = expected_sentence_audio_tag(note)
     if sentence_tag and (
         force

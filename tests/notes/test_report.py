@@ -46,7 +46,7 @@ def test_coverage_rows_calculates_filled_missing_and_percentages() -> None:
 
     assert rows['Hanzi'] == (2, 0, 100.0)
     assert rows['Pinyin'] == (1, 1, 50.0)
-    assert rows['Example Word'] == (0, 2, 0.0)
+    assert rows['Sentence'] == (0, 2, 0.0)
 
 
 def test_validation_issues_reports_duplicates_and_dependent_field_problems() -> None:

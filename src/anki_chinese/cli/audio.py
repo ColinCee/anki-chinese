@@ -8,12 +8,12 @@ from ..audio.errors import TTSRateLimitError
 from ..audio.files import (
     audio_tasks_for_note,
     expected_cantonese_audio_tag,
-    expected_example_audio_tag,
     expected_mandarin_audio_tag,
     expected_sentence_audio_tag,
 )
+from ..config import LEARNED_CHARS_PATH
 from ..notes.model import CharacterNote
-from ..notes.report import filter_from_rsh, heisig_index
+from ..notes.report import filter_from_rsh, heisig_index, load_learned_hanzi, prioritize_learned
 from .app import AppRuntime
 from .ui import create_audio_progress, format_audio_task_labels, report_audio_summary
 
@@ -62,14 +62,21 @@ def run_audio(
         )
         return notes
 
+    # Prioritize learned characters so they get audio first
+    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
+    if learned:
+        pending.sort(key=lambda pair: pair[0].hanzi not in learned)
+        learned_count = sum(1 for n, _ in pending if n.hanzi in learned)
+        runtime.console.print(f"  [dim]{learned_count} learned characters prioritized[/dim]")
+
     skipped = len(targets) - len(pending)
     runtime.console.print(f"[blue]Audio[/blue] {len(pending)} notes need updates")
     if skipped:
         runtime.console.print(f"  [dim]{skipped} notes already had valid audio[/dim]")
 
     failures: list[str] = []
-    repaired = {"mandarin": 0, "cantonese": 0, "example": 0, "sentence": 0}
-    synced = {"mandarin": 0, "cantonese": 0, "example": 0, "sentence": 0}
+    repaired = {"mandarin": 0, "cantonese": 0, "sentence": 0}
+    synced = {"mandarin": 0, "cantonese": 0, "sentence": 0}
     changed_chars: list[str] = []
 
     progress = create_audio_progress(runtime.console)
@@ -108,19 +115,6 @@ def run_audio(
                     )
                     repaired["cantonese"] += 0 if had_valid_audio and not force else 1
                     synced["cantonese"] += 1 if had_valid_audio and not force else 0
-                    note_changed = True
-                if "example" in tasks and note.example_word and note.example_pinyin:
-                    expected = expected_example_audio_tag(note)
-                    had_valid_audio = bool(
-                        expected and runtime.tts_provider.is_valid_audio_tag(expected)
-                    )
-                    note.example_audio = runtime.tts_provider.generate_example_audio(
-                        note.example_word,
-                        note.example_pinyin,
-                        force=force,
-                    )
-                    repaired["example"] += 0 if had_valid_audio and not force else 1
-                    synced["example"] += 1 if had_valid_audio and not force else 0
                     note_changed = True
                 if "sentence" in tasks and note.sentence:
                     sentence_provider = runtime.sentence_tts_provider or runtime.tts_provider

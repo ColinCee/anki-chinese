@@ -138,9 +138,7 @@ def report_audio_summary(
         table.add_column("Linked Existing", justify="right")
         table.add_row("Mandarin", str(repaired["mandarin"]), str(synced["mandarin"]))
         table.add_row("Cantonese", str(repaired["cantonese"]), str(synced["cantonese"]))
-        table.add_row("Example", str(repaired["example"]), str(synced["example"]))
-        if "sentence" in repaired:
-            table.add_row("Sentence", str(repaired["sentence"]), str(synced["sentence"]))
+        table.add_row("Sentence", str(repaired["sentence"]), str(synced["sentence"]))
         console.print(table)
     if changed_chars:
         preview = ", ".join(changed_chars[:12])

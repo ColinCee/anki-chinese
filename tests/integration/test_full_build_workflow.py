@@ -10,9 +10,6 @@ def test_build_full_runs_parse_enrich_audio_and_build(runtime_factory, runner, s
             keyword='go',
             pinyin='xíng',
             jyutping='haang4',
-            example_word='银行',
-            example_meaning='bank',
-            example_pinyin='yín háng',
             heisig_num='RSH 144',
             lesson='Lesson 12',
         )
@@ -30,5 +27,4 @@ def test_build_full_runs_parse_enrich_audio_and_build(runtime_factory, runner, s
     saved = runtime.note_store.load()
     assert saved[0].mandarin_audio == '[sound:cmn_行_xíng.mp3]'
     assert saved[0].cantonese_audio == '[sound:yue_行_haang4.mp3]'
-    assert saved[0].example_audio == '[sound:cmn_银行_yín_háng.mp3]'
     assert (runtime.note_store.path.parent.parent / 'build' / 'decks' / 'deck.apkg').exists()

@@ -8,7 +8,6 @@ import typer
 
 from ..audio.files import (
     expected_cantonese_audio_tag,
-    expected_example_audio_tag,
     expected_mandarin_audio_tag,
     expected_sentence_audio_tag,
 )
@@ -20,12 +19,9 @@ from .ui import report_init_summary, report_review_items
 _PRESERVE_FIELDS = (
     "mandarin_audio",
     "cantonese_audio",
-    "example_pinyin",
-    "example_audio",
     "sentence",
     "sentence_pinyin",
     "sentence_english",
-    "sentence_keyword",
     "sentence_audio",
     "story",
 )
@@ -44,10 +40,6 @@ def _restore_cached_fields(
         if previous is None:
             continue
         for field in _PRESERVE_FIELDS:
-            if field in {"example_pinyin", "example_audio"} and (
-                not note.example_word or note.example_word != previous.example_word
-            ):
-                continue
             previous_value = getattr(previous, field)
             if getattr(note, field) or not previous_value:
                 continue
@@ -65,62 +57,22 @@ def _clear_stale_audio(
     is_valid_audio_tag,
 ) -> int:
     stale_files: list[Path] = []
+
+    def _check_stale(note: CharacterNote, tag_attr: str, expected: str) -> None:
+        tag = getattr(note, tag_attr)
+        if not tag:
+            return
+        if tag != expected or not is_valid_audio_tag(tag):
+            old_file = tag.replace("[sound:", "").rstrip("]")
+            path = generated_audio_dir / old_file
+            if path.exists():
+                stale_files.append(path)
+            setattr(note, tag_attr, "")
+
     for note in notes:
-        expected_mandarin = expected_mandarin_audio_tag(note)
-        if note.mandarin_audio and note.mandarin_audio != expected_mandarin:
-            old_file = note.mandarin_audio.replace("[sound:", "").rstrip("]")
-            stale_files.extend(
-                path for path in [generated_audio_dir / old_file] if path.exists()
-            )
-            note.mandarin_audio = ""
-        elif note.mandarin_audio and not is_valid_audio_tag(note.mandarin_audio):
-            old_file = note.mandarin_audio.replace("[sound:", "").rstrip("]")
-            stale_files.extend(
-                path for path in [generated_audio_dir / old_file] if path.exists()
-            )
-            note.mandarin_audio = ""
-
-        expected_cantonese = expected_cantonese_audio_tag(note)
-        if note.cantonese_audio and note.cantonese_audio != expected_cantonese:
-            old_file = note.cantonese_audio.replace("[sound:", "").rstrip("]")
-            stale_files.extend(
-                path for path in [generated_audio_dir / old_file] if path.exists()
-            )
-            note.cantonese_audio = ""
-        elif note.cantonese_audio and not is_valid_audio_tag(note.cantonese_audio):
-            old_file = note.cantonese_audio.replace("[sound:", "").rstrip("]")
-            stale_files.extend(
-                path for path in [generated_audio_dir / old_file] if path.exists()
-            )
-            note.cantonese_audio = ""
-
-        expected_example = expected_example_audio_tag(note)
-        if note.example_audio and note.example_audio != expected_example:
-            old_file = note.example_audio.replace("[sound:", "").rstrip("]")
-            stale_files.extend(
-                path for path in [generated_audio_dir / old_file] if path.exists()
-            )
-            note.example_audio = ""
-        elif note.example_audio and not is_valid_audio_tag(note.example_audio):
-            old_file = note.example_audio.replace("[sound:", "").rstrip("]")
-            stale_files.extend(
-                path for path in [generated_audio_dir / old_file] if path.exists()
-            )
-            note.example_audio = ""
-
-        expected_sentence = expected_sentence_audio_tag(note)
-        if note.sentence_audio and note.sentence_audio != expected_sentence:
-            old_file = note.sentence_audio.replace("[sound:", "").rstrip("]")
-            stale_files.extend(
-                path for path in [generated_audio_dir / old_file] if path.exists()
-            )
-            note.sentence_audio = ""
-        elif note.sentence_audio and not is_valid_audio_tag(note.sentence_audio):
-            old_file = note.sentence_audio.replace("[sound:", "").rstrip("]")
-            stale_files.extend(
-                path for path in [generated_audio_dir / old_file] if path.exists()
-            )
-            note.sentence_audio = ""
+        _check_stale(note, "mandarin_audio", expected_mandarin_audio_tag(note))
+        _check_stale(note, "cantonese_audio", expected_cantonese_audio_tag(note))
+        _check_stale(note, "sentence_audio", expected_sentence_audio_tag(note))
 
     removed_stale_files = 0
     for path in stale_files:

@@ -7,8 +7,9 @@ import os
 import typer
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn
 
+from ..config import LEARNED_CHARS_PATH
 from ..notes.model import CharacterNote
-from ..notes.report import filter_from_rsh
+from ..notes.report import filter_from_rsh, load_learned_hanzi, prioritize_learned
 from .app import AppRuntime
 
 
@@ -56,6 +57,13 @@ def run_sentences(
         )
         return notes
 
+    # Prioritize learned characters
+    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
+    if learned:
+        targets = prioritize_learned(targets, learned)
+        learned_count = sum(1 for n in targets if n.hanzi in learned)
+        runtime.console.print(f"  [dim]{learned_count} learned characters prioritized[/dim]")
+
     runtime.console.print(
         f"[blue]Generating sentences[/blue] for {len(targets)} notes ..."
     )
@@ -79,7 +87,9 @@ def run_sentences(
                 note.sentence = result.sentence
                 note.sentence_pinyin = result.pinyin
                 note.sentence_english = result.english
-                note.sentence_keyword = result.keyword
+                # Gemini's keyword replaces the Heisig keyword
+                if result.keyword:
+                    note.keyword = result.keyword
                 if result.valid:
                     generated += 1
                 else:

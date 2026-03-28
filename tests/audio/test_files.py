@@ -55,8 +55,6 @@ def test_audio_tasks_for_note_requests_missing_or_invalid_audio() -> None:
         keyword='go',
         pinyin='xíng',
         jyutping='haang4',
-        example_word='银行',
-        example_pinyin='yín háng',
     )
 
     tasks = audio_tasks_for_note(
@@ -65,7 +63,7 @@ def test_audio_tasks_for_note_requests_missing_or_invalid_audio() -> None:
         is_valid_audio_tag_fn=lambda tag: False,
     )
 
-    assert tasks == ['mandarin', 'cantonese', 'example']
+    assert tasks == ['mandarin', 'cantonese']
 
 
 def test_audio_tasks_for_note_force_regenerates_available_audio() -> None:

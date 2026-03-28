@@ -26,6 +26,7 @@ SAMPLE_AUDIO_DIR = BUILD_AUDIO_DIR / "samples"
 DECK_OUTPUT_DIR = BUILD_DATA_DIR / "decks"
 
 SOURCE_DECK_PATH = SOURCE_DATA_DIR / "All Decks.txt"
+LEARNED_CHARS_PATH = SOURCE_DATA_DIR / "Learned Characters.txt"
 OVERRIDES_PATH = MANUAL_DATA_DIR / "overrides.json"
 ENRICHED_PATH = STATE_DATA_DIR / "enriched.json"
 
@@ -56,6 +57,7 @@ FIELDS = [
     "Jyutping",
     "MandarinAudio",
     "CantoneseAudio",
+    # Deprecated: example fields kept as empty slots for Anki model compatibility.
     "ExampleWord",
     "ExampleMeaning",
     "ExamplePinyin",
@@ -63,6 +65,7 @@ FIELDS = [
     "Sentence",
     "SentencePinyin",
     "SentenceEnglish",
+    # Deprecated: merged into Keyword. Kept as empty slot for compatibility.
     "SentenceKeyword",
     "SentenceAudio",
     "StrokeOrder",
