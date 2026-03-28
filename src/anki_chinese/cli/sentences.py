@@ -46,21 +46,21 @@ def run_sentences(
             targets = filter_from_rsh(targets, start_rsh)
         if not force:
             targets = [n for n in targets if not n.sentence]
+        # Prioritize learned characters before applying limit
+        learned = load_learned_hanzi(LEARNED_CHARS_PATH)
+        if learned:
+            targets = prioritize_learned(targets, learned)
         if limit > 0:
             targets = targets[:limit]
+        if learned:
+            learned_count = sum(1 for n in targets if n.hanzi in learned)
+            runtime.console.print(f"  [dim]{learned_count} learned characters prioritized[/dim]")
 
     if not targets:
         runtime.console.print(
             "[green]✓[/green] All notes already have sentences"
         )
         return notes
-
-    # Prioritize learned characters
-    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
-    if learned:
-        targets = prioritize_learned(targets, learned)
-        learned_count = sum(1 for n in targets if n.hanzi in learned)
-        runtime.console.print(f"  [dim]{learned_count} learned characters prioritized[/dim]")
 
     runtime.console.print(
         f"[blue]Generating sentences[/blue] for {len(targets)} notes ..."

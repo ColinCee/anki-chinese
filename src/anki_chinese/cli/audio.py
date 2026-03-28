@@ -52,8 +52,14 @@ def run_audio(
         )
         if tasks:
             pending.append((note, tasks))
-            if limit > 0 and len(pending) >= limit:
-                break
+
+    # Prioritize learned characters before applying limit
+    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
+    if learned:
+        pending.sort(key=lambda pair: pair[0].hanzi not in learned)
+
+    if limit > 0:
+        pending = pending[:limit]
 
     if not pending:
         runtime.console.print(
@@ -61,10 +67,7 @@ def run_audio(
         )
         return notes
 
-    # Prioritize learned characters so they get audio first
-    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
     if learned:
-        pending.sort(key=lambda pair: pair[0].hanzi not in learned)
         learned_count = sum(1 for n, _ in pending if n.hanzi in learned)
         runtime.console.print(f"  [dim]{learned_count} learned characters prioritized[/dim]")
 
