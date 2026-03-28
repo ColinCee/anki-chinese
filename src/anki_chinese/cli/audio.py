@@ -10,6 +10,7 @@ from ..audio.files import (
     expected_cantonese_audio_tag,
     expected_example_audio_tag,
     expected_mandarin_audio_tag,
+    expected_sentence_audio_tag,
 )
 from ..notes.model import CharacterNote
 from ..notes.report import filter_from_rsh, heisig_index
@@ -67,8 +68,8 @@ def run_audio(
         runtime.console.print(f"  [dim]{skipped} notes already had valid audio[/dim]")
 
     failures: list[str] = []
-    repaired = {"mandarin": 0, "cantonese": 0, "example": 0}
-    synced = {"mandarin": 0, "cantonese": 0, "example": 0}
+    repaired = {"mandarin": 0, "cantonese": 0, "example": 0, "sentence": 0}
+    synced = {"mandarin": 0, "cantonese": 0, "example": 0, "sentence": 0}
     changed_chars: list[str] = []
 
     progress = create_audio_progress(runtime.console)
@@ -120,6 +121,20 @@ def run_audio(
                     )
                     repaired["example"] += 0 if had_valid_audio and not force else 1
                     synced["example"] += 1 if had_valid_audio and not force else 0
+                    note_changed = True
+                if "sentence" in tasks and note.sentence:
+                    sentence_provider = runtime.sentence_tts_provider or runtime.tts_provider
+                    expected = expected_sentence_audio_tag(note)
+                    had_valid_audio = bool(
+                        expected and sentence_provider.is_valid_audio_tag(expected)
+                    )
+                    note.sentence_audio = sentence_provider.generate_sentence_audio(
+                        note.hanzi,
+                        note.sentence,
+                        force=force,
+                    )
+                    repaired["sentence"] += 0 if had_valid_audio and not force else 1
+                    synced["sentence"] += 1 if had_valid_audio and not force else 0
                     note_changed = True
                 if note_changed:
                     changed_chars.append(note.hanzi)

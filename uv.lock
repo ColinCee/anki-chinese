@@ -9,6 +9,7 @@ source = { editable = "." }
 dependencies = [
     { name = "genanki" },
     { name = "google-auth" },
+    { name = "google-genai" },
     { name = "pycantonese" },
     { name = "pypinyin" },
     { name = "python-dotenv" },
@@ -20,7 +21,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "google-genai" },
     { name = "pyright" },
     { name = "pytest" },
 ]
@@ -29,6 +29,7 @@ dev = [
 requires-dist = [
     { name = "genanki", specifier = ">=0.13.0" },
     { name = "google-auth", specifier = ">=2.0.0" },
+    { name = "google-genai", specifier = ">=1.68.0" },
     { name = "pycantonese", specifier = ">=3.4.0" },
     { name = "pypinyin", specifier = ">=0.53.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
@@ -40,7 +41,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "google-genai", specifier = ">=1.68.0" },
     { name = "pyright", specifier = ">=1.1.408" },
     { name = "pytest", specifier = ">=9.0.2" },
 ]

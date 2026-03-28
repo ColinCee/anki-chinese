@@ -10,6 +10,7 @@ from ..audio.files import (
     expected_cantonese_audio_tag,
     expected_example_audio_tag,
     expected_mandarin_audio_tag,
+    expected_sentence_audio_tag,
 )
 from ..notes.model import CharacterNote
 from .app import AppRuntime
@@ -21,6 +22,11 @@ _PRESERVE_FIELDS = (
     "cantonese_audio",
     "example_pinyin",
     "example_audio",
+    "sentence",
+    "sentence_pinyin",
+    "sentence_english",
+    "sentence_keyword",
+    "sentence_audio",
     "story",
 )
 
@@ -101,6 +107,20 @@ def _clear_stale_audio(
                 path for path in [generated_audio_dir / old_file] if path.exists()
             )
             note.example_audio = ""
+
+        expected_sentence = expected_sentence_audio_tag(note)
+        if note.sentence_audio and note.sentence_audio != expected_sentence:
+            old_file = note.sentence_audio.replace("[sound:", "").rstrip("]")
+            stale_files.extend(
+                path for path in [generated_audio_dir / old_file] if path.exists()
+            )
+            note.sentence_audio = ""
+        elif note.sentence_audio and not is_valid_audio_tag(note.sentence_audio):
+            old_file = note.sentence_audio.replace("[sound:", "").rstrip("]")
+            stale_files.extend(
+                path for path in [generated_audio_dir / old_file] if path.exists()
+            )
+            note.sentence_audio = ""
 
     removed_stale_files = 0
     for path in stale_files:

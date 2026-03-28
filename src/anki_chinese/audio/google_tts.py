@@ -319,6 +319,18 @@ class GoogleTTSProvider:
         )
         return self._generate_file(filename=filename, payload=payload, force=force)
 
+    def generate_sentence_audio(
+        self, hanzi: str, sentence: str, *, force: bool = False
+    ) -> str:
+        from .files import sentence_audio_filename
+        filename = sentence_audio_filename(hanzi, sentence)
+        payload = _build_synthesis_request(
+            text=sentence,
+            voice_name=self.settings.mandarin_voice,
+            language_code="cmn-CN",
+        )
+        return self._generate_file(filename=filename, payload=payload, force=force)
+
     def _generate_file(
         self,
         *,

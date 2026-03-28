@@ -30,7 +30,15 @@ class AppRuntime:
     build_deck: Callable[[list[CharacterNote]], Path]
     tts_provider_factory: Callable[[Path], TTSProvider]
     tts_provider: TTSProvider
+    sentence_tts_provider: TTSProvider | None = None
     console: Console = field(default_factory=Console)
+
+
+def _build_sentence_tts_provider(generated_audio_dir: Path) -> TTSProvider:
+    """MiniMax for sentence audio — better quality for longer text."""
+    return build_tts_provider(
+        generated_audio_dir=generated_audio_dir, provider_name="minimax"
+    )
 
 
 def build_runtime() -> AppRuntime:
@@ -46,6 +54,7 @@ def build_runtime() -> AppRuntime:
             generated_audio_dir=generated_audio_dir
         ),
         tts_provider=build_tts_provider(generated_audio_dir=GENERATED_AUDIO_DIR),
+        sentence_tts_provider=_build_sentence_tts_provider(GENERATED_AUDIO_DIR),
     )
 
 
@@ -60,10 +69,12 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     audio_command = import_module(".audio", __package__)
     build_command = import_module(".build", __package__)
     init_command = import_module(".init", __package__)
+    sentences_command = import_module(".sentences", __package__)
     status_command = import_module(".status", __package__)
     test_tts_command = import_module(".test_tts", __package__)
 
     init_command.register(app, runtime)
+    sentences_command.register(app, runtime)
     audio_command.register(app, runtime)
     build_command.register(app, runtime)
     status_command.register(app, runtime)

@@ -24,6 +24,11 @@ class CharacterNote:
     example_meaning: str = ""
     example_pinyin: str = ""
     example_audio: str = ""
+    sentence: str = ""
+    sentence_pinyin: str = ""
+    sentence_english: str = ""
+    sentence_keyword: str = ""
+    sentence_audio: str = ""
     stroke_order: str = ""
     heisig_num: str = ""
     lesson: str = ""
@@ -44,6 +49,11 @@ class CharacterNote:
             self.example_meaning,
             self.example_pinyin,
             self.example_audio,
+            self.sentence,
+            self.sentence_pinyin,
+            self.sentence_english,
+            self.sentence_keyword,
+            self.sentence_audio,
             self.stroke_order,
             self.heisig_num,
             self.lesson,

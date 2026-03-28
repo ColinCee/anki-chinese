@@ -77,6 +77,19 @@ class StubTTSProvider:
         self.calls.append(("example", word, pinyin, force))
         return tag
 
+    def generate_sentence_audio(
+        self,
+        hanzi: str,
+        sentence: str,
+        *,
+        force: bool = False,
+    ) -> str:
+        self._maybe_rate_limit("sentence", hanzi)
+        tag = f"[sound:cmn_sentence_{sentence}.mp3]"
+        self.valid_audio_tags.add(tag)
+        self.calls.append(("sentence", hanzi, sentence, force))
+        return tag
+
     def is_valid_audio_tag(self, tag: str) -> bool:
         return tag in self.valid_audio_tags
 

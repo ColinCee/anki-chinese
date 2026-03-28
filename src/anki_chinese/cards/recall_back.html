@@ -10,14 +10,17 @@
     </div>
 </div>
 
-{{#ExampleWord}}
-<div class="example-panel">
-    {{#ExamplePinyin}}<span class="example-pinyin">{{ExamplePinyin}}</span>{{/ExamplePinyin}}
-    <span class="word">{{ExampleWord}}</span>
-    {{ExampleAudio}}
-    {{#ExampleMeaning}}<span class="example-meaning">{{ExampleMeaning}}</span>{{/ExampleMeaning}}
+{{#Sentence}}
+<div class="context-panel">
+    <div class="context-text">
+        {{#SentencePinyin}}<span class="context-pinyin">{{SentencePinyin}}</span>{{/SentencePinyin}}
+        <span class="context-chars">{{Sentence}}</span>
+        {{#SentenceEnglish}}<span class="context-meaning">{{SentenceEnglish}}</span>{{/SentenceEnglish}}
+        {{#SentenceKeyword}}<span class="context-keyword">{{SentenceKeyword}}</span>{{/SentenceKeyword}}
+    </div>
+    <div class="context-audio">{{SentenceAudio}}</div>
 </div>
-{{/ExampleWord}}
+{{/Sentence}}
 
 {{#StrokeOrder}}
 <div class="stroke-order">{{StrokeOrder}}</div>

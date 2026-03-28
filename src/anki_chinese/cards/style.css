@@ -62,35 +62,58 @@
     margin: -4px 0 4px;
 }
 
-/* ── Example panel ────────────────────────────────────────────── */
+/* ── Context panels (example word + sentence) ────────────────── */
 
-.example-panel {
+.context-panel {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #eef6ee;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 0 0 12px;
+}
+
+.context-text {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    background: #f0f4f8;
-    border-radius: 10px;
-    padding: 14px 20px;
-    margin: 0 0 16px;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
 }
 
-.example-panel .word {
-    font-size: 28px;
-    font-weight: 600;
-    color: #2c3e50;
-}
-
-.example-pinyin {
-    font-size: 15px;
+.context-pinyin {
+    font-size: 14px;
     color: #95a5a6;
     letter-spacing: 0.5px;
 }
 
-.example-meaning {
-    font-size: 16px;
+.context-chars {
+    font-size: 24px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.context-meaning {
+    font-size: 15px;
     color: #7f8c8d;
     font-style: italic;
+}
+
+.context-keyword {
+    font-size: 12px;
+    color: #27ae60;
+    background: #d5f5e3;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 2px;
+}
+
+.context-audio {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
 }
 
 /* ── Stroke order ─────────────────────────────────────────────── */
@@ -198,21 +221,27 @@
     color: #4a5568;
 }
 
-.night_mode .example-panel,
-.nightMode .example-panel {
-    background: #1e2a3a;
+.night_mode .context-panel,
+.nightMode .context-panel {
+    background: #1a2e1a;
 }
 
-.night_mode .example-panel .word,
-.nightMode .example-panel .word {
+.night_mode .context-chars,
+.nightMode .context-chars {
     color: #f2f5f8;
 }
 
-.night_mode .example-pinyin,
-.nightMode .example-pinyin,
-.night_mode .example-meaning,
-.nightMode .example-meaning {
+.night_mode .context-pinyin,
+.nightMode .context-pinyin,
+.night_mode .context-meaning,
+.nightMode .context-meaning {
     color: #8899aa;
+}
+
+.night_mode .context-keyword,
+.nightMode .context-keyword {
+    background: #1a3a1a;
+    color: #6ddb6d;
 }
 
 .night_mode .story,

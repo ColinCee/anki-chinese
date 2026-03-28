@@ -23,6 +23,7 @@ def format_audio_task_labels(tasks: list[str]) -> str:
         "mandarin": "Mandarin",
         "cantonese": "Cantonese",
         "example": "Example",
+        "sentence": "Sentence",
     }
     return ", ".join(labels[task] for task in tasks if task in labels)
 
@@ -138,6 +139,8 @@ def report_audio_summary(
         table.add_row("Mandarin", str(repaired["mandarin"]), str(synced["mandarin"]))
         table.add_row("Cantonese", str(repaired["cantonese"]), str(synced["cantonese"]))
         table.add_row("Example", str(repaired["example"]), str(synced["example"]))
+        if "sentence" in repaired:
+            table.add_row("Sentence", str(repaired["sentence"]), str(synced["sentence"]))
         console.print(table)
     if changed_chars:
         preview = ", ".join(changed_chars[:12])

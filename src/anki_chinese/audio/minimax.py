@@ -272,6 +272,19 @@ class MiniMaxTTSProvider:
             force=force,
         )
 
+    def generate_sentence_audio(
+        self, hanzi: str, sentence: str, *, force: bool = False
+    ) -> str:
+        from .files import sentence_audio_filename
+        filename = sentence_audio_filename(hanzi, sentence)
+        return self._generate_file(
+            filename=filename,
+            text=sentence,
+            voice_id=self.settings.mandarin_voice_id,
+            language_boost="Chinese",
+            force=force,
+        )
+
     def _generate_file(
         self,
         *,
