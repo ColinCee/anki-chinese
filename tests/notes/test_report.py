@@ -1,9 +1,13 @@
+from pathlib import Path
+
 from anki_chinese.notes import CharacterNote
 from anki_chinese.notes.report import (
     coverage_rows,
     filter_from_rsh,
     flagged_notes,
     heisig_index,
+    load_learned_hanzi,
+    prioritize_learned,
     validation_issues,
 )
 
@@ -71,3 +75,99 @@ def test_validation_issues_reports_duplicates_and_dependent_field_problems() -> 
     assert '#1 (一): audio without jyutping' in issues
     assert '#1 (一): example word without example pinyin' in issues
     assert '#1 (一): example audio without example pinyin' in issues
+
+
+# -- Learned character prioritization -----------------------------------------
+
+
+def test_load_learned_hanzi_parses_anki_export(tmp_path: Path) -> None:
+    export = tmp_path / "learned.txt"
+    export.write_text(
+        "# comment line\n"
+        "col0\tcol1\tcol2\t水\n"
+        "col0\tcol1\tcol2\t火\n"
+        "col0\tcol1\tcol2\t山\n",
+        encoding="utf-8",
+    )
+
+    result = load_learned_hanzi(export)
+
+    assert result == {"水", "火", "山"}
+
+
+def test_load_learned_hanzi_returns_empty_for_missing_file(tmp_path: Path) -> None:
+    result = load_learned_hanzi(tmp_path / "nonexistent.txt")
+
+    assert result == set()
+
+
+def test_load_learned_hanzi_skips_comment_and_blank_lines(tmp_path: Path) -> None:
+    export = tmp_path / "learned.txt"
+    export.write_text(
+        "# header\n"
+        "\n"
+        "col0\tcol1\tcol2\t水\n"
+        "# another comment\n"
+        "\n"
+        "col0\tcol1\tcol2\t火\n",
+        encoding="utf-8",
+    )
+
+    result = load_learned_hanzi(export)
+
+    assert result == {"水", "火"}
+
+
+def test_load_learned_hanzi_skips_rows_with_too_few_columns(tmp_path: Path) -> None:
+    export = tmp_path / "learned.txt"
+    export.write_text("col0\tcol1\n" "col0\tcol1\tcol2\t水\n", encoding="utf-8")
+
+    result = load_learned_hanzi(export)
+
+    assert result == {"水"}
+
+
+def test_prioritize_learned_puts_learned_chars_first() -> None:
+    notes = [
+        CharacterNote(hanzi="一"),
+        CharacterNote(hanzi="水"),
+        CharacterNote(hanzi="火"),
+        CharacterNote(hanzi="山"),
+    ]
+    learned = {"水", "山"}
+
+    result = prioritize_learned(notes, learned)
+
+    assert [n.hanzi for n in result] == ["水", "山", "一", "火"]
+
+
+def test_prioritize_learned_preserves_relative_order() -> None:
+    notes = [
+        CharacterNote(hanzi="A"),
+        CharacterNote(hanzi="B"),
+        CharacterNote(hanzi="C"),
+        CharacterNote(hanzi="D"),
+    ]
+    learned = {"D", "B"}
+
+    result = prioritize_learned(notes, learned)
+
+    # B before D (both learned, original order preserved)
+    # A before C (both unlearned, original order preserved)
+    assert [n.hanzi for n in result] == ["B", "D", "A", "C"]
+
+
+def test_prioritize_learned_with_empty_learned_set() -> None:
+    notes = [CharacterNote(hanzi="一"), CharacterNote(hanzi="二")]
+
+    result = prioritize_learned(notes, set())
+
+    assert [n.hanzi for n in result] == ["一", "二"]
+
+
+def test_prioritize_learned_all_learned() -> None:
+    notes = [CharacterNote(hanzi="水"), CharacterNote(hanzi="火")]
+
+    result = prioritize_learned(notes, {"水", "火"})
+
+    assert [n.hanzi for n in result] == ["水", "火"]
