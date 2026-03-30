@@ -11,23 +11,22 @@ from rich.table import Table
 from ..config import LEARNED_CHARS_PATH
 from ..notes.model import CharacterNote
 from ..notes.report import filter_from_rsh, load_learned_hanzi, prioritize_learned
+from ..sentences import SentenceResult
 from .app import AppRuntime
 
 
-def _pick_sentence(runtime: AppRuntime, generator, note: CharacterNote, count: int) -> None:
-    """Generate multiple candidates and let the user pick one interactively."""
-    runtime.console.print(
-        f"\n[blue]Generating {count} candidates for[/blue] [bold]{note.hanzi}[/bold] "
-        f"({note.keyword})"
-    )
-    if note.sentence:
-        runtime.console.print(f"  [dim]Current: {note.sentence} — {note.sentence_english}[/dim]")
+def apply_sentence(note: CharacterNote, result: SentenceResult) -> None:
+    """Write a sentence result onto a note, clearing stale audio."""
+    note.sentence = result.sentence
+    note.sentence_pinyin = result.pinyin
+    note.sentence_english = result.english
+    if result.keyword:
+        note.keyword = result.keyword
+    note.sentence_audio = ""
 
-    candidates = generator.generate_candidates(note.hanzi, count=count)
-    if not candidates:
-        runtime.console.print("[red]✗[/red] No valid candidates generated")
-        return
 
+def _candidates_table(candidates: list[SentenceResult]) -> Table:
+    """Build a Rich table showing numbered sentence candidates."""
     table = Table(show_header=True, show_lines=True)
     table.add_column("#", style="bold", width=3)
     table.add_column("Sentence", style="cyan")
@@ -35,43 +34,51 @@ def _pick_sentence(runtime: AppRuntime, generator, note: CharacterNote, count: i
     table.add_column("English")
     table.add_column("Keyword", style="green")
     table.add_column("OK", width=3)
-
     for i, c in enumerate(candidates, 1):
         ok = "[green]✓[/green]" if c.valid else "[red]✗[/red]"
         table.add_row(str(i), c.sentence, c.pinyin, c.english, c.keyword, ok)
+    return table
 
-    runtime.console.print(table)
 
-    choice = typer.prompt(
-        "Pick a sentence (number), or 's' to skip, 'r' to regenerate",
-        default="1",
+def _pick_sentence(runtime: AppRuntime, generator, note: CharacterNote, count: int) -> None:
+    """Generate candidates in a loop until the user picks or skips."""
+    runtime.console.print(
+        f"\n[blue]Generating {count} candidates for[/blue] [bold]{note.hanzi}[/bold] "
+        f"({note.keyword})"
     )
+    if note.sentence:
+        runtime.console.print(f"  [dim]Current: {note.sentence} — {note.sentence_english}[/dim]")
 
-    if choice.lower() == "s":
-        runtime.console.print("[dim]Skipped[/dim]")
-        return
-    if choice.lower() == "r":
-        _pick_sentence(runtime, generator, note, count)
-        return
+    while True:
+        candidates = generator.generate_candidates(note.hanzi, count=count)
+        if not candidates:
+            runtime.console.print("[red]✗[/red] No valid candidates generated")
+            return
 
-    try:
-        idx = int(choice) - 1
-        if not 0 <= idx < len(candidates):
+        runtime.console.print(_candidates_table(candidates))
+        choice = typer.prompt(
+            "Pick a sentence (number), or 's' to skip, 'r' to regenerate",
+            default="1",
+        )
+
+        if choice.lower() == "s":
+            runtime.console.print("[dim]Skipped[/dim]")
+            return
+        if choice.lower() == "r":
+            continue
+
+        try:
+            idx = int(choice) - 1
+            if not 0 <= idx < len(candidates):
+                runtime.console.print("[red]Invalid choice[/red]")
+                return
+        except ValueError:
             runtime.console.print("[red]Invalid choice[/red]")
             return
-    except ValueError:
-        runtime.console.print("[red]Invalid choice[/red]")
-        return
 
-    picked = candidates[idx]
-    note.sentence = picked.sentence
-    note.sentence_pinyin = picked.pinyin
-    note.sentence_english = picked.english
-    if picked.keyword:
-        note.keyword = picked.keyword
-    # Clear stale audio so it gets regenerated
-    note.sentence_audio = ""
-    runtime.console.print(f"[green]✓[/green] Saved: {picked.sentence}")
+        apply_sentence(note, candidates[idx])
+        runtime.console.print(f"[green]✓[/green] Saved: {candidates[idx].sentence}")
+        return
 
 
 def run_sentences(
@@ -151,12 +158,9 @@ def run_sentences(
             progress.update(task_id, description=f"[cyan]{note.hanzi}[/cyan]")
             try:
                 result = generator.generate(note.hanzi)
-                note.sentence = result.sentence
-                note.sentence_pinyin = result.pinyin
-                note.sentence_english = result.english
-                # Gemini's keyword replaces the Heisig keyword
-                if result.keyword:
-                    note.keyword = result.keyword
+                apply_sentence(note, result)
+                # Preserve audio tag — batch mode doesn't clear it
+                # (audio command handles generation separately)
                 if result.valid:
                     generated += 1
                 else:

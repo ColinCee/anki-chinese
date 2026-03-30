@@ -209,6 +209,40 @@ class TestSentenceResult:
         with pytest.raises(AttributeError):
             r.sentence = "changed"  # type: ignore[misc]
 
+
+class TestGenerateCandidates:
+    def test_returns_multiple_independent_results(self):
+        gen = SentenceGenerator(api_key="fake")
+        sentences = ["他很大。", "大家好。", "这个很大。"]
+        responses = []
+        for s in sentences:
+            responses.append(_mock_response(_sentence_json(s, keyword="big")))
+            responses.append(_mock_response(_validation_json()))
+        gen._client = MagicMock()
+        gen._client.models.generate_content = MagicMock(side_effect=responses)
+
+        candidates = gen.generate_candidates("大", count=3)
+
+        assert len(candidates) == 3
+        assert {c.sentence for c in candidates} == set(sentences)
+
+    def test_skips_empty_results(self):
+        gen = SentenceGenerator(api_key="fake")
+        # First call succeeds, second fails (all API errors)
+        responses = [
+            _mock_response(_sentence_json("他很大。", keyword="big")),
+            _mock_response(_validation_json()),
+        ]
+        gen._client = MagicMock()
+        gen._client.models.generate_content = MagicMock(
+            side_effect=responses + [Exception("fail")] * 10
+        )
+
+        candidates = gen.generate_candidates("大", count=2)
+
+        assert len(candidates) == 1
+        assert candidates[0].sentence == "他很大。"
+
     def test_defaults(self):
         r = SentenceResult("x", "x", "x", "x", valid=True)
         assert r.error == ""

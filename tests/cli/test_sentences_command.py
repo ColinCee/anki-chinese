@@ -5,7 +5,7 @@ from __future__ import annotations
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
-from anki_chinese.cli.sentences import run_sentences
+from anki_chinese.cli.sentences import apply_sentence, run_sentences
 from anki_chinese.notes import CharacterNote
 from anki_chinese.sentences.generator import SentenceResult
 
@@ -182,3 +182,97 @@ class TestAllSentencesExist:
 
         output = runtime.console.file.getvalue()  # type: ignore[union-attr]
         assert "already have" in output.lower()
+
+
+class TestApplySentence:
+    def test_writes_all_fields_to_note(self):
+        note = CharacterNote(hanzi="水", keyword="old")
+        result = SentenceResult(
+            sentence="我喝水。", pinyin="wǒ hē shuǐ.",
+            english="I drink water.", keyword="water", valid=True,
+        )
+
+        apply_sentence(note, result)
+
+        assert note.sentence == "我喝水。"
+        assert note.sentence_pinyin == "wǒ hē shuǐ."
+        assert note.sentence_english == "I drink water."
+        assert note.keyword == "water"
+
+    def test_clears_stale_audio(self):
+        note = CharacterNote(
+            hanzi="水", keyword="water",
+            sentence_audio="[sound:cmn_sentence_old.mp3]",
+        )
+        result = SentenceResult(
+            sentence="新句子。", pinyin="xīn jùzi.",
+            english="New sentence.", keyword="water", valid=True,
+        )
+
+        apply_sentence(note, result)
+
+        assert note.sentence_audio == ""
+
+    def test_preserves_keyword_when_result_keyword_empty(self):
+        note = CharacterNote(hanzi="水", keyword="water")
+        result = SentenceResult(
+            sentence="我喝水。", pinyin="wǒ hē shuǐ.",
+            english="I drink water.", keyword="", valid=True,
+        )
+
+        apply_sentence(note, result)
+
+        assert note.keyword == "water"
+
+
+class TestPickMode:
+    def test_pick_populates_chosen_candidate(self, runtime_factory):
+        notes = [CharacterNote(hanzi="水", keyword="water")]
+        runtime = runtime_factory(saved_notes=notes)
+
+        candidates = [
+            SentenceResult(sentence="我喝水。", pinyin="wǒ hē shuǐ.",
+                           english="I drink water.", keyword="water", valid=True),
+            SentenceResult(sentence="水很冷。", pinyin="shuǐ hěn lěng.",
+                           english="The water is cold.", keyword="water", valid=True),
+        ]
+
+        with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
+            MockGen.return_value.generate_candidates.return_value = candidates
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}):
+                with patch("typer.prompt", return_value="2"):
+                    run_sentences(runtime, char="水", pick=2)
+
+        saved = runtime.note_store.load()
+        assert saved[0].sentence == "水很冷。"
+        assert saved[0].sentence_audio == ""  # cleared for regeneration
+
+    def test_pick_skip_leaves_note_unchanged(self, runtime_factory):
+        notes = [CharacterNote(hanzi="水", keyword="water", sentence="原来的。")]
+        runtime = runtime_factory(saved_notes=notes)
+
+        candidates = [
+            SentenceResult(sentence="新的。", pinyin="xīn de.",
+                           english="New.", keyword="water", valid=True),
+        ]
+
+        with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
+            MockGen.return_value.generate_candidates.return_value = candidates
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}):
+                with patch("typer.prompt", return_value="s"):
+                    run_sentences(runtime, char="水", pick=1)
+
+        saved = runtime.note_store.load()
+        assert saved[0].sentence == "原来的。"
+
+    def test_pick_no_candidates_does_not_crash(self, runtime_factory):
+        notes = [CharacterNote(hanzi="水", keyword="water")]
+        runtime = runtime_factory(saved_notes=notes)
+
+        with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
+            MockGen.return_value.generate_candidates.return_value = []
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}):
+                run_sentences(runtime, char="水", pick=3)
+
+        output = runtime.console.file.getvalue()  # type: ignore[union-attr]
+        assert "No valid candidates" in output
