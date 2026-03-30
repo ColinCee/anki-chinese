@@ -9,8 +9,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCo
 from rich.table import Table
 
 from ..config import LEARNED_CHARS_PATH
-from ..notes.model import CharacterNote
-from ..notes.report import filter_from_rsh, load_learned_hanzi, prioritize_learned
+from ..notes import CharacterNote, filter_from_rsh, load_learned_hanzi, prioritize_learned
 from ..sentences import SentenceResult
 from .app import AppRuntime
 

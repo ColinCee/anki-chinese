@@ -6,7 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from ..config import GENERATED_AUDIO_DIR
-from ..notes.model import CharacterNote
+from ..notes import CharacterNote
 
 
 def example_audio_filename(word: str, pinyin: str) -> str:

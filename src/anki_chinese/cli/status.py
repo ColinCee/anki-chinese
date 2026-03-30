@@ -6,7 +6,7 @@ import typer
 from rich.table import Table
 
 from ..config import LEARNED_CHARS_PATH
-from ..notes.report import coverage_rows, flagged_notes, load_learned_hanzi, validation_issues
+from ..notes import coverage_rows, flagged_notes, load_learned_hanzi, validation_issues
 from .app import AppRuntime
 from .ui import review_table
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__all__: list[str] = []  # Internal module — import from package instead
+
 from rich.progress import track
 
 from ..config import OVERRIDES_PATH

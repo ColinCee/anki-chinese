@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__all__: list[str] = []  # Internal module — import from package instead
+
 from collections.abc import Callable
 
 from pypinyin.contrib.tone_convert import to_normal

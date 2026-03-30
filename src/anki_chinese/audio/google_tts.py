@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__all__: list[str] = []  # Internal module — import from package instead
+
 import base64
 import json
 import os

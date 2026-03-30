@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+__all__: list[str] = []  # Internal module — import from package instead
+
 import json
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path

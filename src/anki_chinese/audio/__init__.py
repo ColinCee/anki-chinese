@@ -8,6 +8,7 @@ from .files import (
     expected_cantonese_audio_tag,
     expected_example_audio_tag,
     expected_mandarin_audio_tag,
+    expected_sentence_audio_tag,
     is_valid_audio_tag,
     preview_mandarin_filename,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "expected_cantonese_audio_tag",
     "expected_example_audio_tag",
     "expected_mandarin_audio_tag",
+    "expected_sentence_audio_tag",
     "is_valid_audio_tag",
     "preview_mandarin_filename",
 ]

@@ -10,13 +10,10 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-from ..audio.factory import build_tts_provider
-from ..audio.provider import TTSProvider
+from ..audio import TTSProvider, build_tts_provider
 from ..config import ENRICHED_PATH, GENERATED_AUDIO_DIR, SAMPLE_AUDIO_DIR, SOURCE_DECK_PATH
 from ..deck import build_deck
-from ..notes import CharacterNote, JsonNoteStore
-from ..notes.enrich import enrich_notes
-from ..notes.parser import parse_deck_export
+from ..notes import CharacterNote, JsonNoteStore, enrich_notes, parse_deck_export
 
 
 @dataclass

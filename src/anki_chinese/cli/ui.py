@@ -14,8 +14,7 @@ from rich.progress import (
 )
 from rich.table import Table
 
-from ..notes.model import CharacterNote
-from ..notes.report import flagged_notes
+from ..notes import CharacterNote, flagged_notes
 
 
 def format_audio_task_labels(tasks: list[str]) -> str:

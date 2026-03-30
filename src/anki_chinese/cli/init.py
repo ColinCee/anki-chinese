@@ -6,12 +6,12 @@ from pathlib import Path
 
 import typer
 
-from ..audio.files import (
+from ..audio import (
     expected_cantonese_audio_tag,
     expected_mandarin_audio_tag,
     expected_sentence_audio_tag,
 )
-from ..notes.model import CharacterNote
+from ..notes import CharacterNote
 from .app import AppRuntime
 from .ui import report_init_summary, report_review_items
 

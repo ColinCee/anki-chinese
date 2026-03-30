@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__all__: list[str] = []  # Internal module — import from package instead
+
 from pathlib import Path
 
 from ..config import GENERATED_AUDIO_DIR

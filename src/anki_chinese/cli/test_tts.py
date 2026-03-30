@@ -8,8 +8,8 @@ from pathlib import Path
 import typer
 from rich.table import Table
 
-from ..audio.factory import PROVIDER_NAMES, build_tts_provider
-from ..notes.model import CharacterNote
+from ..audio import PROVIDER_NAMES, build_tts_provider
+from ..notes import CharacterNote
 from .app import AppRuntime
 
 

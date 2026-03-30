@@ -4,16 +4,15 @@ from __future__ import annotations
 
 import typer
 
-from ..audio.errors import TTSRateLimitError
-from ..audio.files import (
+from ..audio import (
+    TTSRateLimitError,
     audio_tasks_for_note,
     expected_cantonese_audio_tag,
     expected_mandarin_audio_tag,
     expected_sentence_audio_tag,
 )
 from ..config import LEARNED_CHARS_PATH
-from ..notes.model import CharacterNote
-from ..notes.report import filter_from_rsh, heisig_index, load_learned_hanzi, prioritize_learned
+from ..notes import CharacterNote, filter_from_rsh, heisig_index, load_learned_hanzi, prioritize_learned
 from .app import AppRuntime
 from .ui import create_audio_progress, format_audio_task_labels, report_audio_summary
 
