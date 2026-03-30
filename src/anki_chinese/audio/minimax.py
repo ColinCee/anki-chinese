@@ -6,7 +6,6 @@ __all__: list[str] = []  # Internal module — import from package instead
 
 import json
 import os
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -18,8 +17,9 @@ from dotenv import load_dotenv
 from ..config import GENERATED_AUDIO_DIR
 from .errors import (
     TTSConfigurationError,
-    TTSRateLimitError,
     TTSError,
+    TTSRateLimitError,
+    classify_http_error,
     is_rate_limited_message,
 )
 from .files import (
@@ -30,7 +30,7 @@ from .files import (
 )
 from .provider import ProviderCapabilities
 from .rate_limit import RateLimiter, SlidingWindowRateLimiter
-from .retry import RetryPolicy
+from .retry import RetryPolicy, synthesize_with_retry
 
 load_dotenv()
 
@@ -86,7 +86,7 @@ def _read_env(name: str, default: str) -> str:
     return value or default
 
 
-def _cleanup_partial_audio(output_path: Path) -> None:
+def _remove_partial_file(output_path: Path) -> None:
     if output_path.exists() and output_path.stat().st_size == 0:
         output_path.unlink()
 
@@ -173,22 +173,23 @@ def _post_t2a_request(
         with urlopen(request, timeout=timeout_seconds) as response:
             body = response.read().decode("utf-8")
     except HTTPError as error:
-        body = error.read().decode("utf-8", errors="replace")
-        message = body.strip() or f"MiniMax request failed with HTTP {error.code}"
+        # Pre-parse message from MiniMax's status envelope if possible
+        raw_body = error.read().decode("utf-8", errors="replace")
+        message = raw_body.strip() or f"MiniMax request failed with HTTP {error.code}"
         try:
-            payload = json.loads(body)
+            data = json.loads(raw_body)
+            _, status_message = _extract_status_details(data)
+            if status_message:
+                message = status_message
         except json.JSONDecodeError:
-            payload = {}
+            pass
 
-        _, status_message = _extract_status_details(payload)
-        if status_message:
-            message = status_message
-
-        if error.code in {401, 403} or "invalid api key" in message.lower():
-            raise TTSConfigurationError(f"{message} {_configuration_guidance()}") from error
-        if error.code == 429 or is_rate_limited_message(message):
-            raise TTSRateLimitError(message) from error
-        raise TTSError(message) from error
+        raise classify_http_error(
+            error,
+            provider_name="MiniMax",
+            extract_message=message,
+            config_hint=_configuration_guidance(),
+        ) from error
     except URLError as error:
         raise TTSError(f"MiniMax request failed: {error.reason}") from error
 
@@ -300,68 +301,37 @@ class MiniMaxTTSProvider:
         if is_valid_audio_file(output_path) and not force:
             return f"[sound:{filename}]"
 
-        payload = _build_request_payload(
-            text=text,
-            voice_id=voice_id,
-            language_boost=language_boost,
-            model=self.settings.model,
-        )
-        self._synthesize_to_path(output_path=output_path, payload=payload)
-        if not is_valid_audio_file(output_path):
-            raise TTSError(f"TTS did not create audio for {filename}")
-        return f"[sound:{filename}]"
-
-    def _synthesize_to_path(
-        self,
-        *,
-        output_path: Path,
-        payload: dict[str, object],
-    ) -> None:
         api_key = os.getenv("MINIMAX_API_KEY", "").strip()
         if not api_key:
             raise TTSConfigurationError(
                 "MINIMAX_API_KEY not set. Copy .env.example to .env and add your MiniMax key."
             )
 
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        for attempt in range(1, self.retry_policy.max_attempts + 1):
-            if attempt > 1:
-                time.sleep(self.retry_policy.rate_limit_retry_delay)
-
-            _cleanup_partial_audio(output_path)
-            self.rate_limiter.acquire()
-
-            try:
-                response = _post_t2a_request(
-                    endpoint=self.settings.endpoint,
-                    api_key=api_key,
-                    payload=payload,
-                    timeout_seconds=self.settings.timeout_seconds,
-                )
-                audio_bytes = self._extract_audio_bytes(response)
-            except TTSRateLimitError:
-                _cleanup_partial_audio(output_path)
-                if attempt < self.retry_policy.max_attempts:
-                    continue
-                raise TTSRateLimitError(
-                    f"MiniMax rate limited audio generation after {attempt} attempts"
-                ) from None
-            except TTSError:
-                _cleanup_partial_audio(output_path)
-                raise
-
-            output_path.write_bytes(audio_bytes)
-            if is_valid_audio_file(output_path):
-                return
-
-            _cleanup_partial_audio(output_path)
-            raise TTSError(f"TTS did not create audio for {output_path.name}")
-
-        raise TTSRateLimitError(
-            "MiniMax rate limited audio generation "
-            f"after {self.retry_policy.max_attempts} attempts"
+        request_payload = _build_request_payload(
+            text=text,
+            voice_id=voice_id,
+            language_boost=language_boost,
+            model=self.settings.model,
         )
+
+        def synthesize() -> bytes:
+            response = _post_t2a_request(
+                endpoint=self.settings.endpoint,
+                api_key=api_key,
+                payload=request_payload,
+                timeout_seconds=self.settings.timeout_seconds,
+            )
+            return self._extract_audio_bytes(response)
+
+        synthesize_with_retry(
+            synthesize=synthesize,
+            output_path=output_path,
+            retry_policy=self.retry_policy,
+            rate_limiter=self.rate_limiter,
+            provider_name="MiniMax",
+            cleanup=lambda: _remove_partial_file(output_path),
+        )
+        return f"[sound:{filename}]"
 
     def _extract_audio_bytes(self, response: dict[str, Any]) -> bytes:
         status_code, status_message = _extract_status_details(response)

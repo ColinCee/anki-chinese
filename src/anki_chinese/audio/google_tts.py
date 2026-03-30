@@ -7,7 +7,6 @@ __all__: list[str] = []  # Internal module — import from package instead
 import base64
 import json
 import os
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -23,7 +22,7 @@ from .errors import (
     TTSConfigurationError,
     TTSError,
     TTSRateLimitError,
-    is_rate_limited_message,
+    classify_http_error,
 )
 from .files import (
     example_audio_filename,
@@ -34,7 +33,7 @@ from .files import (
 from .pinyin import diacritical_to_numbered
 from .provider import ProviderCapabilities
 from .rate_limit import RateLimiter, SlidingWindowRateLimiter
-from .retry import RetryPolicy
+from .retry import RetryPolicy, synthesize_with_retry
 
 load_dotenv()
 
@@ -194,23 +193,11 @@ def _post_synthesis_request(
         with urlopen(request, timeout=timeout_seconds) as response:
             body = response.read().decode("utf-8")
     except HTTPError as error:
-        body = error.read().decode("utf-8", errors="replace")
-        try:
-            error_data = json.loads(body)
-            message = (
-                error_data.get("error", {}).get("message", "")
-                or f"Google TTS request failed with HTTP {error.code}"
-            )
-        except json.JSONDecodeError:
-            message = body.strip() or f"Google TTS request failed with HTTP {error.code}"
-
-        if error.code in {401, 403}:
-            raise TTSConfigurationError(
-                f"{message} Check GOOGLE_APPLICATION_CREDENTIALS."
-            ) from error
-        if error.code == 429 or is_rate_limited_message(message):
-            raise TTSRateLimitError(message) from error
-        raise TTSError(message) from error
+        raise classify_http_error(
+            error,
+            provider_name="Google TTS",
+            config_hint="Check GOOGLE_APPLICATION_CREDENTIALS.",
+        ) from error
     except URLError as error:
         raise TTSError(f"Google TTS request failed: {error.reason}") from error
 
@@ -344,9 +331,27 @@ class GoogleTTSProvider:
         if is_valid_audio_file(output_path) and not force:
             return f"[sound:{filename}]"
 
-        self._synthesize_to_path(output_path=output_path, payload=payload)
-        if not is_valid_audio_file(output_path):
-            raise TTSError(f"TTS did not create audio for {filename}")
+        credentials = self._get_credentials()
+        access_token = _get_access_token(credentials)
+        quota_project = _get_quota_project(credentials)
+
+        def synthesize() -> bytes:
+            response = _post_synthesis_request(
+                endpoint=self.settings.endpoint,
+                access_token=access_token,
+                payload=payload,
+                timeout_seconds=self.settings.timeout_seconds,
+                quota_project=quota_project,
+            )
+            return _extract_audio_bytes(response)
+
+        synthesize_with_retry(
+            synthesize=synthesize,
+            output_path=output_path,
+            retry_policy=self.retry_policy,
+            rate_limiter=self.rate_limiter,
+            provider_name="Google TTS",
+        )
         return f"[sound:{filename}]"
 
     def _get_credentials(self) -> service_account.Credentials:
@@ -354,49 +359,3 @@ class GoogleTTSProvider:
             creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip() or None
             self._credentials = _load_credentials(creds_path)
         return self._credentials
-
-    def _synthesize_to_path(
-        self,
-        *,
-        output_path: Path,
-        payload: dict[str, Any],
-    ) -> None:
-        credentials = self._get_credentials()
-        access_token = _get_access_token(credentials)
-        quota_project = _get_quota_project(credentials)
-
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        for attempt in range(1, self.retry_policy.max_attempts + 1):
-            if attempt > 1:
-                time.sleep(self.retry_policy.rate_limit_retry_delay)
-
-            self.rate_limiter.acquire()
-
-            try:
-                response = _post_synthesis_request(
-                    endpoint=self.settings.endpoint,
-                    access_token=access_token,
-                    payload=payload,
-                    timeout_seconds=self.settings.timeout_seconds,
-                    quota_project=quota_project,
-                )
-                audio_bytes = _extract_audio_bytes(response)
-            except TTSRateLimitError:
-                if attempt < self.retry_policy.max_attempts:
-                    continue
-                raise TTSRateLimitError(
-                    f"Google TTS rate limited after {attempt} attempts"
-                ) from None
-            except TTSError:
-                raise
-
-            output_path.write_bytes(audio_bytes)
-            if is_valid_audio_file(output_path):
-                return
-
-            raise TTSError(f"TTS did not create audio for {output_path.name}")
-
-        raise TTSRateLimitError(
-            f"Google TTS rate limited after {self.retry_policy.max_attempts} attempts"
-        )
