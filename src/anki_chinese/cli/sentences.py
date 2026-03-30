@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 
 import typer
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from ..config import LEARNED_CHARS_PATH

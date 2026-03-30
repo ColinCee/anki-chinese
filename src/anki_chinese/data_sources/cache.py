@@ -4,15 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Generic, TypeVar
-
-
-K = TypeVar("K")
-V = TypeVar("V")
 
 
 @dataclass
-class MemoizedLoader(Generic[K, V]):
+class MemoizedLoader[K, V]:
     _values: dict[K, V] = field(default_factory=dict)
 
     def get_or_load(self, key: K, loader: Callable[[], V]) -> V:

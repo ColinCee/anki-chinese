@@ -2,7 +2,6 @@ from importlib import import_module
 
 from anki_chinese.notes import CharacterNote
 
-
 build_module = import_module("anki_chinese.cli.build")
 
 

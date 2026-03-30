@@ -21,7 +21,6 @@ from ..config import GENERATED_AUDIO_DIR
 from .errors import (
     TTSConfigurationError,
     TTSError,
-    TTSRateLimitError,
     classify_http_error,
 )
 from .files import (

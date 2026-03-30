@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from anki_chinese.notes import CharacterNote, JsonNoteStore, load_notes, save_notes
+from anki_chinese.notes import JsonNoteStore, load_notes, save_notes
 
 
 def test_json_note_store_round_trip_preserves_all_fields(full_note, tmp_path: Path) -> None:

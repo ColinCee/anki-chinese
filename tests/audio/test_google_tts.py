@@ -6,7 +6,6 @@ from anki_chinese.audio import google_tts as gtts
 from anki_chinese.audio.rate_limit import NoOpRateLimiter
 from anki_chinese.audio.retry import RetryPolicy
 
-
 FAKE_MP3 = b"ID3fake-audio-content"
 FAKE_RESPONSE = {"audioContent": base64.b64encode(FAKE_MP3).decode()}
 

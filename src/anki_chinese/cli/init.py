@@ -15,7 +15,6 @@ from ..notes import CharacterNote
 from .app import AppRuntime
 from .ui import report_init_summary, report_review_items
 
-
 _PRESERVE_FIELDS = (
     "mandarin_audio",
     "cantonese_audio",

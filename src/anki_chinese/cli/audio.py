@@ -165,7 +165,7 @@ def run_audio(
                     f"[yellow]Stopped on TTS provider rate limit at {note.hanzi} "
                     f"(RSH #{heisig_index(note) or '?'}). Re-run the same audio command later.[/yellow]"
                 )
-                raise typer.Exit(2)
+                raise typer.Exit(2) from None
             except Exception as error:
                 failures.append(f"{note.hanzi} ({note.keyword}): {error}")
                 runtime.console.print(f"[red]✗[/red] {note.hanzi} ({note.keyword}): {error}")

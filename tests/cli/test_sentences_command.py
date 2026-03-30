@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from io import StringIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from anki_chinese.cli.sentences import apply_sentence, run_sentences
 from anki_chinese.notes import CharacterNote
@@ -92,7 +91,7 @@ class TestAPIKeyMissing:
         runtime = runtime_factory(saved_notes=notes)
 
         with patch.dict("os.environ", {"GEMINI_API_KEY": ""}, clear=False):
-            result = run_sentences(runtime)
+            run_sentences(runtime)
 
         console_output = runtime.console.file.getvalue()  # type: ignore[union-attr]
         assert "GEMINI_API_KEY" in console_output
@@ -176,9 +175,11 @@ class TestAllSentencesExist:
         notes = [CharacterNote(hanzi="一", keyword="one", sentence="有了")]
         runtime = runtime_factory(saved_notes=notes)
 
-        with patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}):
-            with patch("anki_chinese.sentences.SentenceGenerator"):
-                run_sentences(runtime)
+        with (
+            patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}),
+            patch("anki_chinese.sentences.SentenceGenerator"),
+        ):
+            run_sentences(runtime)
 
         output = runtime.console.file.getvalue()  # type: ignore[union-attr]
         assert "already have" in output.lower()
@@ -239,9 +240,11 @@ class TestPickMode:
 
         with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
             MockGen.return_value.generate_candidates.return_value = candidates
-            with patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}):
-                with patch("typer.prompt", return_value="2"):
-                    run_sentences(runtime, char="水", pick=2)
+            with (
+                patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}),
+                patch("typer.prompt", return_value="2"),
+            ):
+                run_sentences(runtime, char="水", pick=2)
 
         saved = runtime.note_store.load()
         assert saved[0].sentence == "水很冷。"
@@ -258,9 +261,11 @@ class TestPickMode:
 
         with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
             MockGen.return_value.generate_candidates.return_value = candidates
-            with patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}):
-                with patch("typer.prompt", return_value="s"):
-                    run_sentences(runtime, char="水", pick=1)
+            with (
+                patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}),
+                patch("typer.prompt", return_value="s"),
+            ):
+                run_sentences(runtime, char="水", pick=1)
 
         saved = runtime.note_store.load()
         assert saved[0].sentence == "原来的。"

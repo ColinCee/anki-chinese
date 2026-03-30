@@ -1,6 +1,6 @@
 """Audio generation, provider boundaries, and file/tag helpers."""
 
-from .errors import TTSConfigurationError, TTSRateLimitError, TTSError, classify_http_error
+from .errors import TTSConfigurationError, TTSError, TTSRateLimitError, classify_http_error
 from .factory import PROVIDER_NAMES, build_tts_provider
 from .files import (
     audio_tasks_for_note,
@@ -13,9 +13,8 @@ from .files import (
     preview_mandarin_filename,
 )
 from .provider import ProviderCapabilities, TTSProvider
-from .retry import DEFAULT_RETRY_POLICY, RetryPolicy, synthesize_with_retry
-
 from .rate_limit import NoOpRateLimiter, RateLimiter, SlidingWindowRateLimiter
+from .retry import synthesize_with_retry
 
 __all__ = [
     "NoOpRateLimiter",

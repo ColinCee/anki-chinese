@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from anki_chinese.sentences.generator import (
     SentenceGenerator,
     SentenceResult,
-    _SentenceSchema,
-    _ValidationSchema,
 )
 
 

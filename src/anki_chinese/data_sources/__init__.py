@@ -16,10 +16,11 @@ from pathlib import Path
 
 from .. import config
 from ..notes.pronunciation import normalize_pinyin, reading_matches
-from .cache import MemoizedLoader
 from ._jyutping import lookup_jyutping, lookup_jyutping_word
 from ._overrides import load_example_overrides
 from ._pinyin import lookup_pinyin, lookup_pinyin_word
+from .cache import MemoizedLoader
+
 
 def _pick_example(
     candidates: list[tuple[str, str, str]],
