@@ -79,3 +79,96 @@ def test_parse_deck_export_supports_exported_rows_with_header_map(tmp_path: Path
     assert note.heisig_num == "RSH 144"
     assert note.lesson == "Lesson 12"
     assert note.story == "walk"
+
+
+def test_parse_deck_export_empty_file(tmp_path: Path) -> None:
+    export_path = tmp_path / "empty.txt"
+    export_path.write_text("", encoding="utf-8")
+
+    notes = parse_deck_export(export_path)
+
+    assert notes == []
+
+
+def test_parse_deck_export_empty_file_with_header_only(tmp_path: Path) -> None:
+    export_path = tmp_path / "header_only.txt"
+    export_path.write_text("#guid column:1\n", encoding="utf-8")
+
+    notes = parse_deck_export(export_path)
+
+    assert notes == []
+
+
+def test_parse_deck_export_skips_malformed_short_rows(tmp_path: Path) -> None:
+    export_path = tmp_path / "malformed.txt"
+    short_row = ["col1", "col2", "col3"]
+    good_row = [""] * 16
+    good_row[2] = "水"
+    good_row[3] = "water"
+    good_row[7] = '<span class="tone3">shuǐ</span>'
+    _write_export(export_path, [short_row, good_row])
+
+    notes = parse_deck_export(export_path)
+
+    assert len(notes) == 1
+    assert notes[0].hanzi == "水"
+    assert notes[0].keyword == "water"
+
+
+def test_parse_deck_export_unicode_cjk_characters(tmp_path: Path) -> None:
+    export_path = tmp_path / "unicode.txt"
+    row = [""] * 16
+    row[2] = "龍"
+    row[3] = "dragon — 龍"
+    row[5] = "story with 中文 and émojis 🐉"
+    row[7] = '<span class="tone2">lóng</span>'
+    row[10] = "RSH 2000"
+    row[11] = "Lesson 99"
+    row[13] = '<span class="tone4">lung4</span>'
+    _write_export(export_path, [row])
+
+    notes = parse_deck_export(export_path)
+
+    assert len(notes) == 1
+    note = notes[0]
+    assert note.hanzi == "龍"
+    assert note.keyword == "dragon — 龍"
+    assert note.story == "story with 中文 and émojis 🐉"
+    assert note.pinyin == "lóng"
+    assert note.jyutping == "lung4"
+
+
+def test_parse_deck_export_multiple_rows(tmp_path: Path) -> None:
+    export_path = tmp_path / "multi.txt"
+    row_a = [""] * 16
+    row_a[2] = "大"
+    row_a[3] = "big"
+    row_a[7] = '<span class="tone4">dà</span>'
+
+    row_b = [""] * 16
+    row_b[2] = "小"
+    row_b[3] = "small"
+    row_b[7] = '<span class="tone3">xiǎo</span>'
+
+    _write_export(export_path, [row_a, row_b])
+
+    notes = parse_deck_export(export_path)
+
+    assert len(notes) == 2
+    assert notes[0].hanzi == "大"
+    assert notes[1].hanzi == "小"
+
+
+def test_parse_deck_export_skips_all_blank_rows(tmp_path: Path) -> None:
+    """A row where every column is empty is all-whitespace and gets skipped."""
+    export_path = tmp_path / "blank_fields.txt"
+    blank_row = [""] * 16
+    real_row = [""] * 16
+    real_row[2] = "火"
+    real_row[3] = "fire"
+    _write_export(export_path, [blank_row, real_row])
+
+    notes = parse_deck_export(export_path)
+
+    assert len(notes) == 1
+    assert notes[0].hanzi == "火"
