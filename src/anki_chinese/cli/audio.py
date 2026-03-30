@@ -12,9 +12,73 @@ from ..audio import (
     expected_sentence_audio_tag,
 )
 from ..config import LEARNED_CHARS_PATH
-from ..notes import CharacterNote, filter_from_rsh, heisig_index, load_learned_hanzi, prioritize_learned
+from ..notes import CharacterNote, filter_from_rsh, heisig_index, load_learned_hanzi
 from .app import AppRuntime
 from .ui import create_audio_progress, format_audio_task_labels, report_audio_summary
+
+
+def _collect_pending_audio(
+    targets: list[CharacterNote],
+    *,
+    force: bool,
+    is_valid_tag: callable,
+    limit: int,
+) -> list[tuple[CharacterNote, list[str]]]:
+    """Filter targets to notes needing audio, prioritize learned, apply limit."""
+    pending: list[tuple[CharacterNote, list[str]]] = []
+    for note in targets:
+        tasks = audio_tasks_for_note(
+            note, force=force, is_valid_audio_tag_fn=is_valid_tag,
+        )
+        if tasks:
+            pending.append((note, tasks))
+
+    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
+    if learned:
+        pending.sort(key=lambda pair: pair[0].hanzi not in learned)
+
+    if limit > 0:
+        pending = pending[:limit]
+
+    return pending
+
+
+def _generate_one_note(
+    note: CharacterNote,
+    tasks: list[str],
+    runtime: AppRuntime,
+    *,
+    force: bool,
+) -> dict[str, int]:
+    """Generate audio for a single note, returning per-type counts of new files."""
+    generated: dict[str, int] = {}
+
+    if "mandarin" in tasks and note.pinyin:
+        expected = expected_mandarin_audio_tag(note)
+        was_cached = bool(expected and runtime.tts_provider.is_valid_audio_tag(expected))
+        note.mandarin_audio = runtime.tts_provider.generate_mandarin(
+            note.hanzi, note.pinyin, force=force,
+        )
+        generated["mandarin"] = 0 if was_cached and not force else 1
+
+    if "cantonese" in tasks and note.jyutping:
+        expected = expected_cantonese_audio_tag(note)
+        was_cached = bool(expected and runtime.tts_provider.is_valid_audio_tag(expected))
+        note.cantonese_audio = runtime.tts_provider.generate_cantonese(
+            note.hanzi, note.jyutping, force=force,
+        )
+        generated["cantonese"] = 0 if was_cached and not force else 1
+
+    if "sentence" in tasks and note.sentence:
+        provider = runtime.sentence_tts_provider or runtime.tts_provider
+        expected = expected_sentence_audio_tag(note)
+        was_cached = bool(expected and provider.is_valid_audio_tag(expected))
+        note.sentence_audio = provider.generate_sentence_audio(
+            note.hanzi, note.sentence, force=force,
+        )
+        generated["sentence"] = 0 if was_cached and not force else 1
+
+    return generated
 
 
 def run_audio(
@@ -35,30 +99,17 @@ def run_audio(
         if not targets:
             runtime.console.print(f"[red]✗[/red] Character '{char}' not found")
             raise typer.Exit(1)
-    else:
-        if start_rsh > 0:
-            targets = filter_from_rsh(targets, start_rsh)
-            if not targets:
-                runtime.console.print(f"[red]✗[/red] No notes found at or after RSH #{start_rsh}")
-                raise typer.Exit(1)
+    elif start_rsh > 0:
+        targets = filter_from_rsh(targets, start_rsh)
+        if not targets:
+            runtime.console.print(f"[red]✗[/red] No notes found at or after RSH #{start_rsh}")
+            raise typer.Exit(1)
 
-    pending: list[tuple[CharacterNote, list[str]]] = []
-    for note in targets:
-        tasks = audio_tasks_for_note(
-            note,
-            force=force,
-            is_valid_audio_tag_fn=runtime.tts_provider.is_valid_audio_tag,
-        )
-        if tasks:
-            pending.append((note, tasks))
-
-    # Prioritize learned characters before applying limit
-    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
-    if learned:
-        pending.sort(key=lambda pair: pair[0].hanzi not in learned)
-
-    if limit > 0:
-        pending = pending[:limit]
+    pending = _collect_pending_audio(
+        targets, force=force,
+        is_valid_tag=runtime.tts_provider.is_valid_audio_tag,
+        limit=limit,
+    )
 
     if not pending:
         runtime.console.print(
@@ -66,6 +117,7 @@ def run_audio(
         )
         return notes
 
+    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
     if learned:
         learned_count = sum(1 for n, _ in pending if n.hanzi in learned)
         runtime.console.print(f"  [dim]{learned_count} learned characters prioritized[/dim]")
@@ -84,54 +136,16 @@ def run_audio(
     with progress:
         task_id = progress.add_task("Audio", total=len(pending), current="Preparing...")
         for index, (note, tasks) in enumerate(pending, 1):
-            note_changed = False
             progress.update(
                 task_id,
                 current=f"{note.hanzi} ({note.keyword}) · {format_audio_task_labels(tasks)}",
             )
-
             try:
-                if "mandarin" in tasks and note.pinyin:
-                    expected = expected_mandarin_audio_tag(note)
-                    had_valid_audio = bool(
-                        expected and runtime.tts_provider.is_valid_audio_tag(expected)
-                    )
-                    note.mandarin_audio = runtime.tts_provider.generate_mandarin(
-                        note.hanzi,
-                        note.pinyin,
-                        force=force,
-                    )
-                    repaired["mandarin"] += 0 if had_valid_audio and not force else 1
-                    synced["mandarin"] += 1 if had_valid_audio and not force else 0
-                    note_changed = True
-                if "cantonese" in tasks and note.jyutping:
-                    expected = expected_cantonese_audio_tag(note)
-                    had_valid_audio = bool(
-                        expected and runtime.tts_provider.is_valid_audio_tag(expected)
-                    )
-                    note.cantonese_audio = runtime.tts_provider.generate_cantonese(
-                        note.hanzi,
-                        note.jyutping,
-                        force=force,
-                    )
-                    repaired["cantonese"] += 0 if had_valid_audio and not force else 1
-                    synced["cantonese"] += 1 if had_valid_audio and not force else 0
-                    note_changed = True
-                if "sentence" in tasks and note.sentence:
-                    sentence_provider = runtime.sentence_tts_provider or runtime.tts_provider
-                    expected = expected_sentence_audio_tag(note)
-                    had_valid_audio = bool(
-                        expected and sentence_provider.is_valid_audio_tag(expected)
-                    )
-                    note.sentence_audio = sentence_provider.generate_sentence_audio(
-                        note.hanzi,
-                        note.sentence,
-                        force=force,
-                    )
-                    repaired["sentence"] += 0 if had_valid_audio and not force else 1
-                    synced["sentence"] += 1 if had_valid_audio and not force else 0
-                    note_changed = True
-                if note_changed:
+                generated = _generate_one_note(note, tasks, runtime, force=force)
+                for kind, count in generated.items():
+                    repaired[kind] += count
+                    synced[kind] += 1 - count
+                if generated:
                     changed_chars.append(note.hanzi)
                 progress.advance(task_id)
             except TTSRateLimitError as error:
