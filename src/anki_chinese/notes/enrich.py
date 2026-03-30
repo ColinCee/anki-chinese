@@ -32,6 +32,31 @@ def _clear_usage_review(note: CharacterNote) -> None:
         note.review_reason = ""
 
 
+def _resolve_example_pinyin(
+    note: CharacterNote, override_fields: dict[str, object]
+) -> None:
+    """Fill missing example pinyin, normalize, and try to derive a reading."""
+    if note.example_word and not note.example_pinyin:
+        note.example_pinyin = lookup_pinyin_word(note.example_word)
+    normalize_example_pinyin(note, lookup_pinyin_word)
+
+    example_reading = reading_from_example(note)
+    if example_reading and "pinyin" not in override_fields:
+        note.pinyin = example_reading
+        _clear_usage_review(note)
+    elif (
+        note.example_word
+        and note.example_pinyin
+        and "pinyin" not in override_fields
+        and not note.needs_review
+    ):
+        _set_usage_review(
+            note,
+            f"Could not derive a single reading for '{note.hanzi}' from "
+            f"example '{note.example_word}' / '{note.example_pinyin}'",
+        )
+
+
 def enrich_notes(
     notes: list[CharacterNote],
     *,
@@ -62,16 +87,9 @@ def enrich_notes(
                 note.example_meaning = meaning
                 note.example_pinyin = example_pinyin
 
-        if note.example_word and not note.example_pinyin:
-            note.example_pinyin = lookup_pinyin_word(note.example_word)
-        normalize_example_pinyin(note, lookup_pinyin_word)
-
-        example_reading = reading_from_example(note)
-
-        if example_reading and "pinyin" not in override_fields:
-            note.pinyin = example_reading
-            _clear_usage_review(note)
-        elif not note.pinyin:
+        # First pass: derive reading from example, or fall back to dictionary
+        _resolve_example_pinyin(note, override_fields)
+        if not note.pinyin:
             pinyin, is_polyphonic = lookup_pinyin(note.hanzi)
             note.pinyin = pinyin
             if is_polyphonic:
@@ -80,39 +98,11 @@ def enrich_notes(
                     f"Polyphonic character — no usage-derived reading found, "
                     f"defaulted to '{pinyin}' — verify manually",
                 )
-        elif (
-            note.example_word
-            and note.example_pinyin
-            and "pinyin" not in override_fields
-            and not note.needs_review
-        ):
-            _set_usage_review(
-                note,
-                f"Could not derive a single reading for '{note.hanzi}' from "
-                f"example '{note.example_word}' / '{note.example_pinyin}'",
-            )
 
         note = apply_overrides(note, overrides)
 
-        if note.example_word and not note.example_pinyin:
-            note.example_pinyin = lookup_pinyin_word(note.example_word)
-        normalize_example_pinyin(note, lookup_pinyin_word)
-
-        example_reading = reading_from_example(note)
-        if example_reading and "pinyin" not in override_fields:
-            note.pinyin = example_reading
-            _clear_usage_review(note)
-        elif (
-            note.example_word
-            and note.example_pinyin
-            and "pinyin" not in override_fields
-            and not note.needs_review
-        ):
-            _set_usage_review(
-                note,
-                f"Could not derive a single reading for '{note.hanzi}' from "
-                f"example '{note.example_word}' / '{note.example_pinyin}'",
-            )
+        # Second pass: overrides may have changed example_word, re-derive
+        _resolve_example_pinyin(note, override_fields)
 
         enriched.append(note)
 
