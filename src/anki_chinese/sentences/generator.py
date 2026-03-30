@@ -103,6 +103,19 @@ class SentenceGenerator:
 
     def generate(self, hanzi: str) -> SentenceResult:
         """Generate a validated example sentence for *hanzi*."""
+        return self._generate_one(hanzi)
+
+    def generate_candidates(self, hanzi: str, count: int = 3) -> list[SentenceResult]:
+        """Generate *count* independent candidate sentences for *hanzi*."""
+        candidates: list[SentenceResult] = []
+        for _ in range(count):
+            result = self._generate_one(hanzi)
+            if result.sentence:
+                candidates.append(result)
+        return candidates
+
+    def _generate_one(self, hanzi: str) -> SentenceResult:
+        """Generate a single validated example sentence for *hanzi*."""
         gen_config = types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION,
             response_mime_type="application/json",
