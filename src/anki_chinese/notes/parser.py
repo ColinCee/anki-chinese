@@ -73,6 +73,22 @@ def _parse_legacy_row(row: list[str]) -> CharacterNote:
 
 
 def _parse_exported_row(row: list[str]) -> CharacterNote:
+    # Detect layout by column count: 18 = clean 14-field export, 22+ = legacy 19-field
+    if len(row) <= 19:
+        # Clean 14-field layout (after removing deprecated fields in Anki)
+        return CharacterNote(
+            hanzi=_extract_hanzi(row[3]),
+            keyword=row[4].strip(),
+            pinyin=_extract_pinyin(row[5]) if row[5].strip() else "",
+            jyutping=_extract_jyutping(row[6]) if row[6].strip() else "",
+            mandarin_audio=_extract_sound(row[7]) if row[7].strip() else "",
+            cantonese_audio=_extract_sound(row[8]) if row[8].strip() else "",
+            stroke_order=row[9].strip(),
+            heisig_num=row[10].strip(),
+            lesson=row[11].strip(),
+            story=row[12].strip() if len(row) > 12 else "",
+        )
+    # Legacy 19-field layout (deprecated example/sentence_keyword fields still present)
     return CharacterNote(
         hanzi=_extract_hanzi(row[3]),
         keyword=row[4].strip(),
@@ -99,7 +115,7 @@ def parse_deck_export(path: Path) -> list[CharacterNote]:
 
     reader = csv.reader(lines, delimiter="\t")
     for row in reader:
-        if len(row) < 16:
+        if len(row) < 13:
             continue
         notes.append(_parse_exported_row(row) if is_exported or len(row) >= 17 else _parse_legacy_row(row))
     return notes

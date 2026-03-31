@@ -42,6 +42,7 @@ def test_parse_deck_export_supports_legacy_rows_with_image_hanzi(tmp_path: Path)
 
 
 def test_parse_deck_export_supports_exported_rows_with_header_map(tmp_path: Path) -> None:
+    """14-field clean export (after deprecated fields removed in Anki)."""
     export_path = tmp_path / "exported.txt"
     row = [""] * 18
     row[0] = "guid-123"
@@ -53,10 +54,43 @@ def test_parse_deck_export_supports_exported_rows_with_header_map(tmp_path: Path
     row[6] = '<span class="tone4">haang4</span>'
     row[7] = "[sound:cmn_行_xíng.mp3]"
     row[8] = "[sound:yue_行_haang4.mp3]"
-    row[9] = "银行"
-    row[10] = "bank"
-    row[11] = "yín háng"
-    row[12] = "[sound:cmn_银行_yín_háng.mp3]"
+    row[9] = "stroke-order"
+    row[10] = "RSH 144"
+    row[11] = "Lesson 12"
+    row[12] = "walk"
+    _write_export(export_path, [row], headers=["#guid column:1"])
+
+    notes = parse_deck_export(export_path)
+
+    assert len(notes) == 1
+    note = notes[0]
+    assert note.hanzi == "行"
+    assert note.keyword == "go"
+    assert note.pinyin == "xíng"
+    assert note.jyutping == "haang4"
+    assert note.stroke_order == "stroke-order"
+    assert note.heisig_num == "RSH 144"
+    assert note.lesson == "Lesson 12"
+    assert note.story == "walk"
+
+
+def test_parse_deck_export_supports_legacy_19_field_export(tmp_path: Path) -> None:
+    """Legacy 19-field export (deprecated example fields still present)."""
+    export_path = tmp_path / "legacy_19.txt"
+    row = [""] * 22
+    row[0] = "guid-456"
+    row[1] = "Chinese RSH"
+    row[2] = "Chinese"
+    row[3] = "行"
+    row[4] = "go"
+    row[5] = '<span class="tone2">xíng</span>'
+    row[6] = '<span class="tone4">haang4</span>'
+    row[7] = "[sound:cmn_行_xíng.mp3]"
+    row[8] = "[sound:yue_行_haang4.mp3]"
+    row[9] = "银行"       # ExampleWord (deprecated)
+    row[10] = "bank"      # ExampleMeaning (deprecated)
+    row[11] = "yín háng"  # ExamplePinyin (deprecated)
+    row[12] = ""          # ExampleAudio (deprecated)
     row[13] = "stroke-order"
     row[14] = "RSH 144"
     row[15] = "Lesson 12"
@@ -69,8 +103,6 @@ def test_parse_deck_export_supports_exported_rows_with_header_map(tmp_path: Path
     note = notes[0]
     assert note.hanzi == "行"
     assert note.keyword == "go"
-    assert note.pinyin == "xíng"
-    assert note.jyutping == "haang4"
     assert note.stroke_order == "stroke-order"
     assert note.heisig_num == "RSH 144"
     assert note.lesson == "Lesson 12"
