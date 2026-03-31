@@ -39,7 +39,7 @@ CEDICT_PATH = REFERENCE_DATA_DIR / "cedict_1_0_ts_utf-8_mdbg.txt"
 SUBTLEX_PATH = REFERENCE_DATA_DIR / "SUBTLEX_CH.xlsx"
 
 # ── genanki IDs (generated once, never change) ────────────────────────
-MODEL_ID = 1_704_328_573  # Unique ID for the note type
+MODEL_ID = 1_704_328_571  # Unique ID for the note type
 DECK_ID = 1_704_328_572  # Unique ID for the deck
 
 # ── Deck metadata ─────────────────────────────────────────────────────
