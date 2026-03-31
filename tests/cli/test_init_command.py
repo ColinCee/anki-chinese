@@ -61,11 +61,12 @@ def test_clear_stale_audio_removes_files_and_clears_tags(tmp_path: Path) -> None
 # -- Sentence-specific init tests ---------------------------------------------
 
 def test_restore_cached_fields_preserves_sentence_fields() -> None:
+    # Current note has Heisig keyword from re-parse; previous has Gemini keyword
     current = [CharacterNote(hanzi='水', keyword='water', sentence='我喝水。')]
     previous = [
         CharacterNote(
             hanzi='水',
-            keyword='water',
+            keyword='drink',
             sentence='我喝水。',
             sentence_pinyin='wǒ hē shuǐ.',
             sentence_english='I drink water.',
@@ -80,10 +81,11 @@ def test_restore_cached_fields_preserves_sentence_fields() -> None:
     )
 
     note = current[0]
+    assert note.keyword == 'drink'  # Gemini keyword preserved over Heisig
     assert note.sentence_pinyin == 'wǒ hē shuǐ.'
     assert note.sentence_english == 'I drink water.'
     assert note.sentence_audio == '[sound:cmn_sentence_我喝水。.mp3]'
-    assert restored == 3  # pinyin, english, audio
+    assert restored == 4  # pinyin, english, audio, keyword
 
 
 def test_restore_cached_fields_does_not_overwrite_existing_sentence_data() -> None:
@@ -115,6 +117,20 @@ def test_restore_cached_fields_does_not_overwrite_existing_sentence_data() -> No
     note = current[0]
     assert note.sentence_pinyin == 'new pinyin'  # NOT overwritten
     assert note.sentence_english == 'old english'  # restored (was empty)
+
+
+def test_restore_keyword_skipped_without_sentence() -> None:
+    """Without a sentence, keyword stays as the parsed Heisig value."""
+    current = [CharacterNote(hanzi='水', keyword='water')]
+    previous = [CharacterNote(hanzi='水', keyword='drink')]
+
+    _restore_cached_fields(
+        current,
+        previous,
+        is_valid_audio_tag=lambda tag: True,
+    )
+
+    assert current[0].keyword == 'water'  # no sentence → Heisig kept
 
 
 def test_clear_stale_audio_removes_sentence_audio_when_invalid(tmp_path: Path) -> None:
