@@ -31,7 +31,6 @@ OVERRIDES_PATH = MANUAL_DATA_DIR / "overrides.json"
 ENRICHED_PATH = STATE_DATA_DIR / "enriched.json"
 
 # ── Data sources ─────────────────────────────────────────────────────
-EXAMPLE_WORDS_PATH = MANUAL_DATA_DIR / "example_words.json"
 HSK_VOCAB_PATH = REFERENCE_DATA_DIR / "hsk_complete.min.json"
 # CC-CEDICT: auto-downloaded on first use by data_sources._cedict
 CEDICT_PATH = REFERENCE_DATA_DIR / "cedict_1_0_ts_utf-8_mdbg.txt"
@@ -40,7 +39,7 @@ CEDICT_PATH = REFERENCE_DATA_DIR / "cedict_1_0_ts_utf-8_mdbg.txt"
 SUBTLEX_PATH = REFERENCE_DATA_DIR / "SUBTLEX_CH.xlsx"
 
 # ── genanki IDs (generated once, never change) ────────────────────────
-MODEL_ID = 1_704_328_571  # Unique ID for the note type
+MODEL_ID = 1_704_328_573  # Unique ID for the note type
 DECK_ID = 1_704_328_572  # Unique ID for the deck
 
 # ── Deck metadata ─────────────────────────────────────────────────────
@@ -57,16 +56,9 @@ FIELDS = [
     "Jyutping",
     "MandarinAudio",
     "CantoneseAudio",
-    # Deprecated: example fields kept as empty slots for Anki model compatibility.
-    "ExampleWord",
-    "ExampleMeaning",
-    "ExamplePinyin",
-    "ExampleAudio",
     "Sentence",
     "SentencePinyin",
     "SentenceEnglish",
-    # Deprecated: merged into Keyword. Kept as empty slot for compatibility.
-    "SentenceKeyword",
     "SentenceAudio",
     "StrokeOrder",
     "HeisigNum",

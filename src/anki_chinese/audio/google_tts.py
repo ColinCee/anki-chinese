@@ -24,7 +24,6 @@ from .errors import (
     classify_http_error,
 )
 from .files import (
-    example_audio_filename,
     is_valid_audio_file,
     is_valid_audio_tag,
     preview_mandarin_filename,
@@ -285,25 +284,6 @@ class GoogleTTSProvider:
             text=hanzi,
             voice_name=self.settings.cantonese_voice,
             language_code="yue-HK",
-        )
-        return self._generate_file(filename=filename, payload=payload, force=force)
-
-    def generate_example_audio(
-        self, word: str, pinyin: str, *, force: bool = False
-    ) -> str:
-        filename = example_audio_filename(word, pinyin)
-        numbered = diacritical_to_numbered(pinyin)
-        payload = _build_synthesis_request(
-            text=word,
-            voice_name=self.settings.mandarin_voice,
-            language_code="cmn-CN",
-            custom_pronunciations=[
-                {
-                    "phrase": word,
-                    "phoneticEncoding": "PHONETIC_ENCODING_PINYIN",
-                    "pronunciation": numbered,
-                }
-            ],
         )
         return self._generate_file(filename=filename, payload=payload, force=force)
 

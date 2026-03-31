@@ -90,9 +90,5 @@ def validation_issues(notes: list[CharacterNote]) -> list[str]:
             issues.append(f"#{index} ({note.hanzi}): audio without pinyin")
         if note.cantonese_audio and not note.jyutping:
             issues.append(f"#{index} ({note.hanzi}): audio without jyutping")
-        if note.example_word and not note.example_pinyin:
-            issues.append(f"#{index} ({note.hanzi}): example word without example pinyin")
-        if note.example_audio and not note.example_pinyin:
-            issues.append(f"#{index} ({note.hanzi}): example audio without example pinyin")
 
     return issues

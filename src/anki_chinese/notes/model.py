@@ -23,21 +23,9 @@ class CharacterNote:
     mandarin_audio: str = ""
     cantonese_audio: str = ""
 
-    # Deprecated: example word fields are no longer shown on cards.
-    # Kept as empty slots so the genanki field count matches the existing
-    # Anki model (MODEL_ID), preserving scheduling data on reimport.
-    example_word: str = ""
-    example_meaning: str = ""
-    example_pinyin: str = ""
-    example_audio: str = ""
-
     sentence: str = ""
     sentence_pinyin: str = ""
     sentence_english: str = ""
-
-    # Deprecated: sentence_keyword is merged into `keyword` during generation.
-    # Kept as an empty slot for genanki field-count compatibility.
-    sentence_keyword: str = ""
 
     sentence_audio: str = ""
     stroke_order: str = ""
@@ -56,14 +44,9 @@ class CharacterNote:
             self.jyutping,
             self.mandarin_audio,
             self.cantonese_audio,
-            self.example_word,
-            self.example_meaning,
-            self.example_pinyin,
-            self.example_audio,
             self.sentence,
             self.sentence_pinyin,
             self.sentence_english,
-            self.sentence_keyword,
             self.sentence_audio,
             self.stroke_order,
             self.heisig_num,

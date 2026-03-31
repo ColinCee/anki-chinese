@@ -4,9 +4,7 @@ from .errors import TTSConfigurationError, TTSError, TTSRateLimitError, classify
 from .factory import PROVIDER_NAMES, build_tts_provider
 from .files import (
     audio_tasks_for_note,
-    example_audio_filename,
     expected_cantonese_audio_tag,
-    expected_example_audio_tag,
     expected_mandarin_audio_tag,
     expected_sentence_audio_tag,
     is_valid_audio_tag,
@@ -30,9 +28,7 @@ __all__ = [
     "synthesize_with_retry",
     "audio_tasks_for_note",
     "build_tts_provider",
-    "example_audio_filename",
     "expected_cantonese_audio_tag",
-    "expected_example_audio_tag",
     "expected_mandarin_audio_tag",
     "expected_sentence_audio_tag",
     "is_valid_audio_tag",

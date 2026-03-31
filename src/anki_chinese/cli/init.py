@@ -46,6 +46,11 @@ def _restore_cached_fields(
                 continue
             setattr(note, field, previous_value)
             restored += 1
+        # If the previous note had a Gemini-generated sentence, its keyword
+        # is the contextual meaning — prefer it over the parsed Heisig keyword.
+        if previous.sentence and previous.keyword:
+            note.keyword = previous.keyword
+            restored += 1
     return prev_by_hanzi, restored
 
 
@@ -86,8 +91,6 @@ def _clear_stale_audio(
 def run_init(
     runtime: AppRuntime,
     input_file: Path,
-    *,
-    skip_examples: bool = False,
 ) -> list[CharacterNote]:
     runtime.console.print(f"[blue]Parsing[/blue] {input_file} ...")
     notes = runtime.parse_deck_export(input_file)
@@ -105,7 +108,7 @@ def run_init(
         )
 
     runtime.console.print("[blue]Enriching[/blue] ...")
-    notes = runtime.enrich_notes(notes, skip_examples=skip_examples)
+    notes = runtime.enrich_notes(notes)
 
     removed_stale_files = _clear_stale_audio(
         notes,
@@ -140,11 +143,6 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             "-i",
             help="Anki text export to parse.",
         ),
-        skip_examples: bool = typer.Option(
-            False,
-            "--skip-examples",
-            help="Skip example-word lookup.",
-        ),
     ) -> None:
-        """Parse source deck export and enrich with pinyin, jyutping, examples."""
-        run_init(runtime, input_file, skip_examples=skip_examples)
+        """Parse source deck export and enrich with pinyin and jyutping."""
+        run_init(runtime, input_file)

@@ -61,8 +61,6 @@ def test_validation_issues_reports_duplicates_and_dependent_field_problems() -> 
             keyword='',
             mandarin_audio='[sound:cmn_一_yī.mp3]',
             cantonese_audio='[sound:yue_一_jat1.mp3]',
-            example_word='银行',
-            example_audio='[sound:cmn_银行_yín_háng.mp3]',
         ),
     ]
 
@@ -73,8 +71,6 @@ def test_validation_issues_reports_duplicates_and_dependent_field_problems() -> 
     assert '#0 (一): missing pinyin' in issues
     assert '#1 (一): audio without pinyin' in issues
     assert '#1 (一): audio without jyutping' in issues
-    assert '#1 (一): example word without example pinyin' in issues
-    assert '#1 (一): example audio without example pinyin' in issues
 
 
 # -- Learned character prioritization -----------------------------------------

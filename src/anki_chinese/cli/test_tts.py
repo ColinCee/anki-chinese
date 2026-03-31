@@ -100,25 +100,6 @@ def run_test_tts(
                     audio_dir=sample_dir,
                 )
 
-            if note.example_word:
-                if note.example_pinyin:
-                    tag = preview_provider.generate_example_audio(
-                        note.example_word,
-                        note.example_pinyin,
-                        force=True,
-                    )
-                else:
-                    tag = preview_provider.generate_plain_mandarin(
-                        note.example_word,
-                        force=True,
-                    )
-                _add_audio_row(
-                    table,
-                    label=f"Example ({note.example_word} · {note.example_pinyin or 'plain'})",
-                    tag=tag,
-                    audio_dir=sample_dir,
-                )
-
             runtime.console.print(table)
         else:
             runtime.console.print(

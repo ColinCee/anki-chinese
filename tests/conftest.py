@@ -64,19 +64,6 @@ class StubTTSProvider:
         self.calls.append(("cantonese", hanzi, jyutping, force))
         return tag
 
-    def generate_example_audio(
-        self,
-        word: str,
-        pinyin: str,
-        *,
-        force: bool = False,
-    ) -> str:
-        self._maybe_rate_limit("example", word)
-        tag = f"[sound:cmn_{word}_{pinyin.replace(' ', '_')}.mp3]"
-        self.valid_audio_tags.add(tag)
-        self.calls.append(("example", word, pinyin, force))
-        return tag
-
     def generate_sentence_audio(
         self,
         hanzi: str,
@@ -113,10 +100,6 @@ def full_note() -> CharacterNote:
         jyutping="haang4",
         mandarin_audio="[sound:cmn_行_xíng.mp3]",
         cantonese_audio="[sound:yue_行_haang4.mp3]",
-        example_word="银行",
-        example_meaning="bank",
-        example_pinyin="yín háng",
-        example_audio="[sound:cmn_银行_yín_háng.mp3]",
         stroke_order="stroke-order",
         heisig_num="RSH 144",
         lesson="Lesson 12",
@@ -161,7 +144,6 @@ def runtime_factory(tmp_path: Path):
 
         def enrich_notes(
             notes: list[CharacterNote],
-            skip_examples: bool = False,
         ) -> list[CharacterNote]:
             return deepcopy(enriched)
 

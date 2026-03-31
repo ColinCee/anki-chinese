@@ -16,7 +16,6 @@ def run_build(
     *,
     full: bool = False,
     skip_audio: bool = False,
-    skip_examples: bool = False,
     audio_limit: int = 0,
     audio_start_rsh: int = 0,
 ) -> Path:
@@ -25,7 +24,6 @@ def run_build(
         notes = run_init(
             runtime,
             runtime.source_deck_path,
-            skip_examples=skip_examples,
         )
 
         if not skip_audio:
@@ -63,11 +61,6 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             "--skip-audio",
             help="When using --full, skip the audio step.",
         ),
-        skip_examples: bool = typer.Option(
-            False,
-            "--skip-examples",
-            help="When using --full, skip example-word lookup.",
-        ),
         audio_limit: int = typer.Option(
             0,
             "--audio-limit",
@@ -84,7 +77,6 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             runtime,
             full=full,
             skip_audio=skip_audio,
-            skip_examples=skip_examples,
             audio_limit=audio_limit,
             audio_start_rsh=audio_start_rsh,
         )

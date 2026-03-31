@@ -80,10 +80,7 @@ def _parse_exported_row(row: list[str]) -> CharacterNote:
         jyutping=_extract_jyutping(row[6]) if row[6].strip() else "",
         mandarin_audio=_extract_sound(row[7]) if row[7].strip() else "",
         cantonese_audio=_extract_sound(row[8]) if row[8].strip() else "",
-        example_word=row[9].strip(),
-        example_meaning=row[10].strip(),
-        example_pinyin=row[11].strip(),
-        example_audio=_extract_sound(row[12]) if row[12].strip() else "",
+        # Columns 9–12 were example_word/meaning/pinyin/audio — skipped.
         stroke_order=row[13].strip(),
         heisig_num=row[14].strip(),
         lesson=row[15].strip(),

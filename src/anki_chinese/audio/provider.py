@@ -25,10 +25,6 @@ class TTSProvider(Protocol):
         self, hanzi: str, jyutping: str, *, force: bool = False
     ) -> str: ...
 
-    def generate_example_audio(
-        self, word: str, pinyin: str, *, force: bool = False
-    ) -> str: ...
-
     def generate_sentence_audio(
         self, hanzi: str, sentence: str, *, force: bool = False
     ) -> str: ...

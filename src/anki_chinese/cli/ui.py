@@ -21,7 +21,6 @@ def format_audio_task_labels(tasks: list[str]) -> str:
     labels = {
         "mandarin": "Mandarin",
         "cantonese": "Cantonese",
-        "example": "Example",
         "sentence": "Sentence",
     }
     return ", ".join(labels[task] for task in tasks if task in labels)
@@ -68,12 +67,8 @@ def report_init_summary(
         "keyword",
         "pinyin",
         "jyutping",
-        "example_word",
-        "example_meaning",
-        "example_pinyin",
         "mandarin_audio",
         "cantonese_audio",
-        "example_audio",
         "story",
     )
     for note in notes:

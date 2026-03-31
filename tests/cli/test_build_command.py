@@ -11,8 +11,8 @@ def test_run_build_full_passes_options_through_init_audio_and_build(monkeypatch,
     audio_notes = [CharacterNote(hanzi='一', keyword='one', pinyin='yī', mandarin_audio='[sound:cmn_一_yī.mp3]')]
     calls: dict[str, object] = {}
 
-    def fake_init(runtime_arg, input_file, *, skip_examples=False):
-        calls['init'] = (runtime_arg, input_file, skip_examples)
+    def fake_init(runtime_arg, input_file):
+        calls['init'] = (runtime_arg, input_file)
         return init_notes
 
     def fake_audio(runtime_arg, *, all_notes=None, limit=0, start_rsh=0, force=False, fail_fast=False):
@@ -33,13 +33,12 @@ def test_run_build_full_passes_options_through_init_audio_and_build(monkeypatch,
     result = build_module.run_build(
         runtime,
         full=True,
-        skip_examples=True,
         audio_limit=3,
         audio_start_rsh=120,
     )
 
     assert result == runtime.note_store.path.parent.parent / 'build' / 'decks' / 'deck.apkg'
-    assert calls['init'] == (runtime, runtime.source_deck_path, True)
+    assert calls['init'] == (runtime, runtime.source_deck_path)
     assert calls['audio'] == (runtime, init_notes, 3, 120, False, False)
     assert calls['build'] == audio_notes
 
@@ -52,7 +51,7 @@ def test_run_build_full_skips_audio_when_requested(monkeypatch, runtime_factory)
     monkeypatch.setattr(
         build_module,
         'run_init',
-        lambda runtime_arg, input_file, *, skip_examples=False: init_notes,
+        lambda runtime_arg, input_file: init_notes,
     )
 
     def fail_audio(*args, **kwargs):

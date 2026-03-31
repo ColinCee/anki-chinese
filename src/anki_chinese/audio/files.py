@@ -9,11 +9,6 @@ from ..config import GENERATED_AUDIO_DIR
 from ..notes import CharacterNote
 
 
-def example_audio_filename(word: str, pinyin: str) -> str:
-    safe_pinyin = pinyin.replace(" ", "_")
-    return f"cmn_{word}_{safe_pinyin}.mp3"
-
-
 def preview_mandarin_filename(text: str) -> str:
     safe_text = text.translate(str.maketrans({"/": "_", "\\": "_", ":": "_", " ": "_"}))
     return f"preview_cmn_{safe_text}.mp3"
@@ -29,12 +24,6 @@ def expected_cantonese_audio_tag(note: CharacterNote) -> str:
     if not note.hanzi or not note.jyutping:
         return ""
     return f"[sound:yue_{note.hanzi}_{note.jyutping.replace(' ', '_')}.mp3]"
-
-
-def expected_example_audio_tag(note: CharacterNote) -> str:
-    if not note.example_word or not note.example_pinyin:
-        return ""
-    return f"[sound:{example_audio_filename(note.example_word, note.example_pinyin)}]"
 
 
 def sentence_audio_filename(hanzi: str, sentence: str) -> str:
@@ -67,7 +56,6 @@ def referenced_audio_files(notes: list[CharacterNote]) -> set[str]:
         for tag in (
             note.mandarin_audio,
             note.cantonese_audio,
-            note.example_audio,
             note.sentence_audio,
         ):
             if tag.startswith("[sound:") and tag.endswith("]"):

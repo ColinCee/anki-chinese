@@ -23,7 +23,6 @@ from .errors import (
     is_rate_limited_message,
 )
 from .files import (
-    example_audio_filename,
     is_valid_audio_file,
     is_valid_audio_tag,
     preview_mandarin_filename,
@@ -260,18 +259,6 @@ class MiniMaxTTSProvider:
             text=hanzi,
             voice_id=self.settings.cantonese_voice_id,
             language_boost="Chinese,Yue",
-            force=force,
-        )
-
-    def generate_example_audio(
-        self, word: str, pinyin: str, *, force: bool = False
-    ) -> str:
-        filename = example_audio_filename(word, pinyin)
-        return self._generate_file(
-            filename=filename,
-            text=word,
-            voice_id=self.settings.mandarin_voice_id,
-            language_boost="Chinese",
             force=force,
         )
 

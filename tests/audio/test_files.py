@@ -4,9 +4,7 @@ import anki_chinese.audio.files as audio_files
 from anki_chinese.audio.files import (
     audio_tasks_for_note,
     collect_orphaned_audio,
-    example_audio_filename,
     expected_cantonese_audio_tag,
-    expected_example_audio_tag,
     expected_mandarin_audio_tag,
     expected_sentence_audio_tag,
     is_valid_audio_tag,
@@ -23,7 +21,6 @@ def test_expected_audio_tags_are_empty_when_required_fields_are_missing() -> Non
 
     assert expected_mandarin_audio_tag(note) == ''
     assert expected_cantonese_audio_tag(note) == ''
-    assert expected_example_audio_tag(note) == ''
     assert expected_sentence_audio_tag(note) == ''
 
 
@@ -33,11 +30,8 @@ def test_audio_tasks_for_note_skips_valid_existing_audio() -> None:
         keyword='go',
         pinyin='xíng',
         jyutping='haang4',
-        example_word='银行',
-        example_pinyin='yín háng',
         mandarin_audio='[sound:cmn_行_xíng.mp3]',
         cantonese_audio='[sound:yue_行_haang4.mp3]',
-        example_audio='[sound:cmn_银行_yín_háng.mp3]',
     )
 
     tasks = audio_tasks_for_note(
@@ -86,7 +80,7 @@ def test_audio_tasks_for_note_force_regenerates_available_audio() -> None:
 
 
 def test_is_valid_audio_tag_uses_passed_audio_directory(tmp_path: Path, monkeypatch) -> None:
-    filename = example_audio_filename('你好', 'nǐ hǎo')
+    filename = 'cmn_你好_nǐ_hǎo.mp3'
     (tmp_path / filename).write_bytes(b'ID3')
     monkeypatch.setattr(audio_files, 'GENERATED_AUDIO_DIR', tmp_path / 'wrong')
 
@@ -171,7 +165,6 @@ def test_referenced_audio_files_extracts_all_tags() -> None:
             keyword='water',
             mandarin_audio='[sound:cmn_水_shuǐ.mp3]',
             cantonese_audio='[sound:yue_水_seoi2.mp3]',
-            example_audio='[sound:cmn_河水_hé_shuǐ.mp3]',
             sentence_audio='[sound:cmn_sentence_我喝水。.mp3]',
         ),
         CharacterNote(
@@ -186,7 +179,6 @@ def test_referenced_audio_files_extracts_all_tags() -> None:
     assert refs == {
         'cmn_水_shuǐ.mp3',
         'yue_水_seoi2.mp3',
-        'cmn_河水_hé_shuǐ.mp3',
         'cmn_sentence_我喝水。.mp3',
         'cmn_火_huǒ.mp3',
     }
@@ -194,7 +186,7 @@ def test_referenced_audio_files_extracts_all_tags() -> None:
 
 def test_referenced_audio_files_ignores_empty_and_invalid_tags() -> None:
     notes = [
-        CharacterNote(hanzi='水', keyword='water', mandarin_audio='', example_audio='not-a-tag'),
+        CharacterNote(hanzi='水', keyword='water', mandarin_audio=''),
     ]
 
     assert referenced_audio_files(notes) == set()

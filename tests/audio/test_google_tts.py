@@ -98,28 +98,6 @@ def test_generate_cantonese_uses_ssml_phoneme(
     assert "ssml" not in payload["input"]
 
 
-def test_generate_example_audio_uses_pinyin_pronunciation(
-    tmp_path: Path, monkeypatch
-) -> None:
-    provider = _make_provider(tmp_path)
-    captured: dict[str, object] = {}
-
-    def fake_post(*, endpoint, access_token, payload, timeout_seconds, quota_project=None):
-        captured["payload"] = payload
-        return FAKE_RESPONSE
-
-    monkeypatch.setattr(gtts, "_post_synthesis_request", fake_post)
-    monkeypatch.setattr(gtts, "_get_access_token", lambda creds: "fake-token")
-
-    tag = provider.generate_example_audio("学习", "xué xí")
-
-    assert tag == "[sound:cmn_学习_xué_xí.mp3]"
-
-    payload = captured["payload"]
-    prons = payload["input"]["customPronunciations"]["pronunciations"]
-    assert prons[0]["pronunciation"] == "xue2 xi2"
-
-
 def test_generate_plain_mandarin_no_pronunciation(
     tmp_path: Path, monkeypatch
 ) -> None:
