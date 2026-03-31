@@ -11,6 +11,7 @@ __all__: list[str] = []  # Internal module — import from package instead
 
 import logging
 import time
+from collections.abc import Callable
 
 from google import genai
 from google.genai import types
@@ -60,6 +61,8 @@ class KeywordFixer:
     def fix_batch(
         self,
         items: list[tuple[str, str, str]],
+        *,
+        on_chunk_done: Callable[[int], None] | None = None,
     ) -> dict[str, str]:
         """Fix keywords for a batch of characters.
 
@@ -67,6 +70,8 @@ class KeywordFixer:
         ----------
         items:
             List of ``(hanzi, sentence, english_translation)`` tuples.
+        on_chunk_done:
+            Optional callback called after each chunk with the chunk size.
 
         Returns
         -------
@@ -77,6 +82,8 @@ class KeywordFixer:
             chunk = items[start : start + _BATCH_SIZE]
             chunk_result = self._fix_chunk(chunk)
             results.update(chunk_result)
+            if on_chunk_done:
+                on_chunk_done(len(chunk))
         return results
 
     # -- Private helpers -------------------------------------------------------

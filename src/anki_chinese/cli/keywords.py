@@ -58,13 +58,16 @@ def run_keywords(
         console=runtime.console,
     ) as progress:
         task_id = progress.add_task("Keywords", total=len(targets))
-        result_map = fixer.fix_batch(items)
-        for note in targets:
-            new_keyword = result_map.get(note.hanzi)
-            if new_keyword and new_keyword != note.keyword:
-                note.keyword = new_keyword
-                updated += 1
-            progress.advance(task_id)
+        result_map = fixer.fix_batch(
+            items,
+            on_chunk_done=lambda n: progress.advance(task_id, n),
+        )
+
+    for note in targets:
+        new_keyword = result_map.get(note.hanzi)
+        if new_keyword and new_keyword != note.keyword:
+            note.keyword = new_keyword
+            updated += 1
 
     runtime.note_store.save(notes)
     runtime.console.print(f"[green]✓[/green] Updated {updated} keywords")
