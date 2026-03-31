@@ -200,3 +200,25 @@ def test_parse_deck_export_skips_all_blank_rows(tmp_path: Path) -> None:
 
     assert len(notes) == 1
     assert notes[0].hanzi == "火"
+
+
+def test_parse_real_all_decks_export() -> None:
+    """Regression test: parse the actual All Decks.txt and verify first note."""
+    export_path = Path(__file__).resolve().parents[2] / "data" / "source" / "All Decks.txt"
+    if not export_path.exists():
+        return  # skip if data not available (CI)
+
+    notes = parse_deck_export(export_path)
+
+    assert len(notes) > 100
+    note = notes[0]
+    assert note.hanzi == "一"
+    assert note.keyword == "one"
+    assert note.pinyin == "yī"
+    assert note.jyutping == "jat1"
+    assert "[sound:cmn_" in note.mandarin_audio
+    assert "[sound:yue_" in note.cantonese_audio
+    assert "img" in note.stroke_order or "gif" in note.stroke_order
+    assert note.heisig_num == "1"
+    assert note.lesson.startswith("RSH")
+    assert note.story  # non-empty for first note

@@ -44,14 +44,14 @@ class CharacterNote:
             self.jyutping,
             self.mandarin_audio,
             self.cantonese_audio,
-            self.sentence,
-            self.sentence_pinyin,
-            self.sentence_english,
-            self.sentence_audio,
             self.stroke_order,
             self.heisig_num,
             self.lesson,
             self.story,
+            self.sentence_audio,
+            self.sentence,
+            self.sentence_pinyin,
+            self.sentence_english,
         ]
 
     def to_dict(self) -> dict[str, Any]:

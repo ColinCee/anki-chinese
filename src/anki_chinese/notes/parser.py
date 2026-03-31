@@ -73,9 +73,12 @@ def _parse_legacy_row(row: list[str]) -> CharacterNote:
 
 
 def _parse_exported_row(row: list[str]) -> CharacterNote:
-    # Detect layout by column count: 18 = clean 14-field export, 22+ = legacy 19-field
+    # Detect layout by column count: <=18 = clean 14-field export, 22+ = legacy 19-field
     if len(row) <= 19:
         # Clean 14-field layout (after removing deprecated fields in Anki)
+        # Fields: Hanzi Keyword Pinyin Jyutping MandarinAudio CantoneseAudio
+        #         StrokeOrder HeisigNum Lesson Story SentenceAudio Sentence
+        #         SentencePinyin SentenceEnglish
         return CharacterNote(
             hanzi=_extract_hanzi(row[3]),
             keyword=row[4].strip(),
