@@ -61,12 +61,13 @@ def test_clear_stale_audio_removes_files_and_clears_tags(tmp_path: Path) -> None
 # -- Sentence-specific init tests ---------------------------------------------
 
 def test_restore_cached_fields_preserves_sentence_fields() -> None:
-    # Current note has Heisig keyword from re-parse; previous has Gemini keyword
-    current = [CharacterNote(hanzi='水', keyword='water', sentence='我喝水。')]
+    # Current note has Heisig keyword from re-parse; previous has Gemini keyword + pinyin
+    current = [CharacterNote(hanzi='水', keyword='water', pinyin='shuǐ', sentence='我喝水。')]
     previous = [
         CharacterNote(
             hanzi='水',
             keyword='drink',
+            pinyin='hē',
             sentence='我喝水。',
             sentence_pinyin='wǒ hē shuǐ.',
             sentence_english='I drink water.',
@@ -82,10 +83,11 @@ def test_restore_cached_fields_preserves_sentence_fields() -> None:
 
     note = current[0]
     assert note.keyword == 'drink'  # Gemini keyword preserved over Heisig
+    assert note.pinyin == 'hē'  # Gemini pinyin preserved
     assert note.sentence_pinyin == 'wǒ hē shuǐ.'
     assert note.sentence_english == 'I drink water.'
     assert note.sentence_audio == '[sound:cmn_sentence_我喝水。.mp3]'
-    assert restored == 4  # pinyin, english, audio, keyword
+    assert restored == 5  # sentence_pinyin, sentence_english, sentence_audio, keyword, pinyin
 
 
 def test_restore_cached_fields_does_not_overwrite_existing_sentence_data() -> None:

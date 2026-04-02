@@ -19,6 +19,7 @@ def _sentence_json(sentence: str = "我喝一杯咖啡。", **overrides) -> str:
         "pinyin": overrides.get("pinyin", "wǒ hē yī bēi kāfēi."),
         "english": overrides.get("english", "I drink a cup of coffee."),
         "keyword": overrides.get("keyword", "one"),
+        "character_pinyin": overrides.get("character_pinyin", "yī"),
     }
     return json.dumps(data)
 
@@ -203,7 +204,7 @@ class TestAPIErrorHandling:
 
 class TestSentenceResult:
     def test_frozen_dataclass(self):
-        r = SentenceResult("你好", "nǐ hǎo", "hello", "good", valid=True)
+        r = SentenceResult("你好", "nǐ hǎo", "hello", "good", "nǐ", valid=True)
         with pytest.raises(AttributeError):
             r.sentence = "changed"  # type: ignore[misc]
 
@@ -242,5 +243,5 @@ class TestGenerateCandidates:
         assert candidates[0].sentence == "他很大。"
 
     def test_defaults(self):
-        r = SentenceResult("x", "x", "x", "x", valid=True)
+        r = SentenceResult("x", "x", "x", "x", "x", valid=True)
         assert r.error == ""

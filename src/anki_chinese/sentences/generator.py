@@ -63,11 +63,15 @@ _INTER_REQUEST_DELAY = 0.5
 
 class _SentenceSchema(BaseModel):
     sentence: str = Field(description="The Chinese sentence (6-10 characters)")
-    pinyin: str = Field(description="Pinyin with tone marks")
+    pinyin: str = Field(description="Pinyin with tone marks for the full sentence")
     english: str = Field(description="English translation")
     keyword: str = Field(
         description="The English meaning of the target character as used in "
         "this sentence (e.g. 'water', 'study', 'big')"
+    )
+    character_pinyin: str = Field(
+        description="The pinyin of the target character as used in this sentence "
+        "(e.g. 'shuǐ', 'xuē', 'xiāo') — just the single syllable"
     )
 
 
@@ -86,6 +90,7 @@ class SentenceResult:
     pinyin: str
     english: str
     keyword: str
+    character_pinyin: str
     valid: bool
     error: str = ""
 
@@ -151,7 +156,7 @@ class SentenceGenerator:
         # Step 1+2: generate + code char-check with retries
         parsed = self._generate_with_char_check(hanzi, history, gen_config)
         if parsed is None:
-            return SentenceResult("", "", "", "", valid=False,
+            return SentenceResult("", "", "", "", "", valid=False,
                                   error="target char missing after retries")
 
         # Step 3: LLM self-validation
@@ -282,6 +287,7 @@ class SentenceGenerator:
             pinyin=parsed.pinyin,
             english=parsed.english,
             keyword=parsed.keyword,
+            character_pinyin=parsed.character_pinyin,
             valid=valid,
             error=error,
         )

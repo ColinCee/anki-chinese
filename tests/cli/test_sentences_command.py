@@ -15,6 +15,7 @@ def _make_result(hanzi: str, *, valid: bool = True, error: str = "") -> Sentence
         pinyin="wǒ yǒu...",
         english=f"I have {hanzi}.",
         keyword="test",
+        character_pinyin="yǒu",
         valid=valid,
         error=error,
     )
@@ -107,6 +108,7 @@ class TestResultPopulation:
             pinyin="wǒ hē shuǐ.",
             english="I drink water.",
             keyword="water",
+            character_pinyin="shuǐ",
             valid=True,
         )
 
@@ -190,7 +192,7 @@ class TestApplySentence:
         note = CharacterNote(hanzi="水", keyword="old")
         result = SentenceResult(
             sentence="我喝水。", pinyin="wǒ hē shuǐ.",
-            english="I drink water.", keyword="water", valid=True,
+            english="I drink water.", keyword="water", character_pinyin="shuǐ", valid=True,
         )
 
         apply_sentence(note, result)
@@ -199,6 +201,7 @@ class TestApplySentence:
         assert note.sentence_pinyin == "wǒ hē shuǐ."
         assert note.sentence_english == "I drink water."
         assert note.keyword == "water"
+        assert note.pinyin == "shuǐ"
 
     def test_clears_stale_audio(self):
         note = CharacterNote(
@@ -207,7 +210,7 @@ class TestApplySentence:
         )
         result = SentenceResult(
             sentence="新句子。", pinyin="xīn jùzi.",
-            english="New sentence.", keyword="water", valid=True,
+            english="New sentence.", keyword="water", character_pinyin="shuǐ", valid=True,
         )
 
         apply_sentence(note, result)
@@ -218,7 +221,7 @@ class TestApplySentence:
         note = CharacterNote(hanzi="水", keyword="water")
         result = SentenceResult(
             sentence="我喝水。", pinyin="wǒ hē shuǐ.",
-            english="I drink water.", keyword="", valid=True,
+            english="I drink water.", keyword="", character_pinyin="", valid=True,
         )
 
         apply_sentence(note, result)
@@ -233,9 +236,9 @@ class TestPickMode:
 
         candidates = [
             SentenceResult(sentence="我喝水。", pinyin="wǒ hē shuǐ.",
-                           english="I drink water.", keyword="water", valid=True),
+                           english="I drink water.", keyword="water", character_pinyin="shuǐ", valid=True),
             SentenceResult(sentence="水很冷。", pinyin="shuǐ hěn lěng.",
-                           english="The water is cold.", keyword="water", valid=True),
+                           english="The water is cold.", keyword="water", character_pinyin="shuǐ", valid=True),
         ]
 
         with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
@@ -256,7 +259,7 @@ class TestPickMode:
 
         candidates = [
             SentenceResult(sentence="新的。", pinyin="xīn de.",
-                           english="New.", keyword="water", valid=True),
+                           english="New.", keyword="water", character_pinyin="shuǐ", valid=True),
         ]
 
         with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:

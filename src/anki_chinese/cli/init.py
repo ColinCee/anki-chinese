@@ -47,9 +47,12 @@ def _restore_cached_fields(
             setattr(note, field, previous_value)
             restored += 1
         # If the previous note had a Gemini-generated sentence, its keyword
-        # is the contextual meaning — prefer it over the parsed Heisig keyword.
+        # and pinyin are the contextual values — prefer over parsed defaults.
         if previous.sentence and previous.keyword:
             note.keyword = previous.keyword
+            restored += 1
+        if previous.sentence and previous.pinyin:
+            note.pinyin = previous.pinyin
             restored += 1
     return prev_by_hanzi, restored
 
