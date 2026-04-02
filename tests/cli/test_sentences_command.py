@@ -35,7 +35,7 @@ class TestFiltering:
                 run_sentences(runtime, force=False)
 
         # Only called for 二 (一 already has a sentence)
-        mock_gen.generate.assert_called_once_with("二")
+        mock_gen.generate.assert_called_once_with("二", pinyin="")
 
     def test_force_regenerates_all(self, runtime_factory):
         notes = [
@@ -66,7 +66,7 @@ class TestFiltering:
             with patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}):
                 run_sentences(runtime, char="二")
 
-        mock_gen.generate.assert_called_once_with("二")
+        mock_gen.generate.assert_called_once_with("二", pinyin="")
 
     def test_limit_caps_number_processed(self, runtime_factory):
         notes = [

@@ -49,7 +49,7 @@ def _pick_sentence(runtime: AppRuntime, generator, note: CharacterNote, count: i
         runtime.console.print(f"  [dim]Current: {note.sentence} — {note.sentence_english}[/dim]")
 
     while True:
-        candidates = generator.generate_candidates(note.hanzi, count=count)
+        candidates = generator.generate_candidates(note.hanzi, count=count, pinyin=note.pinyin)
         if not candidates:
             runtime.console.print("[red]✗[/red] No valid candidates generated")
             return
@@ -156,7 +156,7 @@ def run_sentences(
         for note in targets:
             progress.update(task_id, description=f"[cyan]{note.hanzi}[/cyan]")
             try:
-                result = generator.generate(note.hanzi)
+                result = generator.generate(note.hanzi, pinyin=note.pinyin)
                 apply_sentence(note, result)
                 # Preserve audio tag — batch mode doesn't clear it
                 # (audio command handles generation separately)

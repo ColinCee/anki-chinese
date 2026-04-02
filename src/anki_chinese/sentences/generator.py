@@ -101,20 +101,20 @@ class SentenceGenerator:
         self._client = genai.Client(api_key=api_key)
         self._model = model
 
-    def generate(self, hanzi: str) -> SentenceResult:
+    def generate(self, hanzi: str, *, pinyin: str = "") -> SentenceResult:
         """Generate a validated example sentence for *hanzi*."""
-        return self._generate_one(hanzi)
+        return self._generate_one(hanzi, pinyin=pinyin)
 
-    def generate_candidates(self, hanzi: str, count: int = 3) -> list[SentenceResult]:
+    def generate_candidates(self, hanzi: str, count: int = 3, *, pinyin: str = "") -> list[SentenceResult]:
         """Generate *count* independent candidate sentences for *hanzi*."""
         candidates: list[SentenceResult] = []
         for _ in range(count):
-            result = self._generate_one(hanzi)
+            result = self._generate_one(hanzi, pinyin=pinyin)
             if result.sentence:
                 candidates.append(result)
         return candidates
 
-    def _generate_one(self, hanzi: str) -> SentenceResult:
+    def _generate_one(self, hanzi: str, *, pinyin: str = "") -> SentenceResult:
         """Generate a single validated example sentence for *hanzi*."""
         gen_config = types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION,
@@ -139,6 +139,11 @@ class SentenceGenerator:
             f"Generate a short example sentence containing the character {hanzi}. "
             f"The character {hanzi} MUST literally appear in the sentence."
         )
+        if pinyin:
+            prompt += (
+                f" Use the character with pronunciation {pinyin} "
+                f"(not a different reading of the same character)."
+            )
         history: list[types.Content] = [
             types.Content(role="user", parts=[types.Part(text=prompt)])
         ]
