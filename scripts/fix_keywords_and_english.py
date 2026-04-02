@@ -50,6 +50,10 @@ class _NoteEntry(BaseModel):
         description="Natural English translation of the full sentence. "
         "Must contain the keyword word."
     )
+    character_pinyin: str = Field(
+        description="The pinyin of the target character as used in this "
+        "sentence (single syllable with tone mark, e.g. 'shuǐ', 'xiāo')"
+    )
 
 
 class _BatchSchema(BaseModel):
@@ -105,8 +109,8 @@ def call_gemini(
 def process_batch(
     client: genai.Client,
     batch: list[dict],
-) -> dict[str, tuple[str, str]]:
-    """Send a batch to Gemini, return {hanzi: (keyword, english)}."""
+) -> dict[str, tuple[str, str, str]]:
+    """Send a batch to Gemini, return {hanzi: (keyword, english, character_pinyin)}."""
     lines = []
     for i, note in enumerate(batch, 1):
         lines.append(
@@ -128,7 +132,7 @@ def process_batch(
         return {}
 
     parsed = _BatchSchema.model_validate_json(resp)
-    results = {e.hanzi: (e.keyword, e.english) for e in parsed.entries}
+    results = {e.hanzi: (e.keyword, e.english, e.character_pinyin) for e in parsed.entries}
     history.append(types.Content(role="model", parts=[types.Part(text=resp)]))
 
     # Check for mismatches and fix via follow-up turn
@@ -162,8 +166,8 @@ def process_batch(
             fixed = _FixBatchSchema.model_validate_json(fix_resp)
             for entry in fixed.entries:
                 if entry.hanzi in results:
-                    old_kw = results[entry.hanzi][0]
-                    results[entry.hanzi] = (old_kw, entry.english)
+                    old_kw, _, old_py = results[entry.hanzi]
+                    results[entry.hanzi] = (old_kw, entry.english, old_py)
                     logger.info("  Fixed: %s → %s", entry.hanzi, entry.english)
 
     return results
@@ -195,6 +199,7 @@ def main() -> None:
 
     updated_kw = 0
     updated_en = 0
+    updated_py = 0
     fixed_mismatches = 0
     note_map = {n["hanzi"]: n for n in notes}
 
@@ -209,7 +214,7 @@ def main() -> None:
             hanzi = note["hanzi"]
             if hanzi not in results:
                 continue
-            new_kw, new_en = results[hanzi]
+            new_kw, new_en, new_py = results[hanzi]
 
             real_note = note_map[hanzi]
             if new_kw and new_kw != real_note.get("keyword"):
@@ -219,6 +224,10 @@ def main() -> None:
             if new_en and new_en != real_note.get("sentence_english"):
                 real_note["sentence_english"] = new_en
                 updated_en += 1
+            if new_py and new_py != real_note.get("pinyin"):
+                logger.info("  %s: pinyin '%s' → '%s'", hanzi, real_note.get("pinyin"), new_py)
+                real_note["pinyin"] = new_py
+                updated_py += 1
 
             # Final check
             if new_kw and new_kw.lower() not in (new_en or "").lower():
@@ -226,7 +235,7 @@ def main() -> None:
                 fixed_mismatches += 1
 
     logger.info("")
-    logger.info("Updated %d keywords, %d English translations", updated_kw, updated_en)
+    logger.info("Updated %d keywords, %d English translations, %d pinyin readings", updated_kw, updated_en, updated_py)
     if fixed_mismatches:
         logger.warning("%d still have keyword not in English", fixed_mismatches)
 
