@@ -50,7 +50,7 @@ def coverage_rows(notes: list[CharacterNote]) -> list[tuple[str, int, int, float
     rows: list[tuple[str, int, int, float]] = []
     for label, attr in [
         ("Hanzi", "hanzi"),
-        ("Keyword", "keyword"),
+        ("Meaning", "meaning"),
         ("Pinyin", "pinyin"),
         ("Jyutping", "jyutping"),
         ("Mandarin Audio", "mandarin_audio"),
@@ -82,8 +82,8 @@ def validation_issues(notes: list[CharacterNote]) -> list[str]:
 
         if not note.hanzi:
             issues.append(f"#{index}: missing hanzi")
-        if not note.keyword:
-            issues.append(f"#{index} ({note.hanzi}): missing keyword")
+        if not note.meaning:
+            issues.append(f"#{index} ({note.hanzi}): missing meaning")
         if not note.pinyin:
             issues.append(f"#{index} ({note.hanzi}): missing pinyin")
         if note.mandarin_audio and not note.pinyin:

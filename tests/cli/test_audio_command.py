@@ -7,8 +7,8 @@ from anki_chinese.notes import CharacterNote
 
 def test_run_audio_filters_by_character(runtime_factory, stub_tts_provider) -> None:
     notes = [
-        CharacterNote(hanzi='一', keyword='one', pinyin='yī'),
-        CharacterNote(hanzi='二', keyword='two', pinyin='èr'),
+        CharacterNote(hanzi='一', meaning='one', pinyin='yī'),
+        CharacterNote(hanzi='二', meaning='two', pinyin='èr'),
     ]
     runtime = runtime_factory(saved_notes=notes, tts_provider=stub_tts_provider)
 
@@ -22,9 +22,9 @@ def test_run_audio_filters_by_character(runtime_factory, stub_tts_provider) -> N
 
 def test_run_audio_applies_start_rsh_and_limit(runtime_factory, stub_tts_provider) -> None:
     notes = [
-        CharacterNote(hanzi='一', keyword='one', pinyin='yī', heisig_num='RSH 1'),
-        CharacterNote(hanzi='二', keyword='two', pinyin='èr', heisig_num='RSH 2'),
-        CharacterNote(hanzi='三', keyword='three', pinyin='sān', heisig_num='RSH 3'),
+        CharacterNote(hanzi='一', meaning='one', pinyin='yī', heisig_num='RSH 1'),
+        CharacterNote(hanzi='二', meaning='two', pinyin='èr', heisig_num='RSH 2'),
+        CharacterNote(hanzi='三', meaning='three', pinyin='sān', heisig_num='RSH 3'),
     ]
     runtime = runtime_factory(saved_notes=notes, tts_provider=stub_tts_provider)
 
@@ -34,7 +34,7 @@ def test_run_audio_applies_start_rsh_and_limit(runtime_factory, stub_tts_provide
 
 
 def test_run_audio_exits_when_requested_character_is_missing(runtime_factory) -> None:
-    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi='一', keyword='one', pinyin='yī')])
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi='一', meaning='one', pinyin='yī')])
 
     with pytest.raises(typer.Exit) as exc_info:
         run_audio(runtime, char='三')

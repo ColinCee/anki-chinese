@@ -42,8 +42,8 @@ def test_flagged_notes_returns_only_notes_marked_for_review() -> None:
 
 def test_coverage_rows_calculates_filled_missing_and_percentages() -> None:
     notes = [
-        CharacterNote(hanzi='一', keyword='one', pinyin='yī'),
-        CharacterNote(hanzi='二', keyword='two'),
+        CharacterNote(hanzi='一', meaning='one', pinyin='yī'),
+        CharacterNote(hanzi='二', meaning='two'),
     ]
 
     rows = {label: (filled, missing, pct) for label, filled, missing, pct in coverage_rows(notes)}
@@ -55,10 +55,10 @@ def test_coverage_rows_calculates_filled_missing_and_percentages() -> None:
 
 def test_validation_issues_reports_duplicates_and_dependent_field_problems() -> None:
     notes = [
-        CharacterNote(hanzi='一', keyword='one'),
+        CharacterNote(hanzi='一', meaning='one'),
         CharacterNote(
             hanzi='一',
-            keyword='',
+            meaning='',
             mandarin_audio='[sound:cmn_一_yī.mp3]',
             cantonese_audio='[sound:yue_一_jat1.mp3]',
         ),
@@ -67,7 +67,7 @@ def test_validation_issues_reports_duplicates_and_dependent_field_problems() -> 
     issues = validation_issues(notes)
 
     assert "Duplicate '一' at #0 and #1" in issues
-    assert '#1 (一): missing keyword' in issues
+    assert '#1 (一): missing meaning' in issues
     assert '#0 (一): missing pinyin' in issues
     assert '#1 (一): audio without pinyin' in issues
     assert '#1 (一): audio without jyutping' in issues

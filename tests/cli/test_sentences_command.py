@@ -14,7 +14,7 @@ def _make_result(hanzi: str, *, valid: bool = True, error: str = "") -> Sentence
         sentence=f"我有{hanzi}。",
         pinyin="wǒ yǒu...",
         english=f"I have {hanzi}.",
-        keyword="test",
+        meaning="test",
         character_pinyin="yǒu",
         valid=valid,
         error=error,
@@ -24,8 +24,8 @@ def _make_result(hanzi: str, *, valid: bool = True, error: str = "") -> Sentence
 class TestFiltering:
     def test_skips_notes_with_existing_sentence(self, runtime_factory):
         notes = [
-            CharacterNote(hanzi="一", keyword="one", sentence="已有句子"),
-            CharacterNote(hanzi="二", keyword="two"),
+            CharacterNote(hanzi="一", meaning="one", sentence="已有句子"),
+            CharacterNote(hanzi="二", meaning="two"),
         ]
         runtime = runtime_factory(saved_notes=notes)
 
@@ -40,8 +40,8 @@ class TestFiltering:
 
     def test_force_regenerates_all(self, runtime_factory):
         notes = [
-            CharacterNote(hanzi="一", keyword="one", sentence="已有句子"),
-            CharacterNote(hanzi="二", keyword="two", sentence="也有了"),
+            CharacterNote(hanzi="一", meaning="one", sentence="已有句子"),
+            CharacterNote(hanzi="二", meaning="two", sentence="也有了"),
         ]
         runtime = runtime_factory(saved_notes=notes)
 
@@ -55,9 +55,9 @@ class TestFiltering:
 
     def test_char_filter_targets_single_note(self, runtime_factory):
         notes = [
-            CharacterNote(hanzi="一", keyword="one"),
-            CharacterNote(hanzi="二", keyword="two"),
-            CharacterNote(hanzi="三", keyword="three"),
+            CharacterNote(hanzi="一", meaning="one"),
+            CharacterNote(hanzi="二", meaning="two"),
+            CharacterNote(hanzi="三", meaning="three"),
         ]
         runtime = runtime_factory(saved_notes=notes)
 
@@ -71,9 +71,9 @@ class TestFiltering:
 
     def test_limit_caps_number_processed(self, runtime_factory):
         notes = [
-            CharacterNote(hanzi="一", keyword="one"),
-            CharacterNote(hanzi="二", keyword="two"),
-            CharacterNote(hanzi="三", keyword="three"),
+            CharacterNote(hanzi="一", meaning="one"),
+            CharacterNote(hanzi="二", meaning="two"),
+            CharacterNote(hanzi="三", meaning="three"),
         ]
         runtime = runtime_factory(saved_notes=notes)
 
@@ -88,7 +88,7 @@ class TestFiltering:
 
 class TestAPIKeyMissing:
     def test_warns_and_returns_early_without_api_key(self, runtime_factory):
-        notes = [CharacterNote(hanzi="一", keyword="one")]
+        notes = [CharacterNote(hanzi="一", meaning="one")]
         runtime = runtime_factory(saved_notes=notes)
 
         with patch.dict("os.environ", {"GEMINI_API_KEY": ""}, clear=False):
@@ -100,14 +100,14 @@ class TestAPIKeyMissing:
 
 class TestResultPopulation:
     def test_populates_all_sentence_fields_on_note(self, runtime_factory):
-        notes = [CharacterNote(hanzi="水", keyword="water")]
+        notes = [CharacterNote(hanzi="水", meaning="water")]
         runtime = runtime_factory(saved_notes=notes)
 
         result = SentenceResult(
             sentence="我喝水。",
             pinyin="wǒ hē shuǐ.",
             english="I drink water.",
-            keyword="water",
+            meaning="water",
             character_pinyin="shuǐ",
             valid=True,
         )
@@ -122,10 +122,10 @@ class TestResultPopulation:
         assert note.sentence == "我喝水。"
         assert note.sentence_pinyin == "wǒ hē shuǐ."
         assert note.sentence_english == "I drink water."
-        assert note.keyword == "water"  # sentence_keyword merged into keyword
+        assert note.meaning == "water"  # sentence meaning merged into meaning
 
     def test_saves_to_store_after_generation(self, runtime_factory):
-        notes = [CharacterNote(hanzi="水", keyword="water")]
+        notes = [CharacterNote(hanzi="水", meaning="water")]
         runtime = runtime_factory(saved_notes=notes)
 
         with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
@@ -141,8 +141,8 @@ class TestResultPopulation:
 class TestErrorCounting:
     def test_counts_failures_from_invalid_results(self, runtime_factory):
         notes = [
-            CharacterNote(hanzi="一", keyword="one"),
-            CharacterNote(hanzi="二", keyword="two"),
+            CharacterNote(hanzi="一", meaning="one"),
+            CharacterNote(hanzi="二", meaning="two"),
         ]
         runtime = runtime_factory(saved_notes=notes)
 
@@ -160,7 +160,7 @@ class TestErrorCounting:
         assert "1" in output  # at least "Generated 1"
 
     def test_counts_exceptions_as_failures(self, runtime_factory):
-        notes = [CharacterNote(hanzi="一", keyword="one")]
+        notes = [CharacterNote(hanzi="一", meaning="one")]
         runtime = runtime_factory(saved_notes=notes)
 
         with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
@@ -174,7 +174,7 @@ class TestErrorCounting:
 
 class TestAllSentencesExist:
     def test_prints_already_done_message(self, runtime_factory):
-        notes = [CharacterNote(hanzi="一", keyword="one", sentence="有了")]
+        notes = [CharacterNote(hanzi="一", meaning="one", sentence="有了")]
         runtime = runtime_factory(saved_notes=notes)
 
         with (
@@ -189,10 +189,10 @@ class TestAllSentencesExist:
 
 class TestApplySentence:
     def test_writes_all_fields_to_note(self):
-        note = CharacterNote(hanzi="水", keyword="old")
+        note = CharacterNote(hanzi="水", meaning="old")
         result = SentenceResult(
             sentence="我喝水。", pinyin="wǒ hē shuǐ.",
-            english="I drink water.", keyword="water", character_pinyin="shuǐ", valid=True,
+            english="I drink water.", meaning="water", character_pinyin="shuǐ", valid=True,
         )
 
         apply_sentence(note, result)
@@ -200,45 +200,45 @@ class TestApplySentence:
         assert note.sentence == "我喝水。"
         assert note.sentence_pinyin == "wǒ hē shuǐ."
         assert note.sentence_english == "I drink water."
-        assert note.keyword == "water"
+        assert note.meaning == "water"
         assert note.pinyin == "shuǐ"
 
     def test_clears_stale_audio(self):
         note = CharacterNote(
-            hanzi="水", keyword="water",
+            hanzi="水", meaning="water",
             sentence_audio="[sound:cmn_sentence_old.mp3]",
         )
         result = SentenceResult(
             sentence="新句子。", pinyin="xīn jùzi.",
-            english="New sentence.", keyword="water", character_pinyin="shuǐ", valid=True,
+            english="New sentence.", meaning="water", character_pinyin="shuǐ", valid=True,
         )
 
         apply_sentence(note, result)
 
         assert note.sentence_audio == ""
 
-    def test_preserves_keyword_when_result_keyword_empty(self):
-        note = CharacterNote(hanzi="水", keyword="water")
+    def test_preserves_meaning_when_result_meaning_empty(self):
+        note = CharacterNote(hanzi="水", meaning="water")
         result = SentenceResult(
             sentence="我喝水。", pinyin="wǒ hē shuǐ.",
-            english="I drink water.", keyword="", character_pinyin="", valid=True,
+            english="I drink water.", meaning="", character_pinyin="", valid=True,
         )
 
         apply_sentence(note, result)
 
-        assert note.keyword == "water"
+        assert note.meaning == "water"
 
 
 class TestPickMode:
     def test_pick_populates_chosen_candidate(self, runtime_factory):
-        notes = [CharacterNote(hanzi="水", keyword="water")]
+        notes = [CharacterNote(hanzi="水", meaning="water")]
         runtime = runtime_factory(saved_notes=notes)
 
         candidates = [
             SentenceResult(sentence="我喝水。", pinyin="wǒ hē shuǐ.",
-                           english="I drink water.", keyword="water", character_pinyin="shuǐ", valid=True),
+                           english="I drink water.", meaning="water", character_pinyin="shuǐ", valid=True),
             SentenceResult(sentence="水很冷。", pinyin="shuǐ hěn lěng.",
-                           english="The water is cold.", keyword="water", character_pinyin="shuǐ", valid=True),
+                           english="The water is cold.", meaning="water", character_pinyin="shuǐ", valid=True),
         ]
 
         with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
@@ -254,12 +254,12 @@ class TestPickMode:
         assert saved[0].sentence_audio == ""  # cleared for regeneration
 
     def test_pick_skip_leaves_note_unchanged(self, runtime_factory):
-        notes = [CharacterNote(hanzi="水", keyword="water", sentence="原来的。")]
+        notes = [CharacterNote(hanzi="水", meaning="water", sentence="原来的。")]
         runtime = runtime_factory(saved_notes=notes)
 
         candidates = [
             SentenceResult(sentence="新的。", pinyin="xīn de.",
-                           english="New.", keyword="water", character_pinyin="shuǐ", valid=True),
+                           english="New.", meaning="water", character_pinyin="shuǐ", valid=True),
         ]
 
         with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
@@ -274,7 +274,7 @@ class TestPickMode:
         assert saved[0].sentence == "原来的。"
 
     def test_pick_no_candidates_does_not_crash(self, runtime_factory):
-        notes = [CharacterNote(hanzi="水", keyword="water")]
+        notes = [CharacterNote(hanzi="水", meaning="water")]
         runtime = runtime_factory(saved_notes=notes)
 
         with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:

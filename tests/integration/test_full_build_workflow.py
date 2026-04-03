@@ -3,11 +3,11 @@ from anki_chinese.notes import CharacterNote
 
 
 def test_build_full_runs_parse_enrich_audio_and_build(runtime_factory, runner, stub_tts_provider) -> None:
-    parsed_notes = [CharacterNote(hanzi='行', keyword='go', heisig_num='RSH 144', lesson='Lesson 12')]
+    parsed_notes = [CharacterNote(hanzi='行', meaning='go', heisig_num='RSH 144', lesson='Lesson 12')]
     enriched_notes = [
         CharacterNote(
             hanzi='行',
-            keyword='go',
+            meaning='go',
             pinyin='xíng',
             jyutping='haang4',
             heisig_num='RSH 144',

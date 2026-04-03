@@ -45,7 +45,7 @@ def report_review_items(console: Console, notes: list[CharacterNote]) -> None:
         return
     console.print(f"\n[yellow]⚠ {len(review)} notes need review:[/yellow]")
     for note in review[:15]:
-        console.print(f"  {note.hanzi} ({note.keyword}): {note.review_reason}")
+        console.print(f"  {note.hanzi} ({note.meaning}): {note.review_reason}")
     if len(review) > 15:
         console.print(f"  … and {len(review) - 15} more")
     console.print("[dim]Run 'anki-chinese review' to see details and verify them.[/dim]")
@@ -64,7 +64,7 @@ def report_init_summary(
     removed = sorted(prev_hanzi - {note.hanzi for note in notes})
     changed_existing = 0
     tracked_fields = (
-        "keyword",
+        "meaning",
         "pinyin",
         "jyutping",
         "mandarin_audio",
@@ -145,7 +145,7 @@ def review_table(flagged: list[CharacterNote]) -> Table:
     table.add_column("#", style="dim", width=4)
     table.add_column("Hanzi", style="bold", width=4)
     table.add_column("Pinyin", width=8)
-    table.add_column("Keyword", width=18)
+    table.add_column("Meaning", width=18)
     table.add_column("Heisig", width=6)
     table.add_column("Reason", style="dim")
 
@@ -154,7 +154,7 @@ def review_table(flagged: list[CharacterNote]) -> Table:
             str(index),
             note.hanzi,
             note.pinyin,
-            note.keyword,
+            note.meaning,
             note.heisig_num,
             note.review_reason,
         )

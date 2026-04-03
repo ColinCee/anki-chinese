@@ -17,7 +17,7 @@ class CharacterNote:
     """One character = one note = two cards."""
 
     hanzi: str = ""
-    keyword: str = ""
+    meaning: str = ""
     pinyin: str = ""
     jyutping: str = ""
     mandarin_audio: str = ""
@@ -39,7 +39,7 @@ class CharacterNote:
     def to_fields_list(self) -> list[str]:
         return [
             self.hanzi,
-            self.keyword,
+            self.meaning,
             self.pinyin,
             self.jyutping,
             self.mandarin_audio,
@@ -60,6 +60,9 @@ class CharacterNote:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> CharacterNote:
         valid = {field_.name for field_ in fields(cls)}
+        # Backwards compat: legacy JSON uses "keyword" instead of "meaning"
+        if "keyword" in data and "meaning" not in data:
+            data = {**data, "meaning": data["keyword"]}
         return cls(**{key: value for key, value in data.items() if key in valid})
 
 

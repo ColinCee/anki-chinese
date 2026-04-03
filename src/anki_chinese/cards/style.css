@@ -18,7 +18,7 @@
 .tone4 { color: #2980b9; }   /* blue */
 .tone5 { color: #999999; }   /* grey — neutral tone */
 
-/* ── Hero section (character + keyword + pronunciations) ──────── */
+/* ── Hero section (character + meaning + pronunciations) ──────── */
 
 .hero {
     margin-bottom: 20px;
@@ -31,7 +31,7 @@
     line-height: 1.1;
 }
 
-.keyword {
+.meaning {
     font-size: 24px;
     font-weight: 500;
     color: #5a6c7d;
@@ -206,8 +206,8 @@
     color: #e0e0e0;
 }
 
-.night_mode .keyword,
-.nightMode .keyword {
+.night_mode .meaning,
+.nightMode .meaning {
     color: #a0aec0;
 }
 

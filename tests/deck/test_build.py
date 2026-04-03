@@ -16,7 +16,7 @@ def test_build_deck_writes_apkg_file(tmp_path: Path, monkeypatch) -> None:
 
     note = CharacterNote(
         hanzi="一",
-        keyword="one",
+        meaning="one",
         pinyin="yī",
         jyutping="jat1",
         mandarin_audio="[sound:cmn_一_yī.mp3]",
@@ -53,7 +53,7 @@ def test_build_deck_field_count_matches_config(tmp_path: Path, monkeypatch) -> N
     monkeypatch.setattr(deck_module, "GENERATED_AUDIO_DIR", audio_dir)
     monkeypatch.setattr(deck_module, "DECK_OUTPUT_DIR", deck_output_dir)
 
-    note = CharacterNote(hanzi="人", keyword="person", pinyin="rén")
+    note = CharacterNote(hanzi="人", meaning="person", pinyin="rén")
     fields_list = note.to_fields_list()
 
     assert len(fields_list) == len(FIELDS)
@@ -71,9 +71,9 @@ def test_build_deck_multiple_notes(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(deck_module, "DECK_OUTPUT_DIR", deck_output_dir)
 
     notes = [
-        CharacterNote(hanzi="日", keyword="day", pinyin="rì", lesson="Lesson 1"),
-        CharacterNote(hanzi="月", keyword="month", pinyin="yuè", lesson="Lesson 1"),
-        CharacterNote(hanzi="星", keyword="star", pinyin="xīng", lesson="Lesson 2"),
+        CharacterNote(hanzi="日", meaning="day", pinyin="rì", lesson="Lesson 1"),
+        CharacterNote(hanzi="月", meaning="month", pinyin="yuè", lesson="Lesson 1"),
+        CharacterNote(hanzi="星", meaning="star", pinyin="xīng", lesson="Lesson 2"),
     ]
 
     output_path = build_deck(notes)
@@ -98,7 +98,7 @@ def test_build_deck_includes_audio_media(tmp_path: Path, monkeypatch) -> None:
 
     note = CharacterNote(
         hanzi="人",
-        keyword="person",
+        meaning="person",
         pinyin="rén",
         mandarin_audio="[sound:cmn_人_rén.mp3]",
         cantonese_audio="[sound:yue_人_jan4.mp3]",

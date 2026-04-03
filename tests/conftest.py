@@ -88,14 +88,14 @@ def runner() -> CliRunner:
 
 @pytest.fixture
 def minimal_note() -> CharacterNote:
-    return CharacterNote(hanzi="一", keyword="one")
+    return CharacterNote(hanzi="一", meaning="one")
 
 
 @pytest.fixture
 def full_note() -> CharacterNote:
     return CharacterNote(
         hanzi="行",
-        keyword="go",
+        meaning="go",
         pinyin="xíng",
         jyutping="haang4",
         mandarin_audio="[sound:cmn_行_xíng.mp3]",
@@ -131,10 +131,10 @@ def runtime_factory(tmp_path: Path):
         if saved_notes is not None:
             note_store.save(deepcopy(saved_notes))
 
-        parsed = deepcopy(parsed_notes or [CharacterNote(hanzi="一", keyword="one")])
+        parsed = deepcopy(parsed_notes or [CharacterNote(hanzi="一", meaning="one")])
         enriched = deepcopy(
             enriched_notes
-            or [CharacterNote(hanzi="一", keyword="one", pinyin="yī", jyutping="jat1")]
+            or [CharacterNote(hanzi="一", meaning="one", pinyin="yī", jyutping="jat1")]
         )
         output_path = tmp_path / "data" / "build" / "decks" / "deck.apkg"
         console = Console(file=StringIO(), force_terminal=False, color_system=None)

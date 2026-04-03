@@ -60,7 +60,7 @@ def _parse_header_map(path: Path) -> dict[str, int]:
 def _parse_legacy_row(row: list[str]) -> CharacterNote:
     return CharacterNote(
         hanzi=_extract_hanzi(row[2]),
-        keyword=row[3].strip(),
+        meaning=row[3].strip(),
         pinyin=_extract_pinyin(row[7]) if row[7].strip() else "",
         jyutping=_extract_jyutping(row[13]) if row[13].strip() else "",
         mandarin_audio=_extract_sound(row[12]) if row[12].strip() else "",
@@ -76,12 +76,12 @@ def _parse_exported_row(row: list[str]) -> CharacterNote:
     # Detect layout by column count: <=18 = clean 14-field export, 22+ = legacy 19-field
     if len(row) <= 19:
         # Clean 14-field layout (after removing deprecated fields in Anki)
-        # Fields: Hanzi Keyword Pinyin Jyutping MandarinAudio CantoneseAudio
+        # Fields: Hanzi Meaning Pinyin Jyutping MandarinAudio CantoneseAudio
         #         StrokeOrder HeisigNum Lesson Story SentenceAudio Sentence
         #         SentencePinyin SentenceEnglish
         return CharacterNote(
             hanzi=_extract_hanzi(row[3]),
-            keyword=row[4].strip(),
+            meaning=row[4].strip(),
             pinyin=_extract_pinyin(row[5]) if row[5].strip() else "",
             jyutping=_extract_jyutping(row[6]) if row[6].strip() else "",
             mandarin_audio=_extract_sound(row[7]) if row[7].strip() else "",
@@ -91,10 +91,10 @@ def _parse_exported_row(row: list[str]) -> CharacterNote:
             lesson=row[11].strip(),
             story=row[12].strip() if len(row) > 12 else "",
         )
-    # Legacy 19-field layout (deprecated example/sentence_keyword fields still present)
+    # Legacy 19-field layout (deprecated example/sentence_meaning fields still present)
     return CharacterNote(
         hanzi=_extract_hanzi(row[3]),
-        keyword=row[4].strip(),
+        meaning=row[4].strip(),
         pinyin=_extract_pinyin(row[5]) if row[5].strip() else "",
         jyutping=_extract_jyutping(row[6]) if row[6].strip() else "",
         mandarin_audio=_extract_sound(row[7]) if row[7].strip() else "",

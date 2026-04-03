@@ -9,7 +9,7 @@ Usage:
     generator = SentenceGenerator(api_key="...")
     result = generator.generate("一")
     # result.sentence = "我喝一杯热咖啡。"
-    # result.keyword = "one"
+    # result.meaning = "one"
 """
 
 from __future__ import annotations
@@ -65,9 +65,9 @@ class _SentenceSchema(BaseModel):
     sentence: str = Field(description="The Chinese sentence (6-10 characters)")
     pinyin: str = Field(description="Pinyin with tone marks for the full sentence")
     english: str = Field(description="English translation")
-    keyword: str = Field(
-        description="The English meaning of the target character as used in "
-        "this sentence (e.g. 'water', 'study', 'big')"
+    meaning: str = Field(
+        description="Full English meaning of the target character: core dictionary "
+        "meaning plus contextual usage if different (e.g. 'silver; in 银行: bank')"
     )
     character_pinyin: str = Field(
         description="The pinyin of the target character as used in this sentence "
@@ -89,7 +89,7 @@ class SentenceResult:
     sentence: str
     pinyin: str
     english: str
-    keyword: str
+    meaning: str
     character_pinyin: str
     valid: bool
     error: str = ""
@@ -286,7 +286,7 @@ class SentenceGenerator:
             sentence=parsed.sentence,
             pinyin=parsed.pinyin,
             english=parsed.english,
-            keyword=parsed.keyword,
+            meaning=parsed.meaning,
             character_pinyin=parsed.character_pinyin,
             valid=valid,
             error=error,

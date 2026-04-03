@@ -14,7 +14,7 @@ def _patch_defaults(monkeypatch, *, overrides=None):
 
 
 def test_enrich_fills_missing_pinyin(monkeypatch) -> None:
-    note = CharacterNote(hanzi="大", keyword="big")
+    note = CharacterNote(hanzi="大", meaning="big")
 
     _patch_defaults(monkeypatch)
     monkeypatch.setattr(enrich_module, "lookup_jyutping", lambda hanzi: ("daai6", False))
@@ -29,7 +29,7 @@ def test_enrich_fills_missing_pinyin(monkeypatch) -> None:
 def test_enrich_marks_polyphonic_character_for_review_when_usage_is_missing(
     monkeypatch,
 ) -> None:
-    note = CharacterNote(hanzi="行", keyword="go")
+    note = CharacterNote(hanzi="行", meaning="go")
 
     _patch_defaults(monkeypatch)
     monkeypatch.setattr(enrich_module, "lookup_jyutping", lambda hanzi: ("haang4", False))
@@ -47,7 +47,7 @@ def test_enrich_marks_polyphonic_character_for_review_when_usage_is_missing(
 
 
 def test_jyutping_lookup_fills_missing_jyutping(monkeypatch) -> None:
-    note = CharacterNote(hanzi="水", keyword="water")
+    note = CharacterNote(hanzi="水", meaning="water")
 
     _patch_defaults(monkeypatch)
     monkeypatch.setattr(enrich_module, "lookup_jyutping", lambda hanzi: ("seoi2", False))
@@ -60,7 +60,7 @@ def test_jyutping_lookup_fills_missing_jyutping(monkeypatch) -> None:
 
 
 def test_jyutping_flags_review_when_not_found(monkeypatch) -> None:
-    note = CharacterNote(hanzi="水", keyword="water")
+    note = CharacterNote(hanzi="水", meaning="water")
 
     _patch_defaults(monkeypatch)
     monkeypatch.setattr(enrich_module, "lookup_jyutping", lambda hanzi: ("", True))
@@ -79,7 +79,7 @@ def test_jyutping_flags_review_when_not_found(monkeypatch) -> None:
 def test_polyphonic_character_gets_review_flag_with_correct_message(
     monkeypatch,
 ) -> None:
-    note = CharacterNote(hanzi="乐", keyword="music")
+    note = CharacterNote(hanzi="乐", meaning="music")
 
     _patch_defaults(monkeypatch)
     monkeypatch.setattr(enrich_module, "lookup_jyutping", lambda hanzi: ("lok6", False))
@@ -97,11 +97,11 @@ def test_polyphonic_character_gets_review_flag_with_correct_message(
 
 
 def test_override_application_changes_fields(monkeypatch) -> None:
-    note = CharacterNote(hanzi="了", keyword="completed")
+    note = CharacterNote(hanzi="了", meaning="completed")
 
     _patch_defaults(
         monkeypatch,
-        overrides={"了": {"pinyin": "le", "keyword": "particle"}},
+        overrides={"了": {"pinyin": "le", "meaning": "particle"}},
     )
     monkeypatch.setattr(enrich_module, "lookup_jyutping", lambda hanzi: ("liu5", False))
     monkeypatch.setattr(enrich_module, "lookup_pinyin", lambda hanzi: ("liǎo", False))
@@ -109,4 +109,4 @@ def test_override_application_changes_fields(monkeypatch) -> None:
     [enriched] = enrich_module.enrich_notes([note])
 
     assert enriched.pinyin == "le"
-    assert enriched.keyword == "particle"
+    assert enriched.meaning == "particle"

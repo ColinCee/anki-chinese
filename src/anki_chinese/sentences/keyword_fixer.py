@@ -52,7 +52,7 @@ class _KeywordBatchSchema(BaseModel):
 
 
 class KeywordFixer:
-    """Batch-fix keywords using Gemini to derive contextual meanings."""
+    """Batch-fix meanings using Gemini to derive contextual meanings."""
 
     def __init__(self, api_key: str, *, model: str = MODEL) -> None:
         self._client = genai.Client(api_key=api_key)
@@ -64,7 +64,7 @@ class KeywordFixer:
         *,
         on_chunk_done: Callable[[int], None] | None = None,
     ) -> dict[str, str]:
-        """Fix keywords for a batch of characters.
+        """Fix meanings for a batch of characters.
 
         Parameters
         ----------
@@ -75,7 +75,7 @@ class KeywordFixer:
 
         Returns
         -------
-        dict mapping hanzi → contextual keyword.
+        dict mapping hanzi → contextual meaning.
         """
         results: dict[str, str] = {}
         for start in range(0, len(items), _BATCH_SIZE):

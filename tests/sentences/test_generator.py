@@ -18,7 +18,7 @@ def _sentence_json(sentence: str = "我喝一杯咖啡。", **overrides) -> str:
         "sentence": sentence,
         "pinyin": overrides.get("pinyin", "wǒ hē yī bēi kāfēi."),
         "english": overrides.get("english", "I drink a cup of coffee."),
-        "keyword": overrides.get("keyword", "one"),
+        "meaning": overrides.get("meaning", "one"),
         "character_pinyin": overrides.get("character_pinyin", "yī"),
     }
     return json.dumps(data)
@@ -57,7 +57,7 @@ class TestHappyPath:
         assert "一" in result.sentence
         assert result.pinyin != ""
         assert result.english != ""
-        assert result.keyword == "one"
+        assert result.meaning == "one"
 
     def test_generate_makes_two_api_calls(self):
         gen = SentenceGenerator(api_key="fake")
@@ -80,13 +80,13 @@ class TestCharCheckRetries:
         gen = SentenceGenerator(api_key="fake")
         responses = [
             # First attempt: missing 行
-            _mock_response(_sentence_json("我去银行了。", keyword="go")),
+            _mock_response(_sentence_json("我去银行了。", meaning="go")),
             # Wait — that has 行. Use a sentence WITHOUT the char.
         ]
         # Let's use a char that's harder to accidentally include
         responses = [
-            _mock_response(_sentence_json("我去学校了。", keyword="big")),  # missing 大
-            _mock_response(_sentence_json("这个很大。", keyword="big")),    # has 大
+            _mock_response(_sentence_json("我去学校了。", meaning="big")),  # missing 大
+            _mock_response(_sentence_json("这个很大。", meaning="big")),    # has 大
             _mock_response(_validation_json()),
         ]
         gen._client = MagicMock()
@@ -103,9 +103,9 @@ class TestCharCheckRetries:
         gen = SentenceGenerator(api_key="fake")
         # 3 attempts (1 + 2 retries), all missing the char
         responses = [
-            _mock_response(_sentence_json("我去学校。", keyword="big")),
-            _mock_response(_sentence_json("他很高。", keyword="big")),
-            _mock_response(_sentence_json("这很好。", keyword="big")),
+            _mock_response(_sentence_json("我去学校。", meaning="big")),
+            _mock_response(_sentence_json("他很高。", meaning="big")),
+            _mock_response(_sentence_json("这很好。", meaning="big")),
         ]
         gen._client = MagicMock()
         gen._client.models.generate_content = MagicMock(side_effect=responses)
@@ -124,11 +124,11 @@ class TestValidationFailureAndRetry:
         gen = SentenceGenerator(api_key="fake")
         responses = [
             # Initial generation — contains 两
-            _mock_response(_sentence_json("我有两个朋友。", keyword="two")),
+            _mock_response(_sentence_json("我有两个朋友。", meaning="two")),
             # Validation: grammar error (maybe style issue)
             _mock_response(_validation_json(grammar_correct=False, error="sounds awkward")),
             # Retry generation — also contains 两
-            _mock_response(_sentence_json("我买了两本书。", pinyin="wǒ mǎi le liǎng běn shū.", keyword="two")),
+            _mock_response(_sentence_json("我买了两本书。", pinyin="wǒ mǎi le liǎng běn shū.", meaning="two")),
             # Retry validation: passes
             _mock_response(_validation_json()),
         ]
@@ -143,9 +143,9 @@ class TestValidationFailureAndRetry:
     def test_returns_invalid_when_both_attempts_fail_validation(self):
         gen = SentenceGenerator(api_key="fake")
         responses = [
-            _mock_response(_sentence_json("他在二楼住。", keyword="two")),
+            _mock_response(_sentence_json("他在二楼住。", meaning="two")),
             _mock_response(_validation_json(grammar_correct=False, error="sounds unnatural")),
-            _mock_response(_sentence_json("她有二十块钱。", keyword="two")),
+            _mock_response(_sentence_json("她有二十块钱。", meaning="two")),
             _mock_response(_validation_json(grammar_correct=False, error="still awkward")),
         ]
         gen._client = MagicMock()
@@ -190,7 +190,7 @@ class TestAPIErrorHandling:
         """If validation call fails, we accept the generated sentence."""
         gen = SentenceGenerator(api_key="fake")
         responses = [
-            _mock_response(_sentence_json("这个很大。", keyword="big")),
+            _mock_response(_sentence_json("这个很大。", meaning="big")),
             Exception("timeout"),  # validation fails
         ]
         gen._client = MagicMock()
@@ -215,7 +215,7 @@ class TestGenerateCandidates:
         sentences = ["他很大。", "大家好。", "这个很大。"]
         responses = []
         for s in sentences:
-            responses.append(_mock_response(_sentence_json(s, keyword="big")))
+            responses.append(_mock_response(_sentence_json(s, meaning="big")))
             responses.append(_mock_response(_validation_json()))
         gen._client = MagicMock()
         gen._client.models.generate_content = MagicMock(side_effect=responses)
@@ -229,7 +229,7 @@ class TestGenerateCandidates:
         gen = SentenceGenerator(api_key="fake")
         # First call succeeds, second fails (all API errors)
         responses = [
-            _mock_response(_sentence_json("他很大。", keyword="big")),
+            _mock_response(_sentence_json("他很大。", meaning="big")),
             _mock_response(_validation_json()),
         ]
         gen._client = MagicMock()

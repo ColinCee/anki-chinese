@@ -1,6 +1,6 @@
 {
   "着": {
-    "keyword": "-ing",
-    "_reason": "Heisig RSH #536 — keyword corrupted to '#¿NOMBRE?' by Excel"
+    "meaning": "-ing",
+    "_reason": "Heisig RSH #536 — meaning corrupted to '#¿NOMBRE?' by Excel"
   }
 }

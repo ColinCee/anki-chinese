@@ -17,11 +17,11 @@ def run_keywords(
     limit: int = 0,
     force: bool = False,
 ) -> list[CharacterNote]:
-    """Fix keywords on notes that already have sentences."""
+    """Fix meanings on notes that already have sentences."""
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
         runtime.console.print(
-            "[yellow]⚠[/yellow] GEMINI_API_KEY not set — skipping keyword fixing.\n"
+            "[yellow]⚠[/yellow] GEMINI_API_KEY not set — skipping meaning fixing.\n"
             "  Set it in .env or environment to enable."
         )
         return runtime.note_store.load()
@@ -42,7 +42,7 @@ def run_keywords(
         return notes
 
     runtime.console.print(
-        f"[blue]Fixing keywords[/blue] for {len(targets)} notes ..."
+        f"[blue]Fixing meanings[/blue] for {len(targets)} notes ..."
     )
 
     # Build (hanzi, sentence, english) tuples
@@ -65,12 +65,12 @@ def run_keywords(
 
     for note in targets:
         new_keyword = result_map.get(note.hanzi)
-        if new_keyword and new_keyword != note.keyword:
-            note.keyword = new_keyword
+        if new_keyword and new_keyword != note.meaning:
+            note.meaning = new_keyword
             updated += 1
 
     runtime.note_store.save(notes)
-    runtime.console.print(f"[green]✓[/green] Updated {updated} keywords")
+    runtime.console.print(f"[green]✓[/green] Updated {updated} meanings")
     return notes
 
 
@@ -78,7 +78,7 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
     @app.command()
     def keywords(
         limit: int = typer.Option(0, "--limit", "-n", help="Max notes to process."),
-        force: bool = typer.Option(False, "--force", "-f", help="Re-fix all keywords."),
+        force: bool = typer.Option(False, "--force", "-f", help="Re-fix all meanings."),
     ) -> None:
-        """Fix keywords to contextual meanings using Gemini AI."""
+        """Fix meanings to contextual meanings using Gemini AI."""
         run_keywords(runtime, limit=limit, force=force)

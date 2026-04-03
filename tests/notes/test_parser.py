@@ -31,7 +31,7 @@ def test_parse_deck_export_supports_legacy_rows_with_image_hanzi(tmp_path: Path)
     assert len(notes) == 1
     note = notes[0]
     assert note.hanzi == "一"
-    assert note.keyword == "one"
+    assert note.meaning == "one"
     assert note.pinyin == "yī"
     assert note.jyutping == "jat1"
     assert note.mandarin_audio == "[sound:cmn_一_yī.mp3]"
@@ -65,7 +65,7 @@ def test_parse_deck_export_supports_exported_rows_with_header_map(tmp_path: Path
     assert len(notes) == 1
     note = notes[0]
     assert note.hanzi == "行"
-    assert note.keyword == "go"
+    assert note.meaning == "go"
     assert note.pinyin == "xíng"
     assert note.jyutping == "haang4"
     assert note.stroke_order == "stroke-order"
@@ -102,7 +102,7 @@ def test_parse_deck_export_supports_legacy_19_field_export(tmp_path: Path) -> No
     assert len(notes) == 1
     note = notes[0]
     assert note.hanzi == "行"
-    assert note.keyword == "go"
+    assert note.meaning == "go"
     assert note.stroke_order == "stroke-order"
     assert note.heisig_num == "RSH 144"
     assert note.lesson == "Lesson 12"
@@ -140,7 +140,7 @@ def test_parse_deck_export_skips_malformed_short_rows(tmp_path: Path) -> None:
 
     assert len(notes) == 1
     assert notes[0].hanzi == "水"
-    assert notes[0].keyword == "water"
+    assert notes[0].meaning == "water"
 
 
 def test_parse_deck_export_unicode_cjk_characters(tmp_path: Path) -> None:
@@ -160,7 +160,7 @@ def test_parse_deck_export_unicode_cjk_characters(tmp_path: Path) -> None:
     assert len(notes) == 1
     note = notes[0]
     assert note.hanzi == "龍"
-    assert note.keyword == "dragon — 龍"
+    assert note.meaning == "dragon — 龍"
     assert note.story == "story with 中文 and émojis 🐉"
     assert note.pinyin == "lóng"
     assert note.jyutping == "lung4"
@@ -213,7 +213,7 @@ def test_parse_real_all_decks_export() -> None:
     assert len(notes) > 100
     note = notes[0]
     assert note.hanzi == "一"
-    assert note.keyword == "one"
+    assert note.meaning == "one"
     assert note.pinyin == "yī"
     assert note.jyutping == "jat1"
     assert "[sound:cmn_" in note.mandarin_audio

@@ -68,7 +68,7 @@ def run_test_tts(
                 note = matches[0]
 
         if note:
-            runtime.console.print(f"[blue]Testing[/blue] {note.hanzi} ({note.keyword})")
+            runtime.console.print(f"[blue]Testing[/blue] {note.hanzi} ({note.meaning})")
             table = Table(show_header=False, box=None, padding=(0, 2))
             table.add_column("Type", style="cyan")
             table.add_column("File")

@@ -138,7 +138,7 @@ def run_audio(
         for index, (note, tasks) in enumerate(pending, 1):
             progress.update(
                 task_id,
-                current=f"{note.hanzi} ({note.keyword}) · {format_audio_task_labels(tasks)}",
+                current=f"{note.hanzi} ({note.meaning}) · {format_audio_task_labels(tasks)}",
             )
             try:
                 generated = _generate_one_note(note, tasks, runtime, force=force)
@@ -150,7 +150,7 @@ def run_audio(
                 progress.advance(task_id)
             except TTSRateLimitError as error:
                 progress.stop()
-                failures.append(f"{note.hanzi} ({note.keyword}): {error}")
+                failures.append(f"{note.hanzi} ({note.meaning}): {error}")
                 runtime.note_store.save(notes)
                 report_audio_summary(
                     runtime.console,
@@ -167,8 +167,8 @@ def run_audio(
                 )
                 raise typer.Exit(2) from None
             except Exception as error:
-                failures.append(f"{note.hanzi} ({note.keyword}): {error}")
-                runtime.console.print(f"[red]✗[/red] {note.hanzi} ({note.keyword}): {error}")
+                failures.append(f"{note.hanzi} ({note.meaning}): {error}")
+                runtime.console.print(f"[red]✗[/red] {note.hanzi} ({note.meaning}): {error}")
                 progress.advance(task_id)
                 if fail_fast:
                     raise

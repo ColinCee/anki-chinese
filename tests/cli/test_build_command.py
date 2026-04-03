@@ -7,8 +7,8 @@ build_module = import_module("anki_chinese.cli.build")
 
 def test_run_build_full_passes_options_through_init_audio_and_build(monkeypatch, runtime_factory) -> None:
     runtime = runtime_factory()
-    init_notes = [CharacterNote(hanzi='一', keyword='one', pinyin='yī')]
-    audio_notes = [CharacterNote(hanzi='一', keyword='one', pinyin='yī', mandarin_audio='[sound:cmn_一_yī.mp3]')]
+    init_notes = [CharacterNote(hanzi='一', meaning='one', pinyin='yī')]
+    audio_notes = [CharacterNote(hanzi='一', meaning='one', pinyin='yī', mandarin_audio='[sound:cmn_一_yī.mp3]')]
     calls: dict[str, object] = {}
 
     def fake_init(runtime_arg, input_file):
@@ -45,7 +45,7 @@ def test_run_build_full_passes_options_through_init_audio_and_build(monkeypatch,
 
 def test_run_build_full_skips_audio_when_requested(monkeypatch, runtime_factory) -> None:
     runtime = runtime_factory()
-    init_notes = [CharacterNote(hanzi='一', keyword='one', pinyin='yī')]
+    init_notes = [CharacterNote(hanzi='一', meaning='one', pinyin='yī')]
     calls: dict[str, object] = {}
 
     monkeypatch.setattr(

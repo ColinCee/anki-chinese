@@ -51,7 +51,7 @@ MODEL_NAME = "Chinese RSH"
 # the card files under `src/anki_chinese/cards/`. The CLI will catch mismatches.
 FIELDS = [
     "Hanzi",
-    "Keyword",
+    "Meaning",
     "Pinyin",
     "Jyutping",
     "MandarinAudio",

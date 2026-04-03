@@ -19,8 +19,8 @@ def apply_sentence(note: CharacterNote, result: SentenceResult) -> None:
     note.sentence = result.sentence
     note.sentence_pinyin = result.pinyin
     note.sentence_english = result.english
-    if result.keyword:
-        note.keyword = result.keyword
+    if result.meaning:
+        note.meaning = result.meaning
     if result.character_pinyin:
         note.pinyin = result.character_pinyin
     note.sentence_audio = ""
@@ -33,12 +33,12 @@ def _candidates_table(candidates: list[SentenceResult]) -> Table:
     table.add_column("Sentence", style="cyan")
     table.add_column("Pinyin")
     table.add_column("English")
-    table.add_column("Keyword", style="green")
+    table.add_column("Meaning", style="green")
     table.add_column("Reading", style="magenta")
     table.add_column("OK", width=3)
     for i, c in enumerate(candidates, 1):
         ok = "[green]✓[/green]" if c.valid else "[red]✗[/red]"
-        table.add_row(str(i), c.sentence, c.pinyin, c.english, c.keyword, c.character_pinyin, ok)
+        table.add_row(str(i), c.sentence, c.pinyin, c.english, c.meaning, c.character_pinyin, ok)
     return table
 
 
@@ -46,7 +46,7 @@ def _pick_sentence(runtime: AppRuntime, generator, note: CharacterNote, count: i
     """Generate candidates in a loop until the user picks or skips."""
     runtime.console.print(
         f"\n[blue]Generating {count} candidates for[/blue] [bold]{note.hanzi}[/bold] "
-        f"({note.keyword})"
+        f"({note.meaning})"
     )
     if note.sentence:
         runtime.console.print(f"  [dim]Current: {note.sentence} — {note.sentence_english}[/dim]")

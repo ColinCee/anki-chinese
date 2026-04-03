@@ -5,11 +5,11 @@ from anki_chinese.notes import CharacterNote
 
 
 def test_restore_cached_fields_reuses_valid_audio_and_story() -> None:
-    current = [CharacterNote(hanzi='行', keyword='go', pinyin='xíng', jyutping='haang4')]
+    current = [CharacterNote(hanzi='行', meaning='go', pinyin='xíng', jyutping='haang4')]
     previous = [
         CharacterNote(
             hanzi='行',
-            keyword='go',
+            meaning='go',
             pinyin='xíng',
             jyutping='haang4',
             mandarin_audio='[sound:cmn_行_xíng.mp3]',
@@ -39,7 +39,7 @@ def test_clear_stale_audio_removes_files_and_clears_tags(tmp_path: Path) -> None
 
     note = CharacterNote(
         hanzi='行',
-        keyword='go',
+        meaning='go',
         pinyin='háng',
         jyutping='haang4',
         mandarin_audio='[sound:cmn_行_old.mp3]',
@@ -61,12 +61,12 @@ def test_clear_stale_audio_removes_files_and_clears_tags(tmp_path: Path) -> None
 # -- Sentence-specific init tests ---------------------------------------------
 
 def test_restore_cached_fields_preserves_sentence_fields() -> None:
-    # Current note has Heisig keyword from re-parse; previous has Gemini keyword + pinyin
-    current = [CharacterNote(hanzi='水', keyword='water', pinyin='shuǐ', sentence='我喝水。')]
+    # Current note has Heisig meaning from re-parse; previous has Gemini meaning + pinyin
+    current = [CharacterNote(hanzi='水', meaning='water', pinyin='shuǐ', sentence='我喝水。')]
     previous = [
         CharacterNote(
             hanzi='水',
-            keyword='drink',
+            meaning='drink',
             pinyin='hē',
             sentence='我喝水。',
             sentence_pinyin='wǒ hē shuǐ.',
@@ -82,12 +82,12 @@ def test_restore_cached_fields_preserves_sentence_fields() -> None:
     )
 
     note = current[0]
-    assert note.keyword == 'drink'  # Gemini keyword preserved over Heisig
+    assert note.meaning == 'drink'  # Gemini meaning preserved over Heisig
     assert note.pinyin == 'hē'  # Gemini pinyin preserved
     assert note.sentence_pinyin == 'wǒ hē shuǐ.'
     assert note.sentence_english == 'I drink water.'
     assert note.sentence_audio == '[sound:cmn_sentence_我喝水。.mp3]'
-    assert restored == 5  # sentence_pinyin, sentence_english, sentence_audio, keyword, pinyin
+    assert restored == 5  # sentence_pinyin, sentence_english, sentence_audio, meaning, pinyin
 
 
 def test_restore_cached_fields_does_not_overwrite_existing_sentence_data() -> None:
@@ -95,7 +95,7 @@ def test_restore_cached_fields_does_not_overwrite_existing_sentence_data() -> No
     current = [
         CharacterNote(
             hanzi='水',
-            keyword='water',
+            meaning='water',
             sentence='我喝水。',
             sentence_pinyin='new pinyin',
         )
@@ -103,7 +103,7 @@ def test_restore_cached_fields_does_not_overwrite_existing_sentence_data() -> No
     previous = [
         CharacterNote(
             hanzi='水',
-            keyword='water',
+            meaning='water',
             sentence='我喝水。',
             sentence_pinyin='old pinyin',
             sentence_english='old english',
@@ -121,10 +121,10 @@ def test_restore_cached_fields_does_not_overwrite_existing_sentence_data() -> No
     assert note.sentence_english == 'old english'  # restored (was empty)
 
 
-def test_restore_keyword_skipped_without_sentence() -> None:
-    """Without a sentence, keyword stays as the parsed Heisig value."""
-    current = [CharacterNote(hanzi='水', keyword='water')]
-    previous = [CharacterNote(hanzi='水', keyword='drink')]
+def test_restore_meaning_skipped_without_sentence() -> None:
+    """Without a sentence, meaning stays as the parsed Heisig value."""
+    current = [CharacterNote(hanzi='水', meaning='water')]
+    previous = [CharacterNote(hanzi='水', meaning='drink')]
 
     _restore_cached_fields(
         current,
@@ -132,7 +132,7 @@ def test_restore_keyword_skipped_without_sentence() -> None:
         is_valid_audio_tag=lambda tag: True,
     )
 
-    assert current[0].keyword == 'water'  # no sentence → Heisig kept
+    assert current[0].meaning == 'water'  # no sentence → Heisig kept
 
 
 def test_clear_stale_audio_removes_sentence_audio_when_invalid(tmp_path: Path) -> None:
@@ -142,7 +142,7 @@ def test_clear_stale_audio_removes_sentence_audio_when_invalid(tmp_path: Path) -
 
     note = CharacterNote(
         hanzi='水',
-        keyword='water',
+        meaning='water',
         sentence='我喝水。',
         sentence_audio='[sound:cmn_sentence_我喝水。.mp3]',
     )
@@ -166,7 +166,7 @@ def test_clear_stale_audio_removes_sentence_audio_when_sentence_changed(tmp_path
 
     note = CharacterNote(
         hanzi='水',
-        keyword='water',
+        meaning='water',
         sentence='他喝了很多水。',  # sentence changed
         sentence_audio='[sound:cmn_sentence_旧的句子。.mp3]',  # old tag
     )

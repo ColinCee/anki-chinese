@@ -8,8 +8,8 @@ from anki_chinese.notes import CharacterNote
 def test_run_audio_saves_completed_work_before_rate_limit(runtime_factory, stub_tts_provider) -> None:
     stub_tts_provider.rate_limit_on.add('mandarin:二')
     notes = [
-        CharacterNote(hanzi='一', keyword='one', pinyin='yī'),
-        CharacterNote(hanzi='二', keyword='two', pinyin='èr'),
+        CharacterNote(hanzi='一', meaning='one', pinyin='yī'),
+        CharacterNote(hanzi='二', meaning='two', pinyin='èr'),
     ]
     runtime = runtime_factory(saved_notes=notes, tts_provider=stub_tts_provider)
 

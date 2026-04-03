@@ -10,7 +10,7 @@ def test_character_note_round_trips_through_dict_and_ignores_unknown_fields(full
 
 
 def test_apply_overrides_updates_known_fields_only() -> None:
-    note = CharacterNote(hanzi='行', keyword='go')
+    note = CharacterNote(hanzi='行', meaning='go')
 
     apply_overrides(note, {'行': {'pinyin': 'xíng', 'unknown': 'ignored'}})
 
@@ -32,7 +32,7 @@ def test_load_overrides_reads_json_mapping(tmp_path: Path) -> None:
 def test_sentence_fields_round_trip_through_dict() -> None:
     note = CharacterNote(
         hanzi='水',
-        keyword='water',
+        meaning='water',
         sentence='我喝水。',
         sentence_pinyin='wǒ hē shuǐ.',
         sentence_english='I drink water.',
@@ -50,7 +50,7 @@ def test_sentence_fields_round_trip_through_dict() -> None:
 def test_to_fields_list_includes_sentence_fields() -> None:
     note = CharacterNote(
         hanzi='水',
-        keyword='water',
+        meaning='water',
         sentence='我喝水。',
         sentence_pinyin='wǒ hē shuǐ.',
         sentence_english='I drink water.',
