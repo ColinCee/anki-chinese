@@ -46,6 +46,7 @@ def _is_cjk(word: str) -> bool:
 
 
 def _normalize_pinyin(text: str) -> str:
+    """Normalize whitespace and casing in pinyin text."""
     return " ".join(text.lower().split())
 
 

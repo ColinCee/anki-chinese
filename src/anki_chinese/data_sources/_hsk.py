@@ -16,6 +16,8 @@ from pathlib import Path
 from urllib.error import URLError
 from urllib.request import urlopen
 
+from ._cedict import _looks_like_proper_noun_pinyin, _normalize_pinyin
+
 _HSK_VOCAB_URL = (
     "https://raw.githubusercontent.com/drkameleon/complete-hsk-vocabulary/main/complete.min.json"
 )
@@ -54,14 +56,6 @@ def _load_raw(path: Path) -> list[dict]:
         json.dump(data, f, ensure_ascii=False)
 
     return data
-
-
-def _normalize_pinyin(text: str) -> str:
-    return " ".join(text.lower().split())
-
-
-def _looks_like_proper_noun_pinyin(text: str) -> bool:
-    return text != text.lower()
 
 
 def _extract_fields(entry: dict) -> tuple[str, int | None, str, str]:
