@@ -1,8 +1,8 @@
 """
-Batch keyword fixer using Gemini.
+Batch meaning fixer using Gemini.
 
-Sends batches of (hanzi, sentence, english) to Gemini and asks for the
-contextual English meaning of each character as used in its sentence.
+Sends batches of (hanzi, sentence, english) to Gemini along with CC-CEDICT
+definitions and asks for full meaning definitions for each character.
 """
 
 from __future__ import annotations
@@ -17,6 +17,8 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 
+from ..config import CEDICT_PATH
+from ..data_sources._cedict import lookup_char_defs
 from .generator import MODEL
 
 logger = logging.getLogger(__name__)
@@ -27,25 +29,27 @@ _INTER_REQUEST_DELAY = 0.5
 
 SYSTEM_INSTRUCTION = (
     "You are a Mandarin Chinese expert. For each Chinese character below, "
-    "provide the English meaning of that character as used in the given "
-    "sentence. Return a single, concise English word or short phrase "
-    "(1-3 words)."
+    "provide the full English meaning of that character.\n\n"
+    "Format: core dictionary meaning first. If the character appears in a compound "
+    "with a different meaning, add '; in [compound]: compound meaning'.\n"
+    "Examples: 'silver; in 银行: bank', 'to hit; in 打电话: to make a phone call', "
+    "'aspect particle (-ing); marks ongoing action', 'phonetic; in 俄罗斯: Russia'."
 )
 
 
 # -- Structured output schemas ------------------------------------------------
 
 
-class _KeywordEntry(BaseModel):
+class _MeaningEntry(BaseModel):
     hanzi: str = Field(description="The Chinese character")
-    keyword: str = Field(
-        description="The contextual English meaning of the character "
-        "as used in the sentence (1-3 words)"
+    meaning: str = Field(
+        description="Full English meaning: core dictionary definition + "
+        "contextual compound usage if different"
     )
 
 
-class _KeywordBatchSchema(BaseModel):
-    entries: list[_KeywordEntry]
+class _MeaningBatchSchema(BaseModel):
+    entries: list[_MeaningEntry]
 
 
 # -- Public interface ----------------------------------------------------------
@@ -95,13 +99,19 @@ class KeywordFixer:
         """Send one batch request to Gemini and parse the result."""
         lines: list[str] = []
         for i, (hanzi, sentence, english) in enumerate(chunk, 1):
-            lines.append(f"{i}. {hanzi} — sentence: {sentence}({english})")
+            cedict_defs = lookup_char_defs(hanzi, CEDICT_PATH)
+            defs_str = "; ".join(cedict_defs[:5]) if cedict_defs else "(no entry)"
+            lines.append(
+                f"{i}. {hanzi}\n"
+                f"   Dictionary: {defs_str}\n"
+                f"   Sentence: {sentence} ({english})"
+            )
         prompt = "\n".join(lines)
 
         config = types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION,
             response_mime_type="application/json",
-            response_schema=_KeywordBatchSchema,
+            response_schema=_MeaningBatchSchema,
             temperature=0.0,
         )
         contents = [
@@ -113,8 +123,8 @@ class KeywordFixer:
             logger.warning("Empty response for batch of %d", len(chunk))
             return {}
 
-        parsed = _KeywordBatchSchema.model_validate_json(resp)
-        return {entry.hanzi: entry.keyword for entry in parsed.entries}
+        parsed = _MeaningBatchSchema.model_validate_json(resp)
+        return {entry.hanzi: entry.meaning for entry in parsed.entries}
 
     def _call(
         self,

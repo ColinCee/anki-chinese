@@ -9,7 +9,7 @@ Usage:
     generator = SentenceGenerator(api_key="...")
     result = generator.generate("一")
     # result.sentence = "我喝一杯热咖啡。"
-    # result.meaning = "one"
+    # result.meaning = "one; 1"
 """
 
 from __future__ import annotations
@@ -21,6 +21,9 @@ from dataclasses import dataclass
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
+
+from ..config import CEDICT_PATH
+from ..data_sources._cedict import lookup_char_defs
 
 logger = logging.getLogger(__name__)
 
@@ -149,9 +152,13 @@ class SentenceGenerator:
             f"Generate a short example sentence containing the character {hanzi}. "
             f"The character {hanzi} MUST literally appear in the sentence."
         )
+        cedict_defs = lookup_char_defs(hanzi, CEDICT_PATH)
+        if cedict_defs:
+            defs_str = "; ".join(cedict_defs[:5])
+            prompt += f"\nDictionary definitions for {hanzi}: {defs_str}"
         if pinyin:
             prompt += (
-                f" Use the character with pronunciation {pinyin} "
+                f"\nUse the character with pronunciation {pinyin} "
                 f"(not a different reading of the same character)."
             )
         history: list[types.Content] = [

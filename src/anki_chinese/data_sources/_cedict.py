@@ -38,8 +38,9 @@ _CEDICT_ZIP_URL = (
 # Matches: Traditional Simplified [pinyin] /def1/def2/.../
 _LINE_RE = re.compile(r"^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+/(.+)/$")
 
-# Module-level cache
+# Module-level caches
 _index: dict[str, list[tuple[str, str, str]]] | None = None
+_char_defs: dict[str, list[str]] | None = None
 
 
 def _is_cjk(word: str) -> bool:
@@ -161,3 +162,37 @@ def lookup(
     if _index is None:
         _index = build_index(path, subtlex_path)
     return _index.get(hanzi, [])
+
+
+def _build_char_defs(path: Path) -> dict[str, list[str]]:
+    """Build {char: [def1, def2, ...]} for single-character CEDICT entries."""
+    text = _load_raw(path)
+    index: dict[str, list[str]] = {}
+    for line in text.splitlines():
+        if line.startswith("#") or not line.strip():
+            continue
+        m = _LINE_RE.match(line)
+        if not m:
+            continue
+        simp = m.group(2)
+        if len(simp) != 1:
+            continue
+        defs = [d.strip() for d in m.group(4).split("/") if d.strip()]
+        clean = [
+            d for d in defs
+            if not d.startswith("surname ")
+            and not d.startswith("variant of ")
+            and not d.startswith("old variant of ")
+            and not d.startswith("see ")
+        ]
+        if clean:
+            index.setdefault(simp, []).extend(clean)
+    return index
+
+
+def lookup_char_defs(hanzi: str, path: Path) -> list[str]:
+    """Return dictionary definitions for a single character from CC-CEDICT."""
+    global _char_defs
+    if _char_defs is None:
+        _char_defs = _build_char_defs(path)
+    return _char_defs.get(hanzi, [])

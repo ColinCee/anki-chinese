@@ -16,14 +16,14 @@ def _mock_gemini_response(entries: list[dict]) -> MagicMock:
 
 
 def test_fix_batch_returns_keyword_map() -> None:
-    """Single chunk returns correct hanzi → keyword mapping."""
+    """Single chunk returns correct hanzi → meaning mapping."""
     items = [
         ("的", "这是我的中文书。", "This is my Chinese book."),
         ("元", "这个苹果只要五元。", "This apple only costs five yuan."),
     ]
     mock_entries = [
-        {"hanzi": "的", "keyword": "of"},
-        {"hanzi": "元", "keyword": "yuan"},
+        {"hanzi": "的", "meaning": "possessive particle; marks possession"},
+        {"hanzi": "元", "meaning": "first, original; currency unit (yuan)"},
     ]
 
     with patch("anki_chinese.sentences.keyword_fixer.genai") as mock_genai:
@@ -34,7 +34,10 @@ def test_fix_batch_returns_keyword_map() -> None:
         fixer = KeywordFixer(api_key="test-key")
         result = fixer.fix_batch(items)
 
-    assert result == {"的": "of", "元": "yuan"}
+    assert result == {
+        "的": "possessive particle; marks possession",
+        "元": "first, original; currency unit (yuan)",
+    }
 
 
 def test_fix_batch_splits_into_chunks() -> None:
