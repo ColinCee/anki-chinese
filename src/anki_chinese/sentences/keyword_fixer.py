@@ -18,7 +18,7 @@ from google.genai import types
 from pydantic import BaseModel, Field
 
 from ..config import CEDICT_PATH
-from ..data_sources._cedict import lookup_char_defs
+from ..data_sources import lookup_char_defs
 from .generator import MODEL
 
 logger = logging.getLogger(__name__)
