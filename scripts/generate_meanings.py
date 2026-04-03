@@ -18,7 +18,6 @@ import argparse
 import json
 import logging
 import os
-import re
 import sys
 import time
 from pathlib import Path
@@ -42,38 +41,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ENRICHED_PATH = PROJECT_ROOT / "data" / "state" / "enriched.json"
 CEDICT_PATH = PROJECT_ROOT / "data" / "reference" / "cedict_1_0_ts_utf-8_mdbg.txt"
 
-_LINE_RE = re.compile(r"^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+/(.+)/$")
-
-
-# -- CEDICT lookup -----------------------------------------------------------
-
-
-def load_cedict_chars(path: Path) -> dict[str, list[str]]:
-    """Load single-character CEDICT entries → {char: [def1, def2, ...]}."""
-    index: dict[str, list[str]] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("#") or not line.strip():
-            continue
-        m = _LINE_RE.match(line)
-        if not m:
-            continue
-        simp = m.group(2)
-        if len(simp) != 1:
-            continue
-        defs = [d.strip() for d in m.group(4).split("/") if d.strip()]
-        # Filter unhelpful entries like "surname X", "variant of X"
-        clean = [
-            d for d in defs
-            if not d.startswith("surname ")
-            and not d.startswith("variant of ")
-            and not d.startswith("old variant of ")
-            and not d.startswith("see ")
-        ]
-        if simp in index:
-            index[simp].extend(clean)
-        else:
-            index[simp] = clean
-    return index
+# Add src/ to path so we can import the shared CEDICT module
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from anki_chinese.data_sources._cedict import lookup_char_defs  # noqa: E402
 
 
 # -- Pydantic schemas --------------------------------------------------------
@@ -157,16 +127,16 @@ def call_gemini(
 def process_batch(
     client: genai.Client,
     batch: list[dict],
-    cedict: dict[str, list[str]],
 ) -> dict[str, str]:
     """Send a batch to Gemini, return {hanzi: meaning}."""
     lines = []
     for i, note in enumerate(batch, 1):
         h = note["hanzi"]
-        defs = cedict.get(h, [])
+        pinyin = note.get("pinyin", "")
+        defs = lookup_char_defs(h, CEDICT_PATH, pinyin=pinyin)
         defs_str = "; ".join(defs[:5]) if defs else "(no dictionary entry)"
         lines.append(
-            f"{i}. {h}\n"
+            f"{i}. {h} (pinyin: {pinyin})\n"
             f"   Dictionary: {defs_str}\n"
             f"   Sentence: {note['sentence']}\n"
             f"   English: {note['sentence_english']}"
@@ -203,10 +173,6 @@ def main() -> None:
 
     client = genai.Client(api_key=api_key)
 
-    logger.info("Loading CEDICT...")
-    cedict = load_cedict_chars(CEDICT_PATH)
-    logger.info("Loaded %d single-character entries", len(cedict))
-
     notes = json.loads(ENRICHED_PATH.read_text(encoding="utf-8"))
     targets = [n for n in notes if n.get("sentence")]
 
@@ -225,7 +191,7 @@ def main() -> None:
         end = min(start + BATCH_SIZE, len(targets))
         logger.info("[%d/%d] Processing batch ...", end, len(targets))
 
-        results = process_batch(client, batch, cedict)
+        results = process_batch(client, batch)
 
         for note in batch:
             hanzi = note["hanzi"]

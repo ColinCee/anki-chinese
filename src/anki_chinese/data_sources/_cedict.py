@@ -164,10 +164,10 @@ def lookup(
     return _index.get(hanzi, [])
 
 
-def _build_char_defs(path: Path) -> dict[str, list[str]]:
-    """Build {char: [def1, def2, ...]} for single-character CEDICT entries."""
+def _build_char_defs(path: Path) -> dict[str, dict[str, list[str]]]:
+    """Build {char: {pinyin: [def1, ...], ...}} for single-character CEDICT entries."""
     text = _load_raw(path)
-    index: dict[str, list[str]] = {}
+    index: dict[str, dict[str, list[str]]] = {}
     for line in text.splitlines():
         if line.startswith("#") or not line.strip():
             continue
@@ -177,6 +177,8 @@ def _build_char_defs(path: Path) -> dict[str, list[str]]:
         simp = m.group(2)
         if len(simp) != 1:
             continue
+        raw_pinyin = m.group(3).strip()
+        pinyin_key = _cedict_pinyin_to_diacritical(raw_pinyin)
         defs = [d.strip() for d in m.group(4).split("/") if d.strip()]
         clean = [
             d for d in defs
@@ -186,13 +188,28 @@ def _build_char_defs(path: Path) -> dict[str, list[str]]:
             and not d.startswith("see ")
         ]
         if clean:
-            index.setdefault(simp, []).extend(clean)
+            index.setdefault(simp, {}).setdefault(pinyin_key, []).extend(clean)
     return index
 
 
-def lookup_char_defs(hanzi: str, path: Path) -> list[str]:
-    """Return dictionary definitions for a single character from CC-CEDICT."""
+def lookup_char_defs(hanzi: str, path: Path, *, pinyin: str = "") -> list[str]:
+    """Return dictionary definitions for a single character from CC-CEDICT.
+
+    When *pinyin* is provided (e.g. "tiáo"), returns only definitions for
+    that pronunciation. Falls back to all definitions if no match.
+    """
     global _char_defs
     if _char_defs is None:
         _char_defs = _build_char_defs(path)
-    return _char_defs.get(hanzi, [])
+    readings = _char_defs.get(hanzi, {})
+    if not readings:
+        return []
+    if pinyin:
+        normalized = _normalize_pinyin(pinyin)
+        if normalized in readings:
+            return readings[normalized]
+    # Fall back to all definitions across all readings
+    all_defs: list[str] = []
+    for defs in readings.values():
+        all_defs.extend(defs)
+    return all_defs

@@ -152,7 +152,7 @@ class SentenceGenerator:
             f"Generate a short example sentence containing the character {hanzi}. "
             f"The character {hanzi} MUST literally appear in the sentence."
         )
-        cedict_defs = lookup_char_defs(hanzi, CEDICT_PATH)
+        cedict_defs = lookup_char_defs(hanzi, CEDICT_PATH, pinyin=pinyin)
         if cedict_defs:
             defs_str = "; ".join(cedict_defs[:5])
             prompt += f"\nDictionary definitions for {hanzi}: {defs_str}"
