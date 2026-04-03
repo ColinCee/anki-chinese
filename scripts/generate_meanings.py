@@ -57,6 +57,12 @@ class _MeaningEntry(BaseModel):
         "'big, large' or 'silver; in 银行: bank' or "
         "'aspect particle (-ing); marks ongoing action'"
     )
+    english: str = Field(
+        description="The English translation of the sentence, corrected for "
+        "grammar. Fix articles (a/an), verb forms, prepositions, "
+        "subject-verb agreement. Do NOT translate measure words literally. "
+        "Return the original if it is already correct."
+    )
 
 
 class _MeaningBatchSchema(BaseModel):
@@ -86,6 +92,8 @@ FORMAT RULES:
    → Example: "silver; in 银行: bank" or "west; in 西瓜: watermelon"
    → The compound meaning should be the natural English translation of the
      compound word, NOT an explanation of why the character contributes to it.
+   → NEVER cite the character itself as a compound. Wrong: "in 包: bag". 
+     Instead list both meanings directly: "to wrap; bag"
 
 3. For grammatical particles and function words:
    → Describe the function: "aspect particle (-ing); marks ongoing action"
@@ -94,9 +102,13 @@ FORMAT RULES:
    → "phonetic; in [compound]: transliterated word"
    → Example: "phonetic; in 俄罗斯: Russia"
 
+5. If the character has multiple meanings at this pronunciation, list the most
+   relevant ones separated by semicolons: "to trap; sleepy"
+
 GUIDELINES:
 - Keep it concise (under 60 characters ideally)
 - Use the character's CORE meaning first, then contextual if needed
+- Only use dictionary definitions that match the given pinyin pronunciation
 - Don't repeat the sentence translation
 - Lowercase except proper nouns
 """
@@ -156,7 +168,7 @@ def process_batch(
         return {}
 
     parsed = _MeaningBatchSchema.model_validate_json(resp)
-    return {e.hanzi: e.meaning for e in parsed.entries}
+    return {e.hanzi: (e.meaning, e.english) for e in parsed.entries}
 
 
 def main() -> None:
@@ -183,7 +195,8 @@ def main() -> None:
 
     logger.info("Processing %d notes ...\n", len(targets))
 
-    updated = 0
+    updated_meaning = 0
+    updated_english = 0
     note_map = {n["hanzi"]: n for n in notes}
 
     for start in range(0, len(targets), BATCH_SIZE):
@@ -197,16 +210,22 @@ def main() -> None:
             hanzi = note["hanzi"]
             if hanzi not in results:
                 continue
-            new_meaning = results[hanzi]
+            new_meaning, new_english = results[hanzi]
             real_note = note_map[hanzi]
+
             old_meaning = real_note.get("meaning", "")
-
             if new_meaning and new_meaning != old_meaning:
-                logger.info("  %s: '%s' → '%s'", hanzi, old_meaning, new_meaning)
+                logger.info("  %s: meaning '%s' → '%s'", hanzi, old_meaning, new_meaning)
                 real_note["meaning"] = new_meaning
-                updated += 1
+                updated_meaning += 1
 
-    logger.info("\nUpdated %d meanings", updated)
+            old_english = real_note.get("sentence_english", "")
+            if new_english and new_english != old_english:
+                logger.info("  %s: english '%s' → '%s'", hanzi, old_english[:40], new_english[:40])
+                real_note["sentence_english"] = new_english
+                updated_english += 1
+
+    logger.info("\nUpdated %d meanings, %d English translations", updated_meaning, updated_english)
 
     if not args.dry_run:
         ENRICHED_PATH.write_text(
