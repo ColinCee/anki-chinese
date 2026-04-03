@@ -52,8 +52,7 @@ def classify_http_error(
             )
         except json.JSONDecodeError:
             extract_message = (
-                body.strip()
-                or f"{provider_name} request failed with HTTP {error.code}"
+                body.strip() or f"{provider_name} request failed with HTTP {error.code}"
             )
 
     if error.code in {401, 403} or "invalid api key" in extract_message.lower():

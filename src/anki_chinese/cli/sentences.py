@@ -102,6 +102,7 @@ def run_sentences(
         return runtime.note_store.load()
 
     from ..sentences import SentenceGenerator
+
     generator = SentenceGenerator(api_key=api_key)
 
     notes = runtime.note_store.load()
@@ -128,9 +129,7 @@ def run_sentences(
             runtime.console.print(f"  [dim]{learned_count} learned characters prioritized[/dim]")
 
     if not targets:
-        runtime.console.print(
-            "[green]✓[/green] All notes already have sentences"
-        )
+        runtime.console.print("[green]✓[/green] All notes already have sentences")
         return notes
 
     # Interactive pick mode
@@ -140,9 +139,7 @@ def run_sentences(
         runtime.note_store.save(notes)
         return notes
 
-    runtime.console.print(
-        f"[blue]Generating sentences[/blue] for {len(targets)} notes ..."
-    )
+    runtime.console.print(f"[blue]Generating sentences[/blue] for {len(targets)} notes ...")
 
     generated = 0
     failed = 0
@@ -170,9 +167,7 @@ def run_sentences(
                 if result.error:
                     retried += 1
             except Exception as exc:
-                runtime.console.print(
-                    f"  [red]✗[/red] {note.hanzi}: {exc}"
-                )
+                runtime.console.print(f"  [red]✗[/red] {note.hanzi}: {exc}")
                 failed += 1
             progress.advance(task_id)
 
@@ -191,8 +186,12 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
         char: str = typer.Option("", "--char", "-c", help="Generate for one character only."),
         limit: int = typer.Option(0, "--limit", "-n", help="Max notes to process."),
         start_rsh: int = typer.Option(0, "--from-rsh", help="Start from RSH number."),
-        force: bool = typer.Option(False, "--force", "-f", help="Regenerate even if sentence exists."),
-        pick: int = typer.Option(0, "--pick", "-p", help="Generate N candidates and pick interactively."),
+        force: bool = typer.Option(
+            False, "--force", "-f", help="Regenerate even if sentence exists."
+        ),
+        pick: int = typer.Option(
+            0, "--pick", "-p", help="Generate N candidates and pick interactively."
+        ),
     ) -> None:
         """Generate example sentences using Gemini AI."""
         run_sentences(runtime, char=char, limit=limit, start_rsh=start_rsh, force=force, pick=pick)

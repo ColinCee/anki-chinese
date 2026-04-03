@@ -28,7 +28,9 @@ def _collect_pending_audio(
     pending: list[tuple[CharacterNote, list[str]]] = []
     for note in targets:
         tasks = audio_tasks_for_note(
-            note, force=force, is_valid_audio_tag_fn=is_valid_tag,
+            note,
+            force=force,
+            is_valid_audio_tag_fn=is_valid_tag,
         )
         if tasks:
             pending.append((note, tasks))
@@ -57,7 +59,9 @@ def _generate_one_note(
         expected = expected_mandarin_audio_tag(note)
         was_cached = bool(expected and runtime.tts_provider.is_valid_audio_tag(expected))
         note.mandarin_audio = runtime.tts_provider.generate_mandarin(
-            note.hanzi, note.pinyin, force=force,
+            note.hanzi,
+            note.pinyin,
+            force=force,
         )
         generated["mandarin"] = 0 if was_cached and not force else 1
 
@@ -65,7 +69,9 @@ def _generate_one_note(
         expected = expected_cantonese_audio_tag(note)
         was_cached = bool(expected and runtime.tts_provider.is_valid_audio_tag(expected))
         note.cantonese_audio = runtime.tts_provider.generate_cantonese(
-            note.hanzi, note.jyutping, force=force,
+            note.hanzi,
+            note.jyutping,
+            force=force,
         )
         generated["cantonese"] = 0 if was_cached and not force else 1
 
@@ -74,7 +80,9 @@ def _generate_one_note(
         expected = expected_sentence_audio_tag(note)
         was_cached = bool(expected and provider.is_valid_audio_tag(expected))
         note.sentence_audio = provider.generate_sentence_audio(
-            note.hanzi, note.sentence, force=force,
+            note.hanzi,
+            note.sentence,
+            force=force,
         )
         generated["sentence"] = 0 if was_cached and not force else 1
 
@@ -106,15 +114,14 @@ def run_audio(
             raise typer.Exit(1)
 
     pending = _collect_pending_audio(
-        targets, force=force,
+        targets,
+        force=force,
         is_valid_tag=runtime.tts_provider.is_valid_audio_tag,
         limit=limit,
     )
 
     if not pending:
-        runtime.console.print(
-            f"[green]✓[/green] Audio already up to date for {len(targets)} notes"
-        )
+        runtime.console.print(f"[green]✓[/green] Audio already up to date for {len(targets)} notes")
         return notes
 
     learned = load_learned_hanzi(LEARNED_CHARS_PATH)

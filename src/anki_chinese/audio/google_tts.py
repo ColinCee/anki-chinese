@@ -58,8 +58,7 @@ class GoogleTTSSettings:
     @classmethod
     def from_env(cls) -> GoogleTTSSettings:
         return cls(
-            endpoint=os.getenv("GOOGLE_TTS_ENDPOINT", "").strip()
-            or DEFAULT_GOOGLE_TTS_ENDPOINT,
+            endpoint=os.getenv("GOOGLE_TTS_ENDPOINT", "").strip() or DEFAULT_GOOGLE_TTS_ENDPOINT,
             mandarin_voice=os.getenv("GOOGLE_TTS_MANDARIN_VOICE", "").strip()
             or DEFAULT_MANDARIN_VOICE,
             cantonese_voice=os.getenv("GOOGLE_TTS_CANTONESE_VOICE", "").strip()
@@ -71,10 +70,7 @@ def _build_ssml_phoneme(text: str, alphabet: str, phoneme: str) -> str:
     """Build SSML with a <phoneme> tag for pronunciation control."""
     safe_ph = phoneme.replace("&", "&amp;").replace('"', "&quot;")
     safe_text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    return (
-        f'<speak><phoneme alphabet="{alphabet}" ph="{safe_ph}">'
-        f"{safe_text}</phoneme></speak>"
-    )
+    return f'<speak><phoneme alphabet="{alphabet}" ph="{safe_ph}">{safe_text}</phoneme></speak>'
 
 
 def _build_synthesis_request(
@@ -124,9 +120,7 @@ def _load_credentials(
     if credentials_path:
         path = Path(credentials_path)
         if not path.is_file():
-            raise TTSConfigurationError(
-                f"Service account file not found: {credentials_path}"
-            )
+            raise TTSConfigurationError(f"Service account file not found: {credentials_path}")
         try:
             return service_account.Credentials.from_service_account_file(
                 str(path), scopes=_TTS_SCOPES
@@ -244,9 +238,7 @@ class GoogleTTSProvider:
     def is_valid_audio_tag(self, tag: str) -> bool:
         return is_valid_audio_tag(tag, generated_audio_dir=self.generated_audio_dir)
 
-    def generate_mandarin(
-        self, hanzi: str, pinyin: str, *, force: bool = False
-    ) -> str:
+    def generate_mandarin(self, hanzi: str, pinyin: str, *, force: bool = False) -> str:
         safe_pinyin = pinyin.replace(" ", "_")
         filename = f"cmn_{hanzi}_{safe_pinyin}.mp3"
         numbered = diacritical_to_numbered(pinyin)
@@ -273,9 +265,7 @@ class GoogleTTSProvider:
         )
         return self._generate_file(filename=filename, payload=payload, force=force)
 
-    def generate_cantonese(
-        self, hanzi: str, jyutping: str, *, force: bool = False
-    ) -> str:
+    def generate_cantonese(self, hanzi: str, jyutping: str, *, force: bool = False) -> str:
         safe_jyutping = jyutping.replace(" ", "_")
         filename = f"yue_{hanzi}_{safe_jyutping}.mp3"
         # Cantonese has no custom_pronunciations or phoneme SSML on Chirp 3 HD,
@@ -287,10 +277,9 @@ class GoogleTTSProvider:
         )
         return self._generate_file(filename=filename, payload=payload, force=force)
 
-    def generate_sentence_audio(
-        self, hanzi: str, sentence: str, *, force: bool = False
-    ) -> str:
+    def generate_sentence_audio(self, hanzi: str, sentence: str, *, force: bool = False) -> str:
         from .files import sentence_audio_filename
+
         filename = sentence_audio_filename(hanzi, sentence)
         payload = _build_synthesis_request(
             text=sentence,

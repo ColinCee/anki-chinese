@@ -107,25 +107,19 @@ def audio_tasks_for_note(
 
     mandarin_tag = expected_mandarin_audio_tag(note)
     if mandarin_tag and (
-        force
-        or note.mandarin_audio != mandarin_tag
-        or not is_valid_audio_tag_fn(mandarin_tag)
+        force or note.mandarin_audio != mandarin_tag or not is_valid_audio_tag_fn(mandarin_tag)
     ):
         tasks.append("mandarin")
 
     cantonese_tag = expected_cantonese_audio_tag(note)
     if cantonese_tag and (
-        force
-        or note.cantonese_audio != cantonese_tag
-        or not is_valid_audio_tag_fn(cantonese_tag)
+        force or note.cantonese_audio != cantonese_tag or not is_valid_audio_tag_fn(cantonese_tag)
     ):
         tasks.append("cantonese")
 
     sentence_tag = expected_sentence_audio_tag(note)
     if sentence_tag and (
-        force
-        or note.sentence_audio != sentence_tag
-        or not is_valid_audio_tag_fn(sentence_tag)
+        force or note.sentence_audio != sentence_tag or not is_valid_audio_tag_fn(sentence_tag)
     ):
         tasks.append("sentence")
 

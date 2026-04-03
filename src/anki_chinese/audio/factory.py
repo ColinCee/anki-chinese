@@ -34,6 +34,4 @@ def build_tts_provider(
 
         return MiniMaxTTSProvider(generated_audio_dir=generated_audio_dir)
 
-    raise ValueError(
-        f"Unknown TTS provider: {name!r}. Choose from: {', '.join(PROVIDER_NAMES)}"
-    )
+    raise ValueError(f"Unknown TTS provider: {name!r}. Choose from: {', '.join(PROVIDER_NAMES)}")

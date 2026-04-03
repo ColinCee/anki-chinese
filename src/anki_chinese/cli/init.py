@@ -106,9 +106,7 @@ def run_init(
         is_valid_audio_tag=runtime.tts_provider.is_valid_audio_tag,
     )
     if restored:
-        runtime.console.print(
-            f"  [green]✓[/green] Restored {restored} fields from previous data"
-        )
+        runtime.console.print(f"  [green]✓[/green] Restored {restored} fields from previous data")
 
     runtime.console.print("[blue]Enriching[/blue] ...")
     notes = runtime.enrich_notes(notes)

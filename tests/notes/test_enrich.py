@@ -5,9 +5,7 @@ from anki_chinese.notes import CharacterNote
 def _patch_defaults(monkeypatch, *, overrides=None):
     """Patch track (suppress progress bar) and load_overrides with common defaults."""
     monkeypatch.setattr(enrich_module, "track", lambda seq, **kw: seq)
-    monkeypatch.setattr(
-        enrich_module, "load_overrides", lambda path: (overrides or {})
-    )
+    monkeypatch.setattr(enrich_module, "load_overrides", lambda path: overrides or {})
 
 
 # ── Pinyin lookup ───────────────────────────────────────────────────────

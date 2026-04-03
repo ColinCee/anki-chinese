@@ -33,9 +33,7 @@ class AppRuntime:
 
 def _build_sentence_tts_provider(generated_audio_dir: Path) -> TTSProvider:
     """MiniMax for sentence audio — better quality for longer text."""
-    return build_tts_provider(
-        generated_audio_dir=generated_audio_dir, provider_name="minimax"
-    )
+    return build_tts_provider(generated_audio_dir=generated_audio_dir, provider_name="minimax")
 
 
 def build_runtime() -> AppRuntime:

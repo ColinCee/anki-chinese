@@ -40,9 +40,7 @@ def test_provider_reports_capabilities(tmp_path: Path) -> None:
     assert caps.supports_phoneme_control
 
 
-def test_generate_mandarin_uses_custom_pronunciations(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_generate_mandarin_uses_custom_pronunciations(tmp_path: Path, monkeypatch) -> None:
     provider = _make_provider(tmp_path)
     captured: dict[str, object] = {}
 
@@ -71,9 +69,7 @@ def test_generate_mandarin_uses_custom_pronunciations(
     assert prons[0]["pronunciation"] == "yi1"
 
 
-def test_generate_cantonese_uses_ssml_phoneme(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_generate_cantonese_uses_ssml_phoneme(tmp_path: Path, monkeypatch) -> None:
     provider = _make_provider(tmp_path)
     captured: dict[str, object] = {}
 
@@ -98,9 +94,7 @@ def test_generate_cantonese_uses_ssml_phoneme(
     assert "ssml" not in payload["input"]
 
 
-def test_generate_plain_mandarin_no_pronunciation(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_generate_plain_mandarin_no_pronunciation(tmp_path: Path, monkeypatch) -> None:
     provider = _make_provider(tmp_path)
     captured: dict[str, object] = {}
 

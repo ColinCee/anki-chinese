@@ -191,8 +191,12 @@ class TestApplySentence:
     def test_writes_all_fields_to_note(self):
         note = CharacterNote(hanzi="水", meaning="old")
         result = SentenceResult(
-            sentence="我喝水。", pinyin="wǒ hē shuǐ.",
-            english="I drink water.", meaning="water", character_pinyin="shuǐ", valid=True,
+            sentence="我喝水。",
+            pinyin="wǒ hē shuǐ.",
+            english="I drink water.",
+            meaning="water",
+            character_pinyin="shuǐ",
+            valid=True,
         )
 
         apply_sentence(note, result)
@@ -205,12 +209,17 @@ class TestApplySentence:
 
     def test_clears_stale_audio(self):
         note = CharacterNote(
-            hanzi="水", meaning="water",
+            hanzi="水",
+            meaning="water",
             sentence_audio="[sound:cmn_sentence_old.mp3]",
         )
         result = SentenceResult(
-            sentence="新句子。", pinyin="xīn jùzi.",
-            english="New sentence.", meaning="water", character_pinyin="shuǐ", valid=True,
+            sentence="新句子。",
+            pinyin="xīn jùzi.",
+            english="New sentence.",
+            meaning="water",
+            character_pinyin="shuǐ",
+            valid=True,
         )
 
         apply_sentence(note, result)
@@ -220,8 +229,12 @@ class TestApplySentence:
     def test_preserves_meaning_when_result_meaning_empty(self):
         note = CharacterNote(hanzi="水", meaning="water")
         result = SentenceResult(
-            sentence="我喝水。", pinyin="wǒ hē shuǐ.",
-            english="I drink water.", meaning="", character_pinyin="", valid=True,
+            sentence="我喝水。",
+            pinyin="wǒ hē shuǐ.",
+            english="I drink water.",
+            meaning="",
+            character_pinyin="",
+            valid=True,
         )
 
         apply_sentence(note, result)
@@ -235,10 +248,22 @@ class TestPickMode:
         runtime = runtime_factory(saved_notes=notes)
 
         candidates = [
-            SentenceResult(sentence="我喝水。", pinyin="wǒ hē shuǐ.",
-                           english="I drink water.", meaning="water", character_pinyin="shuǐ", valid=True),
-            SentenceResult(sentence="水很冷。", pinyin="shuǐ hěn lěng.",
-                           english="The water is cold.", meaning="water", character_pinyin="shuǐ", valid=True),
+            SentenceResult(
+                sentence="我喝水。",
+                pinyin="wǒ hē shuǐ.",
+                english="I drink water.",
+                meaning="water",
+                character_pinyin="shuǐ",
+                valid=True,
+            ),
+            SentenceResult(
+                sentence="水很冷。",
+                pinyin="shuǐ hěn lěng.",
+                english="The water is cold.",
+                meaning="water",
+                character_pinyin="shuǐ",
+                valid=True,
+            ),
         ]
 
         with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
@@ -258,8 +283,14 @@ class TestPickMode:
         runtime = runtime_factory(saved_notes=notes)
 
         candidates = [
-            SentenceResult(sentence="新的。", pinyin="xīn de.",
-                           english="New.", meaning="water", character_pinyin="shuǐ", valid=True),
+            SentenceResult(
+                sentence="新的。",
+                pinyin="xīn de.",
+                english="New.",
+                meaning="water",
+                character_pinyin="shuǐ",
+                valid=True,
+            ),
         ]
 
         with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:

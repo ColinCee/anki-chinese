@@ -33,9 +33,7 @@ def run_status(runtime: AppRuntime) -> None:
         total = len(learned_notes)
         with_sentence = sum(1 for n in learned_notes if n.sentence)
         with_audio = sum(1 for n in learned_notes if n.sentence_audio)
-        runtime.console.print(
-            f"\n[bold]Learned characters[/bold] · {total} of {len(learned)}"
-        )
+        runtime.console.print(f"\n[bold]Learned characters[/bold] · {total} of {len(learned)}")
         sent_color = "green" if with_sentence == total else "yellow"
         audio_color = "green" if with_audio == total else "yellow"
         runtime.console.print(

@@ -29,6 +29,4 @@ def reading_matches(
     if len(syllables) != len(word):
         return False
 
-    return any(
-        syllables[index] == preferred for index, char in enumerate(word) if char == hanzi
-    )
+    return any(syllables[index] == preferred for index, char in enumerate(word) if char == hanzi)

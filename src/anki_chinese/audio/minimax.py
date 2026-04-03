@@ -249,9 +249,7 @@ class MiniMaxTTSProvider:
             force=force,
         )
 
-    def generate_cantonese(
-        self, hanzi: str, jyutping: str, *, force: bool = False
-    ) -> str:
+    def generate_cantonese(self, hanzi: str, jyutping: str, *, force: bool = False) -> str:
         safe_jyutping = jyutping.replace(" ", "_")
         filename = f"yue_{hanzi}_{safe_jyutping}.mp3"
         return self._generate_file(
@@ -262,10 +260,9 @@ class MiniMaxTTSProvider:
             force=force,
         )
 
-    def generate_sentence_audio(
-        self, hanzi: str, sentence: str, *, force: bool = False
-    ) -> str:
+    def generate_sentence_audio(self, hanzi: str, sentence: str, *, force: bool = False) -> str:
         from .files import sentence_audio_filename
+
         filename = sentence_audio_filename(hanzi, sentence)
         return self._generate_file(
             filename=filename,

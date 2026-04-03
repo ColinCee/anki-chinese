@@ -120,7 +120,9 @@ def parse_deck_export(path: Path) -> list[CharacterNote]:
     for row in reader:
         if len(row) < 13:
             continue
-        notes.append(_parse_exported_row(row) if is_exported or len(row) >= 17 else _parse_legacy_row(row))
+        notes.append(
+            _parse_exported_row(row) if is_exported or len(row) >= 17 else _parse_legacy_row(row)
+        )
     return notes
 
 

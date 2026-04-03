@@ -87,10 +87,10 @@ def test_parse_deck_export_supports_legacy_19_field_export(tmp_path: Path) -> No
     row[6] = '<span class="tone4">haang4</span>'
     row[7] = "[sound:cmn_行_xíng.mp3]"
     row[8] = "[sound:yue_行_haang4.mp3]"
-    row[9] = "银行"       # ExampleWord (deprecated)
-    row[10] = "bank"      # ExampleMeaning (deprecated)
+    row[9] = "银行"  # ExampleWord (deprecated)
+    row[10] = "bank"  # ExampleMeaning (deprecated)
     row[11] = "yín háng"  # ExamplePinyin (deprecated)
-    row[12] = ""          # ExampleAudio (deprecated)
+    row[12] = ""  # ExampleAudio (deprecated)
     row[13] = "stroke-order"
     row[14] = "RSH 144"
     row[15] = "Lesson 12"

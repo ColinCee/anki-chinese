@@ -33,9 +33,7 @@ def load_learned_hanzi(path: Path) -> set[str]:
     return learned
 
 
-def prioritize_learned(
-    notes: list[CharacterNote], learned: set[str]
-) -> list[CharacterNote]:
+def prioritize_learned(notes: list[CharacterNote], learned: set[str]) -> list[CharacterNote]:
     """Sort notes so learned characters come first, preserving relative order."""
     first = [n for n in notes if n.hanzi in learned]
     rest = [n for n in notes if n.hanzi not in learned]

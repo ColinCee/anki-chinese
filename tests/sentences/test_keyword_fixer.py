@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
-from anki_chinese.sentences.keyword_fixer import KeywordFixer, _BATCH_SIZE
+from anki_chinese.sentences.keyword_fixer import _BATCH_SIZE, KeywordFixer
 
 
 def _mock_gemini_response(entries: list[dict]) -> MagicMock:

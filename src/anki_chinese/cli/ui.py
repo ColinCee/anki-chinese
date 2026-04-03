@@ -74,8 +74,7 @@ def report_init_summary(
     for note in notes:
         previous = prev_by_hanzi.get(note.hanzi)
         if previous and any(
-            getattr(note, field) != getattr(previous, field)
-            for field in tracked_fields
+            getattr(note, field) != getattr(previous, field) for field in tracked_fields
         ):
             changed_existing += 1
 
@@ -84,25 +83,17 @@ def report_init_summary(
     if added:
         preview = ", ".join(added[:12])
         suffix = "" if len(added) <= 12 else f" … +{len(added) - 12} more"
-        console.print(
-            f"  [green]•[/green] {len(added)} new characters: {preview}{suffix}"
-        )
+        console.print(f"  [green]•[/green] {len(added)} new characters: {preview}{suffix}")
     if changed_existing:
-        console.print(
-            f"  [green]•[/green] {changed_existing} existing characters updated"
-        )
+        console.print(f"  [green]•[/green] {changed_existing} existing characters updated")
     if removed:
         preview = ", ".join(removed[:12])
         suffix = "" if len(removed) <= 12 else f" … +{len(removed) - 12} more"
-        console.print(
-            f"  [yellow]•[/yellow] {len(removed)} characters removed: {preview}{suffix}"
-        )
+        console.print(f"  [yellow]•[/yellow] {len(removed)} characters removed: {preview}{suffix}")
     if restored_fields:
         console.print(f"  [green]•[/green] {restored_fields} cached fields reused")
     if removed_stale_files:
-        console.print(
-            f"  [yellow]•[/yellow] {removed_stale_files} stale audio files removed"
-        )
+        console.print(f"  [yellow]•[/yellow] {removed_stale_files} stale audio files removed")
 
 
 def report_audio_summary(
@@ -122,9 +113,7 @@ def report_audio_summary(
         if repaired_total:
             console.print(f"  [green]•[/green] {repaired_total} new audio files generated")
         if synced_total:
-            console.print(
-                f"  [green]•[/green] {synced_total} existing audio files linked to notes"
-            )
+            console.print(f"  [green]•[/green] {synced_total} existing audio files linked to notes")
 
         table = Table(show_header=True, box=None, padding=(0, 2))
         table.add_column("Audio Type")

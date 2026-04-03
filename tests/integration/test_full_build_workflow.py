@@ -2,16 +2,20 @@ from anki_chinese.cli import create_app
 from anki_chinese.notes import CharacterNote
 
 
-def test_build_full_runs_parse_enrich_audio_and_build(runtime_factory, runner, stub_tts_provider) -> None:
-    parsed_notes = [CharacterNote(hanzi='行', meaning='go', heisig_num='RSH 144', lesson='Lesson 12')]
+def test_build_full_runs_parse_enrich_audio_and_build(
+    runtime_factory, runner, stub_tts_provider
+) -> None:
+    parsed_notes = [
+        CharacterNote(hanzi="行", meaning="go", heisig_num="RSH 144", lesson="Lesson 12")
+    ]
     enriched_notes = [
         CharacterNote(
-            hanzi='行',
-            meaning='go',
-            pinyin='xíng',
-            jyutping='haang4',
-            heisig_num='RSH 144',
-            lesson='Lesson 12',
+            hanzi="行",
+            meaning="go",
+            pinyin="xíng",
+            jyutping="haang4",
+            heisig_num="RSH 144",
+            lesson="Lesson 12",
         )
     ]
     runtime = runtime_factory(
@@ -21,10 +25,10 @@ def test_build_full_runs_parse_enrich_audio_and_build(runtime_factory, runner, s
     )
     app = create_app(runtime)
 
-    result = runner.invoke(app, ['build', '--full'])
+    result = runner.invoke(app, ["build", "--full"])
 
     assert result.exit_code == 0
     saved = runtime.note_store.load()
-    assert saved[0].mandarin_audio == '[sound:cmn_行_xíng.mp3]'
-    assert saved[0].cantonese_audio == '[sound:yue_行_haang4.mp3]'
-    assert (runtime.note_store.path.parent.parent / 'build' / 'decks' / 'deck.apkg').exists()
+    assert saved[0].mandarin_audio == "[sound:cmn_行_xíng.mp3]"
+    assert saved[0].cantonese_audio == "[sound:yue_行_haang4.mp3]"
+    assert (runtime.note_store.path.parent.parent / "build" / "decks" / "deck.apkg").exists()

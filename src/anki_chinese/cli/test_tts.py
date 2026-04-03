@@ -29,9 +29,7 @@ def _add_audio_row(
     table.add_row(label, filename, f"{output_path.stat().st_size:,} bytes")
 
 
-def _sample_dir_for(
-    runtime: AppRuntime, *, label: str, provider_name: str
-) -> Path:
+def _sample_dir_for(runtime: AppRuntime, *, label: str, provider_name: str) -> Path:
     """Return samples/<label>/<provider>, creating it fresh."""
     sample_dir = runtime.sample_audio_dir / label / provider_name
     if sample_dir.exists():
@@ -63,7 +61,9 @@ def run_test_tts(
 
         note: CharacterNote | None = None
         if runtime.note_store.exists():
-            matches = [candidate for candidate in runtime.note_store.load() if candidate.hanzi == char]
+            matches = [
+                candidate for candidate in runtime.note_store.load() if candidate.hanzi == char
+            ]
             if matches:
                 note = matches[0]
 

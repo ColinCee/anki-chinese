@@ -25,11 +25,13 @@ def _sentence_json(sentence: str = "我喝一杯咖啡。", **overrides) -> str:
 
 
 def _validation_json(*, grammar_correct: bool = True, natural: bool = True, error: str = "") -> str:
-    return json.dumps({
-        "grammar_correct": grammar_correct,
-        "natural": natural,
-        "error_description": error,
-    })
+    return json.dumps(
+        {
+            "grammar_correct": grammar_correct,
+            "natural": natural,
+            "error_description": error,
+        }
+    )
 
 
 def _mock_response(text: str) -> MagicMock:
@@ -86,7 +88,7 @@ class TestCharCheckRetries:
         # Let's use a char that's harder to accidentally include
         responses = [
             _mock_response(_sentence_json("我去学校了。", meaning="big")),  # missing 大
-            _mock_response(_sentence_json("这个很大。", meaning="big")),    # has 大
+            _mock_response(_sentence_json("这个很大。", meaning="big")),  # has 大
             _mock_response(_validation_json()),
         ]
         gen._client = MagicMock()
@@ -171,9 +173,7 @@ class TestAPIErrorHandling:
     def test_generic_api_error_returns_none_from_call(self):
         gen = SentenceGenerator(api_key="fake")
         gen._client = MagicMock()
-        gen._client.models.generate_content = MagicMock(
-            side_effect=Exception("Connection refused")
-        )
+        gen._client.models.generate_content = MagicMock(side_effect=Exception("Connection refused"))
 
         result = gen.generate("大")
 

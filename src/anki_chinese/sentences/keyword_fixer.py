@@ -102,9 +102,7 @@ class KeywordFixer:
             cedict_defs = lookup_char_defs(hanzi, CEDICT_PATH)
             defs_str = "; ".join(cedict_defs[:5]) if cedict_defs else "(no entry)"
             lines.append(
-                f"{i}. {hanzi}\n"
-                f"   Dictionary: {defs_str}\n"
-                f"   Sentence: {sentence} ({english})"
+                f"{i}. {hanzi}\n   Dictionary: {defs_str}\n   Sentence: {sentence} ({english})"
             )
         prompt = "\n".join(lines)
 
@@ -134,7 +132,9 @@ class KeywordFixer:
         """Make a Gemini API call with rate-limit retry."""
         try:
             resp = self._client.models.generate_content(
-                model=self._model, contents=contents, config=config,
+                model=self._model,
+                contents=contents,
+                config=config,
             )
             time.sleep(_INTER_REQUEST_DELAY)
             return resp.text or None

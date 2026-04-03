@@ -74,9 +74,7 @@ def load_overrides(path: Path) -> dict[str, dict[str, Any]]:
         return json.load(file)
 
 
-def apply_overrides(
-    note: CharacterNote, overrides: dict[str, dict[str, Any]]
-) -> CharacterNote:
+def apply_overrides(note: CharacterNote, overrides: dict[str, dict[str, Any]]) -> CharacterNote:
     """Apply manual overrides for a character, if any exist."""
     if note.hanzi not in overrides:
         return note

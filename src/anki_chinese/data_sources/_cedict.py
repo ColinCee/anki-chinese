@@ -31,9 +31,7 @@ from urllib.request import urlopen
 
 from pypinyin.contrib.tone_convert import to_tone
 
-_CEDICT_ZIP_URL = (
-    "https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.zip"
-)
+_CEDICT_ZIP_URL = "https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.zip"
 
 # Matches: Traditional Simplified [pinyin] /def1/def2/.../
 _LINE_RE = re.compile(r"^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+/(.+)/$")
@@ -71,9 +69,7 @@ def _download_and_cache(path: Path) -> str:
         # The archive ships as cedict_ts.u8 (UTF-8 text despite the extension)
         txt_names = [n for n in zf.namelist() if n.endswith((".txt", ".u8"))]
         if not txt_names:
-            raise RuntimeError(
-                f"No data file found inside CC-CEDICT zip: {zf.namelist()}"
-            )
+            raise RuntimeError(f"No data file found inside CC-CEDICT zip: {zf.namelist()}")
         content = zf.read(txt_names[0]).decode("utf-8")
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -181,7 +177,8 @@ def _build_char_defs(path: Path) -> dict[str, dict[str, list[str]]]:
         pinyin_key = _cedict_pinyin_to_diacritical(raw_pinyin)
         defs = [d.strip() for d in m.group(4).split("/") if d.strip()]
         clean = [
-            d for d in defs
+            d
+            for d in defs
             if not d.startswith("surname ")
             and not d.startswith("variant of ")
             and not d.startswith("old variant of ")

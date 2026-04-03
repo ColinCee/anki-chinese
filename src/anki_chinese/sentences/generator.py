@@ -68,6 +68,7 @@ _INTER_REQUEST_DELAY = 0.5
 
 # -- Structured output schemas for Gemini ----------------------------------
 
+
 class _SentenceSchema(BaseModel):
     sentence: str = Field(description="The Chinese sentence (6-10 characters)")
     pinyin: str = Field(description="Pinyin with tone marks for the full sentence")
@@ -90,9 +91,11 @@ class _ValidationSchema(BaseModel):
 
 # -- Public interface -------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class SentenceResult:
     """Output of sentence generation for one character."""
+
     sentence: str
     pinyin: str
     english: str
@@ -117,7 +120,9 @@ class SentenceGenerator:
         """Generate a validated example sentence for *hanzi*."""
         return self._generate_one(hanzi, pinyin=pinyin)
 
-    def generate_candidates(self, hanzi: str, count: int = 3, *, pinyin: str = "") -> list[SentenceResult]:
+    def generate_candidates(
+        self, hanzi: str, count: int = 3, *, pinyin: str = ""
+    ) -> list[SentenceResult]:
         """Generate *count* independent candidate sentences for *hanzi*."""
         candidates: list[SentenceResult] = []
         for _ in range(count):
@@ -138,9 +143,7 @@ class SentenceGenerator:
             response_mime_type="application/json",
             response_schema=_SentenceSchema,
             temperature=0.7,
-            thinking_config=types.ThinkingConfig(
-                thinking_level=types.ThinkingLevel.MINIMAL
-            ),
+            thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel.MINIMAL),
         )
         val_config = types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION,
@@ -162,15 +165,14 @@ class SentenceGenerator:
                 f"\nUse the character with pronunciation {pinyin} "
                 f"(not a different reading of the same character)."
             )
-        history: list[types.Content] = [
-            types.Content(role="user", parts=[types.Part(text=prompt)])
-        ]
+        history: list[types.Content] = [types.Content(role="user", parts=[types.Part(text=prompt)])]
 
         # Step 1: generate + code char-check with retries (1 API call usually)
         parsed = self._generate_with_char_check(hanzi, history, gen_config)
         if parsed is None:
-            return SentenceResult("", "", "", "", "", valid=False,
-                                  error="target char missing after retries")
+            return SentenceResult(
+                "", "", "", "", "", valid=False, error="target char missing after retries"
+            )
 
         # Step 2: LLM self-validation (1 API call) — flag but don't retry
         validation = self._validate(history, val_config)
@@ -195,18 +197,14 @@ class SentenceGenerator:
             if resp is None:
                 continue
             parsed = _SentenceSchema.model_validate_json(resp)
-            history.append(
-                types.Content(role="model", parts=[types.Part(text=resp)])
-            )
+            history.append(types.Content(role="model", parts=[types.Part(text=resp)]))
             if hanzi in parsed.sentence:
                 return parsed
             retry_msg = (
-                f"WRONG. Your sentence \"{parsed.sentence}\" does not contain "
+                f'WRONG. Your sentence "{parsed.sentence}" does not contain '
                 f"the character {hanzi}. Try again."
             )
-            history.append(
-                types.Content(role="user", parts=[types.Part(text=retry_msg)])
-            )
+            history.append(types.Content(role="user", parts=[types.Part(text=retry_msg)]))
         return None
 
     def _validate(
@@ -214,16 +212,12 @@ class SentenceGenerator:
         history: list[types.Content],
         config: types.GenerateContentConfig,
     ) -> _ValidationSchema | None:
-        history.append(
-            types.Content(role="user", parts=[types.Part(text=VALIDATE_PROMPT)])
-        )
+        history.append(types.Content(role="user", parts=[types.Part(text=VALIDATE_PROMPT)]))
         resp = self._call(history, config)
         if resp is None:
             return None
         result = _ValidationSchema.model_validate_json(resp)
-        history.append(
-            types.Content(role="model", parts=[types.Part(text=resp)])
-        )
+        history.append(types.Content(role="model", parts=[types.Part(text=resp)]))
         return result
 
     def _call(
@@ -234,7 +228,9 @@ class SentenceGenerator:
         """Make a Gemini API call with rate-limit retry."""
         try:
             resp = self._client.models.generate_content(
-                model=self._model, contents=history, config=config,
+                model=self._model,
+                contents=history,
+                config=config,
             )
             time.sleep(_INTER_REQUEST_DELAY)
             return resp.text or None

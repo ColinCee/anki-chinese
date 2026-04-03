@@ -27,6 +27,7 @@ def run_keywords(
         return runtime.note_store.load()
 
     from ..sentences import KeywordFixer
+
     fixer = KeywordFixer(api_key=api_key)
 
     notes = runtime.note_store.load()
@@ -36,14 +37,10 @@ def run_keywords(
         targets = targets[:limit]
 
     if not targets:
-        runtime.console.print(
-            "[green]✓[/green] No notes with sentences to fix"
-        )
+        runtime.console.print("[green]✓[/green] No notes with sentences to fix")
         return notes
 
-    runtime.console.print(
-        f"[blue]Fixing meanings[/blue] for {len(targets)} notes ..."
-    )
+    runtime.console.print(f"[blue]Fixing meanings[/blue] for {len(targets)} notes ...")
 
     # Build (hanzi, sentence, english) tuples
     items = [(n.hanzi, n.sentence, n.sentence_english) for n in targets]
