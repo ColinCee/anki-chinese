@@ -17,7 +17,7 @@ from .config import (
     MODEL_ID,
     MODEL_NAME,
 )
-from .notes.model import CharacterNote
+from .notes import CharacterNote
 
 
 def _read_card_file(name: str) -> str:
