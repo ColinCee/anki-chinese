@@ -34,7 +34,12 @@ SYSTEM_INSTRUCTION = (
     "2. 6–10 Chinese characters long\n"
     "3. Natural — something a native speaker would actually say in daily life\n"
     "4. Use the character in its most common, everyday meaning\n"
-    "5. Keep other vocabulary simple and common"
+    "5. Keep other vocabulary simple and common\n"
+    "6. For the meaning field: give the character's CORE dictionary meaning first. "
+    "If the character appears in a compound with a different meaning, add "
+    "'; in [compound]: compound meaning' (e.g. 'silver; in 银行: bank'). "
+    "For grammatical particles, describe the function. "
+    "For phonetic uses, write 'phonetic; in [compound]: word'."
 )
 
 VALIDATE_PROMPT = (
