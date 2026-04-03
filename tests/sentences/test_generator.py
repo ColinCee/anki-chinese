@@ -117,45 +117,38 @@ class TestCharCheckRetries:
         assert result.sentence == ""
 
 
-class TestValidationFailureAndRetry:
-    """Validation flags error → regenerate with feedback."""
+class TestValidationFlagging:
+    """Validation flags error → returns sentence marked invalid for review."""
 
-    def test_regenerates_on_validation_failure(self):
+    def test_flags_invalid_on_validation_failure(self):
         gen = SentenceGenerator(api_key="fake")
         responses = [
             # Initial generation — contains 两
             _mock_response(_sentence_json("我有两个朋友。", meaning="two")),
-            # Validation: grammar error (maybe style issue)
+            # Validation: grammar error
             _mock_response(_validation_json(grammar_correct=False, error="sounds awkward")),
-            # Retry generation — also contains 两
-            _mock_response(_sentence_json("我买了两本书。", pinyin="wǒ mǎi le liǎng běn shū.", meaning="two")),
-            # Retry validation: passes
-            _mock_response(_validation_json()),
         ]
         gen._client = MagicMock()
         gen._client.models.generate_content = MagicMock(side_effect=responses)
 
         result = gen.generate("两")
 
-        assert result.valid is True
-        assert "两" in result.sentence
+        assert result.valid is False
+        assert result.error == "sounds awkward"
+        assert "两" in result.sentence  # sentence still returned
 
-    def test_returns_invalid_when_both_attempts_fail_validation(self):
+    def test_returns_valid_when_validation_passes(self):
         gen = SentenceGenerator(api_key="fake")
         responses = [
             _mock_response(_sentence_json("他在二楼住。", meaning="two")),
-            _mock_response(_validation_json(grammar_correct=False, error="sounds unnatural")),
-            _mock_response(_sentence_json("她有二十块钱。", meaning="two")),
-            _mock_response(_validation_json(grammar_correct=False, error="still awkward")),
+            _mock_response(_validation_json()),
         ]
         gen._client = MagicMock()
         gen._client.models.generate_content = MagicMock(side_effect=responses)
 
         result = gen.generate("二")
 
-        assert result.valid is False
-        assert result.error != ""
-        # Still returns the sentence (best effort)
+        assert result.valid is True
         assert result.sentence != ""
 
 

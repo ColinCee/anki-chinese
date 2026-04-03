@@ -62,7 +62,6 @@ VALIDATE_PROMPT = (
 )
 
 _MAX_CHAR_RETRIES = 2
-_MAX_VALIDATE_RETRIES = 1
 _RATE_LIMIT_SLEEP = 15
 _INTER_REQUEST_DELAY = 0.5
 
@@ -128,7 +127,12 @@ class SentenceGenerator:
         return candidates
 
     def _generate_one(self, hanzi: str, *, pinyin: str = "") -> SentenceResult:
-        """Generate a single validated example sentence for *hanzi*."""
+        """Generate a single validated example sentence for *hanzi*.
+
+        Flow (max 2 API calls):
+        1. Generate sentence + code-level char check (with retries)
+        2. LLM self-validation — flags issues but does NOT retry
+        """
         gen_config = types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION,
             response_mime_type="application/json",
@@ -143,9 +147,6 @@ class SentenceGenerator:
             response_mime_type="application/json",
             response_schema=_ValidationSchema,
             temperature=0.0,
-            thinking_config=types.ThinkingConfig(
-                thinking_level=types.ThinkingLevel.MINIMAL
-            ),
         )
 
         prompt = (
@@ -165,22 +166,20 @@ class SentenceGenerator:
             types.Content(role="user", parts=[types.Part(text=prompt)])
         ]
 
-        # Step 1+2: generate + code char-check with retries
+        # Step 1: generate + code char-check with retries (1 API call usually)
         parsed = self._generate_with_char_check(hanzi, history, gen_config)
         if parsed is None:
             return SentenceResult("", "", "", "", "", valid=False,
                                   error="target char missing after retries")
 
-        # Step 3: LLM self-validation
+        # Step 2: LLM self-validation (1 API call) — flag but don't retry
         validation = self._validate(history, val_config)
         if validation is None or (validation.grammar_correct and validation.natural):
             return self._to_result(parsed, valid=True)
 
-        # Step 4: regenerate with error feedback
-        return self._retry_with_feedback(
-            hanzi, history, gen_config, val_config,
-            parsed, validation.error_description,
-        )
+        # Validation found issues — return the sentence but flag it for review
+        logger.warning("%s: validation flagged: %s", hanzi, validation.error_description)
+        return self._to_result(parsed, valid=False, error=validation.error_description)
 
     # -- Private helpers (all hidden behind generate()) --------------------
 
@@ -226,46 +225,6 @@ class SentenceGenerator:
             types.Content(role="model", parts=[types.Part(text=resp)])
         )
         return result
-
-    def _retry_with_feedback(
-        self,
-        hanzi: str,
-        history: list[types.Content],
-        gen_config: types.GenerateContentConfig,
-        val_config: types.GenerateContentConfig,
-        first_parsed: _SentenceSchema,
-        error_description: str,
-    ) -> SentenceResult:
-        regen_msg = (
-            f"Your sentence has this error: {error_description}\n"
-            f"Generate a NEW, DIFFERENT sentence containing {hanzi} that fixes "
-            f"this problem. The character {hanzi} MUST literally appear."
-        )
-        history.append(
-            types.Content(role="user", parts=[types.Part(text=regen_msg)])
-        )
-
-        resp = self._call(history, gen_config)
-        if resp is None:
-            return self._to_result(first_parsed, valid=True, error=error_description)
-
-        parsed2 = _SentenceSchema.model_validate_json(resp)
-        history.append(
-            types.Content(role="model", parts=[types.Part(text=resp)])
-        )
-
-        if hanzi not in parsed2.sentence:
-            logger.warning("%s: retry missing char, keeping first", hanzi)
-            return self._to_result(first_parsed, valid=True, error=error_description)
-
-        # Validate the retry
-        validation2 = self._validate(history, val_config)
-        if validation2 is None or (validation2.grammar_correct and validation2.natural):
-            return self._to_result(parsed2, valid=True)
-
-        # Both attempts have issues — use the retry (it addressed the first error)
-        return self._to_result(parsed2, valid=False,
-                               error=validation2.error_description)
 
     def _call(
         self,
