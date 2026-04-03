@@ -22,6 +22,7 @@ def _collect_pending_audio(
     *,
     force: bool,
     is_valid_tag: callable,
+    learned: set[str],
     limit: int,
 ) -> list[tuple[CharacterNote, list[str]]]:
     """Filter targets to notes needing audio, prioritize learned, apply limit."""
@@ -35,7 +36,6 @@ def _collect_pending_audio(
         if tasks:
             pending.append((note, tasks))
 
-    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
     if learned:
         pending.sort(key=lambda pair: pair[0].hanzi not in learned)
 
@@ -113,10 +113,12 @@ def run_audio(
             runtime.console.print(f"[red]✗[/red] No notes found at or after RSH #{start_rsh}")
             raise typer.Exit(1)
 
+    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
     pending = _collect_pending_audio(
         targets,
         force=force,
         is_valid_tag=runtime.tts_provider.is_valid_audio_tag,
+        learned=learned,
         limit=limit,
     )
 
@@ -124,7 +126,6 @@ def run_audio(
         runtime.console.print(f"[green]✓[/green] Audio already up to date for {len(targets)} notes")
         return notes
 
-    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
     if learned:
         learned_count = sum(1 for n, _ in pending if n.hanzi in learned)
         runtime.console.print(f"  [dim]{learned_count} learned characters prioritized[/dim]")

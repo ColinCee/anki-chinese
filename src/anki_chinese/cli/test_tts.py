@@ -51,76 +51,61 @@ def run_test_tts(
 
     if char:
         sample_dir = _sample_dir_for(runtime, label=char, provider_name=provider_name)
-        preview_provider = build_tts_provider(
+        provider = build_tts_provider(
             generated_audio_dir=sample_dir,
             provider_name=provider_name,
         )
-        caps = preview_provider.capabilities()
-        runtime.console.print(f"[dim]Provider:[/dim] {caps.name}")
-        runtime.console.print(f"[dim]Samples:[/dim]  {sample_dir}")
-
-        note: CharacterNote | None = None
-        if runtime.note_store.exists():
-            matches = [
-                candidate for candidate in runtime.note_store.load() if candidate.hanzi == char
-            ]
-            if matches:
-                note = matches[0]
-
-        if note:
-            runtime.console.print(f"[blue]Testing[/blue] {note.hanzi} ({note.meaning})")
-            table = Table(show_header=False, box=None, padding=(0, 2))
-            table.add_column("Type", style="cyan")
-            table.add_column("File")
-            table.add_column("Size", justify="right", style="dim")
-
-            if note.pinyin:
-                tag = preview_provider.generate_mandarin(
-                    note.hanzi,
-                    note.pinyin,
-                    force=True,
-                )
-                _add_audio_row(
-                    table,
-                    label="Mandarin",
-                    tag=tag,
-                    audio_dir=sample_dir,
-                )
-
-            if note.jyutping:
-                tag = preview_provider.generate_cantonese(
-                    note.hanzi,
-                    note.jyutping,
-                    force=True,
-                )
-                _add_audio_row(
-                    table,
-                    label="Cantonese",
-                    tag=tag,
-                    audio_dir=sample_dir,
-                )
-
-            runtime.console.print(table)
-        else:
-            runtime.console.print(
-                f"[yellow]⚠[/yellow] '{char}' not in enriched data — generating plain Mandarin audio only."
-            )
-            tag = preview_provider.generate_plain_mandarin(char, force=True)
-            filename = _filename_from_sound_tag(tag)
-            output_path = sample_dir / filename
-            runtime.console.print(f"  → {output_path} ({output_path.stat().st_size:,} bytes)")
+        _print_provider_info(runtime, provider, sample_dir)
+        _test_char(runtime, provider, sample_dir, char)
 
     if word:
         sample_dir = _sample_dir_for(runtime, label=word, provider_name=provider_name)
-        preview_provider = build_tts_provider(
+        provider = build_tts_provider(
             generated_audio_dir=sample_dir,
             provider_name=provider_name,
         )
-        caps = preview_provider.capabilities()
-        runtime.console.print(f"[dim]Provider:[/dim] {caps.name}")
-        runtime.console.print(f"[dim]Samples:[/dim]  {sample_dir}")
+        _print_provider_info(runtime, provider, sample_dir)
         runtime.console.print(f"[blue]Testing word[/blue] {word}")
-        tag = preview_provider.generate_plain_mandarin(word, force=True)
+        tag = provider.generate_plain_mandarin(word, force=True)
+        filename = _filename_from_sound_tag(tag)
+        output_path = sample_dir / filename
+        runtime.console.print(f"  → {output_path} ({output_path.stat().st_size:,} bytes)")
+
+
+def _print_provider_info(runtime: AppRuntime, provider, sample_dir: Path) -> None:
+    caps = provider.capabilities()
+    runtime.console.print(f"[dim]Provider:[/dim] {caps.name}")
+    runtime.console.print(f"[dim]Samples:[/dim]  {sample_dir}")
+
+
+def _test_char(runtime: AppRuntime, provider, sample_dir: Path, char: str) -> None:
+    note: CharacterNote | None = None
+    if runtime.note_store.exists():
+        matches = [c for c in runtime.note_store.load() if c.hanzi == char]
+        if matches:
+            note = matches[0]
+
+    if note:
+        runtime.console.print(f"[blue]Testing[/blue] {note.hanzi} ({note.meaning})")
+        table = Table(show_header=False, box=None, padding=(0, 2))
+        table.add_column("Type", style="cyan")
+        table.add_column("File")
+        table.add_column("Size", justify="right", style="dim")
+
+        if note.pinyin:
+            tag = provider.generate_mandarin(note.hanzi, note.pinyin, force=True)
+            _add_audio_row(table, label="Mandarin", tag=tag, audio_dir=sample_dir)
+
+        if note.jyutping:
+            tag = provider.generate_cantonese(note.hanzi, note.jyutping, force=True)
+            _add_audio_row(table, label="Cantonese", tag=tag, audio_dir=sample_dir)
+
+        runtime.console.print(table)
+    else:
+        runtime.console.print(
+            f"[yellow]⚠[/yellow] '{char}' not in enriched data — generating plain Mandarin audio only."
+        )
+        tag = provider.generate_plain_mandarin(char, force=True)
         filename = _filename_from_sound_tag(tag)
         output_path = sample_dir / filename
         runtime.console.print(f"  → {output_path} ({output_path.stat().st_size:,} bytes)")
