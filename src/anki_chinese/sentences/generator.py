@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 
 from ..config import CEDICT_PATH
 from ..data_sources import lookup_char_defs
+from ..notes import find_phonetic_confusers
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,10 @@ SYSTEM_INSTRUCTION = (
     "If the character appears in a compound with a different meaning, add "
     "'; in [compound]: compound meaning' (e.g. 'silver; in 银行: bank'). "
     "For grammatical particles, describe the function. "
-    "For phonetic uses, write 'phonetic; in [compound]: word'."
+    "For phonetic uses, write 'phonetic; in [compound]: word'.\n"
+    "7. IMPORTANT: No other character in the sentence should sound similar to the "
+    "target character (same syllable or rhyming final). This is for audio flashcards — "
+    "the learner must be able to pick out the target sound clearly."
 )
 
 VALIDATE_PROMPT = (
@@ -174,7 +178,15 @@ class SentenceGenerator:
                 "", "", "", "", "", valid=False, error="target char missing after retries"
             )
 
-        # Step 2: LLM self-validation (1 API call) — flag but don't retry
+        # Step 2: Code-level phonetic confuser check
+        confusers = find_phonetic_confusers(
+            hanzi, parsed.character_pinyin or pinyin, parsed.sentence, parsed.pinyin
+        )
+        if confusers:
+            labels = ", ".join(f"{ch}({py})[{sev}]" for ch, py, sev in confusers)
+            logger.warning("%s: phonetic confusers in sentence: %s", hanzi, labels)
+
+        # Step 3: LLM self-validation (1 API call) — flag but don't retry
         validation = self._validate(history, val_config)
         if validation is None or (validation.grammar_correct and validation.natural):
             return self._to_result(parsed, valid=True)

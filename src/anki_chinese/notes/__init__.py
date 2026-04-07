@@ -3,6 +3,7 @@
 from .enrich import enrich_notes
 from .model import CharacterNote, apply_overrides, load_overrides
 from .parser import parse_deck_export, parse_old_deck
+from .pronunciation import find_phonetic_confusers
 from .report import (
     coverage_rows,
     filter_from_rsh,
@@ -21,6 +22,7 @@ __all__ = [
     "coverage_rows",
     "enrich_notes",
     "filter_from_rsh",
+    "find_phonetic_confusers",
     "flagged_notes",
     "heisig_index",
     "load_learned_hanzi",
