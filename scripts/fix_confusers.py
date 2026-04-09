@@ -113,6 +113,10 @@ def main() -> None:
             new_confusers = find_phonetic_confusers(
                 hanzi, result.character_pinyin or pinyin, result.sentence, result.pinyin
             )
+            if args.exact_only:
+                new_confusers = [
+                    (ch, py, sev) for ch, py, sev in new_confusers if sev == "exact"
+                ]
             if new_confusers:
                 labels = ", ".join(f"{ch}({py})[{sev}]" for ch, py, sev in new_confusers)
                 print(f"  attempt {attempt}: still has confusers: {labels}")
