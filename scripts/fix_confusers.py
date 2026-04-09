@@ -17,6 +17,8 @@ import os
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # Ensure the package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -82,6 +84,7 @@ def main() -> None:
             print(f"    {n['sentence_english']}\n")
         return
 
+    load_dotenv()
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
         print("ERROR: GEMINI_API_KEY not set")

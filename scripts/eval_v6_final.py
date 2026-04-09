@@ -24,6 +24,7 @@ import json
 import os
 import time
 
+from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
@@ -273,6 +274,7 @@ def _error_result(hanzi, error):
 # ---------------------------------------------------------------------------
 
 def main():
+    load_dotenv()
     key = os.getenv("GEMINI_API_KEY", "").strip()
     if not key:
         print("ERROR: GEMINI_API_KEY not set")
