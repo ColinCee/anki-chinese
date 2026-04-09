@@ -14,9 +14,9 @@ the generation prompt alone cannot prevent.
 
 ## Decision
 
-Generate sentences with **Gemini Flash Lite** using a lean 5-rule prompt, validate
-with a **code-level character check** and **LLM self-validation** (7-point checklist),
-retry once on failure.
+Generate sentences with **Gemini Flash Lite** using a lean 7-rule prompt, validate
+with a **code-level character check**, **phonetic confuser check**, and **LLM
+self-validation** (7-point checklist), retry once on failure.
 
 ### Configuration
 
@@ -35,21 +35,23 @@ retry once on failure.
 ### Pipeline (v6)
 
 ```
-1. Generate → Gemini Flash Lite, lean 5-rule system prompt
+1. Generate → Gemini Flash Lite, lean 7-rule system prompt
 2. Code check → target char in sentence? If not → retry (up to 2×)
-3. LLM validate → same model, same conversation, temp=0.0, 7-point checklist
-4. If flagged → regenerate with error feedback (1 retry, also code-checked)
-5. If still bad → flag for manual review
+3. Confuser check → exact homophones in sentence? Log warning if found
+4. LLM validate → same model, same conversation, temp=0.0, 7-point checklist
+5. If flagged → flag for manual review (no expensive retry cycle)
 ```
 
 ### Prompt Design
 
-**System prompt** (5 rules — lean, no topic forcing):
+**System prompt** (7 rules — lean, no topic forcing):
 1. Target character MUST appear literally in the sentence
 2. 6–10 Chinese characters long
 3. Natural — something a native speaker would actually say in daily life
 4. Use the character in its most common, everyday meaning
 5. Keep other vocabulary simple and common
+6. Give the meaning with compound context (e.g. "silver; in 银行: bank")
+7. Avoid other characters that sound identical to the target (same base syllable)
 
 **Validation prompt** (7-point checklist):
 1. Wrong measure words (个 instead of 只/块/粒/条)
@@ -201,6 +203,32 @@ but adds cost/latency that isn't justified for 212 cards.
 
 ## Unresolved Issues
 
+### Phonetic Confusers in Example Sentences
+
+**Problem:** Some sentences contain characters that sound identical or very similar to
+the target character, making audio-based flashcards confusing. For example, 享 (xiǎng)
+in "我想和你分享这个" — the character 想 (xiǎng) is an exact homophone.
+
+**Severity levels:**
+- **Exact homophones** (same syllable + same tone): impossible to distinguish by ear.
+  These must be fixed. Example: 作(zuò)/做(zuò), 境(jìng)/静(jìng).
+- **Same-base different-tone**: same syllable, different tone. These are acceptable —
+  tone discrimination is a core Mandarin skill. Example: 豆(dòu)/都(dōu).
+
+**Detection:** `find_phonetic_confusers()` in `notes/pronunciation.py` compares the
+target's pinyin against all other CJK characters in the sentence. When sentence pinyin
+uses compound tokens (e.g. `měitiān` instead of `měi tiān`), it falls back to
+`pypinyin` for per-character readings.
+
+**Mitigation:**
+1. Rule 7 in the generation system prompt tells Gemini to avoid phonetically similar words
+2. Code-level confuser check in `_generate_one()` logs warnings
+3. `scripts/fix_confusers.py --exact-only` regenerates sentences with exact homophones
+4. Some exact homophones are unavoidable (仁/人 — 人 is the most common Chinese character)
+
+**Verified:** 4 parallel Sonnet 4.6 agents verified all 57 detected confusers (100%
+correct detections) and spot-checked 60 clean sentences (0 false negatives).
+
 ### Sentence Repetition Without Topic Seeds
 Without topic diversity hints, the model gravitates toward templates for similar chars
 (我家里有X个人 for numbers 3–6). Topic seeds fix this but hurt naturalness. Accepted
@@ -226,6 +254,7 @@ diminishing returns territory.
 | File | Purpose |
 |------|---------|
 | `scripts/eval_v6_final.py` | **Production pipeline** — v6 generate+validate script |
+| `scripts/fix_confusers.py` | **Confuser fix** — detect and regenerate phonetic confuser sentences |
 | `scripts/eval_v5_validated.py` | v5 with topic seeds (historical, superseded) |
 | `scripts/eval_v3_no_keyword.py` | v3 evaluation script (historical) |
 | `data/build/eval_v6.json` | v6 results (212 sentences, production quality) |

@@ -85,6 +85,21 @@ def _tone_number(pinyin: str) -> int:
     return 5
 
 
+def _split_pinyin_tokens(sentence_pinyin: str, num_chars: int) -> list[str] | None:
+    """Split sentence pinyin into per-character syllables.
+
+    Handles compound tokens like 'měitiān' → ['měi', 'tiān'] by splitting
+    on boundaries between a tone vowel's consonant cluster and the next onset.
+    Returns None if the result doesn't align with *num_chars*.
+    """
+    tokens = sentence_pinyin.replace(",", "").replace(".", "").replace("?", "").split()
+    if len(tokens) == num_chars:
+        return tokens
+
+    # Simple split didn't work — use pypinyin to get per-char readings
+    return None
+
+
 def find_phonetic_confusers(
     hanzi: str,
     char_pinyin: str,
@@ -97,20 +112,25 @@ def find_phonetic_confusers(
     - "exact": same syllable + same tone (true homophone)
     - "same-base": same syllable, different tone
     """
+    from pypinyin import Style, lazy_pinyin
+
     char_base = to_normal(char_pinyin).lower().strip()
     char_tone = _tone_number(char_pinyin)
 
     if not char_base:
         return []
 
-    cjk_chars = [(i, ch) for i, ch in enumerate(sentence) if "\u4e00" <= ch <= "\u9fff"]
-    syllables = sentence_pinyin.split()
+    cjk_chars = [ch for ch in sentence if "\u4e00" <= ch <= "\u9fff"]
 
-    if len(cjk_chars) != len(syllables):
+    # Try splitting sentence_pinyin first; fall back to pypinyin
+    syllables = _split_pinyin_tokens(sentence_pinyin, len(cjk_chars))
+    if syllables is None:
+        syllables = lazy_pinyin("".join(cjk_chars), style=Style.TONE, errors="ignore")
+    if len(syllables) != len(cjk_chars):
         return []
 
     confusers: list[tuple[str, str, str]] = []
-    for (_, ch), syl in zip(cjk_chars, syllables, strict=True):
+    for ch, syl in zip(cjk_chars, syllables, strict=True):
         if ch == hanzi:
             continue
 

@@ -2,9 +2,11 @@
 """Regenerate sentences that have phonetic confusers.
 
 Usage:
-    uv run python scripts/fix_confusers.py --dry-run     # preview what would change
-    uv run python scripts/fix_confusers.py --limit 5     # fix first 5
-    uv run python scripts/fix_confusers.py               # fix all
+    uv run python scripts/fix_confusers.py --dry-run                # preview all confusers
+    uv run python scripts/fix_confusers.py --exact-only --dry-run   # preview exact homophones only
+    uv run python scripts/fix_confusers.py --exact-only             # fix exact homophones
+    uv run python scripts/fix_confusers.py --limit 5                # fix first 5
+    uv run python scripts/fix_confusers.py                          # fix all (exact + same-base)
 """
 
 from __future__ import annotations
@@ -36,7 +38,9 @@ def save_notes(notes: list[dict]) -> None:
     print(f"  Saved {len(notes)} notes to {ENRICHED_PATH}")
 
 
-def find_problem_notes(notes: list[dict]) -> list[tuple[int, dict, list]]:
+def find_problem_notes(
+    notes: list[dict], *, exact_only: bool = False
+) -> list[tuple[int, dict, list]]:
     """Return (index, note, confusers) for notes with phonetic confusers."""
     problems = []
     for i, n in enumerate(notes):
@@ -47,6 +51,8 @@ def find_problem_notes(notes: list[dict]) -> list[tuple[int, dict, list]]:
         if not sentence or not sent_pinyin or not pinyin:
             continue
         confusers = find_phonetic_confusers(hanzi, pinyin, sentence, sent_pinyin)
+        if exact_only:
+            confusers = [(ch, py, sev) for ch, py, sev in confusers if sev == "exact"]
         if confusers:
             problems.append((i, n, confusers))
     return problems
@@ -56,11 +62,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Fix phonetic confusers in sentences")
     parser.add_argument("--dry-run", action="store_true", help="Just list problems, don't fix")
     parser.add_argument("--limit", type=int, default=0, help="Max notes to fix (0 = all)")
+    parser.add_argument(
+        "--exact-only",
+        action="store_true",
+        help="Only fix exact homophones (same syllable + same tone)",
+    )
     args = parser.parse_args()
 
     notes = load_notes()
-    problems = find_problem_notes(notes)
-    print(f"Found {len(problems)} sentences with phonetic confusers\n")
+    problems = find_problem_notes(notes, exact_only=args.exact_only)
+    label = "exact homophone" if args.exact_only else "phonetic confuser"
+    print(f"Found {len(problems)} sentences with {label}s\n")
 
     if args.dry_run:
         for _, n, confusers in problems:
