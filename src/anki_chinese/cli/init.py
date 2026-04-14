@@ -142,8 +142,8 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             runtime.source_deck_path,
             "--input",
             "-i",
-            help="Anki text export to parse.",
+            help="Anki .apkg export to parse.",
         ),
     ) -> None:
-        """Parse source deck export and enrich with pinyin and jyutping."""
+        """Parse source .apkg deck export and enrich with pinyin and jyutping."""
         run_init(runtime, input_file)

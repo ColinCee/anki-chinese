@@ -5,8 +5,7 @@ from __future__ import annotations
 import typer
 from rich.table import Table
 
-from ..config import LEARNED_CHARS_PATH
-from ..notes import coverage_rows, flagged_notes, load_learned_hanzi, validation_issues
+from ..notes import coverage_rows, flagged_notes, validation_issues
 from .app import AppRuntime
 from .ui import review_table
 
@@ -27,7 +26,7 @@ def run_status(runtime: AppRuntime) -> None:
     runtime.console.print(table)
 
     # Learned characters progress
-    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
+    learned = runtime.load_learned_hanzi(runtime.source_deck_path)
     if learned:
         learned_notes = [n for n in notes if n.hanzi in learned]
         total = len(learned_notes)
