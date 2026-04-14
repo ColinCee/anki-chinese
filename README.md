@@ -2,7 +2,7 @@
 
 Build a regenerable Anki deck for Mandarin study with Cantonese support.
 
-This repo parses a deck export, enriches each character with readings and example words, optionally generates TTS audio, and builds a clean `.apkg` for Anki.
+This repo parses an Anki `.apkg` deck export, enriches each character with readings and example words, optionally generates TTS audio, and builds a clean `.apkg` for Anki.
 
 ## Project goals
 
@@ -77,7 +77,8 @@ Important notes:
 - `audio` is optional; you can build and study without it.
 - `audio` is network-bound and can still take a while on larger batches.
 - Example words are auto-generated when missing; manual overrides still come from `data/manual/example_words.json`.
-- Default source input is `data/source/All Decks.txt`.
+- Default source input is `data/source/All Decks.apkg` (native Anki package export).
+- Learned/suspended status is read directly from the `.apkg` — no separate export needed.
 
 ### Common commands
 
@@ -145,7 +146,7 @@ The rest of the repo is kept intentionally simple:
 - At the root, the meaningful product folders are just `src/`, `tests/`, `data/`, and `docs/`.
 - `tests/` — automated tests, mirrored by feature plus small `regressions/` and `integration/` areas
 - `data/` — split by purpose
-  - `source/` — deck imports such as `All Decks.txt`
+  - `source/` — deck imports such as `All Decks.apkg` (native Anki package export)
   - `manual/` — hand-maintained overrides and example-word data
   - `reference/` — canonical lookup corpora kept for deterministic offline use; optional local extras like `SUBTLEX_CH.xlsx` also live here
   - `state/` — workflow state such as `enriched.json`

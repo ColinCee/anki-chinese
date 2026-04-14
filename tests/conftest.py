@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+import sqlite3
+import zipfile
 from copy import deepcopy
 from io import StringIO
 from pathlib import Path
 
 import pytest
+import zstandard as zstd
 from rich.console import Console
 from typer.testing import CliRunner
 
 from anki_chinese.audio.errors import TTSRateLimitError
 from anki_chinese.audio.provider import ProviderCapabilities
 from anki_chinese.cli import AppRuntime
+from anki_chinese.config import MODEL_ID
 from anki_chinese.notes import CharacterNote, JsonNoteStore
 
 
@@ -142,6 +146,9 @@ def runtime_factory(tmp_path: Path):
         def parse_deck_export(path: Path) -> list[CharacterNote]:
             return deepcopy(parsed)
 
+        def load_learned_hanzi(path: Path) -> set[str]:
+            return set()
+
         def enrich_notes(
             notes: list[CharacterNote],
         ) -> list[CharacterNote]:
@@ -160,6 +167,7 @@ def runtime_factory(tmp_path: Path):
             generated_audio_dir=tmp_path / "data" / "build" / "audio" / "generated",
             sample_audio_dir=tmp_path / "data" / "build" / "audio" / "samples",
             parse_deck_export=parse_deck_export,
+            load_learned_hanzi=load_learned_hanzi,
             enrich_notes=enrich_notes,
             build_deck=build_deck,
             tts_provider_factory=lambda generated_audio_dir: active_tts_provider,
@@ -168,3 +176,79 @@ def runtime_factory(tmp_path: Path):
         )
 
     return make_runtime
+
+
+_APKG_FIELD_KEYS = [
+    "hanzi", "meaning", "pinyin", "jyutping",
+    "mandarin_audio", "cantonese_audio",
+    "stroke_order", "heisig_num", "lesson", "story",
+    "sentence_audio", "sentence", "sentence_pinyin", "sentence_english",
+]
+
+
+def _build_test_apkg(
+    path: Path,
+    notes: list[dict[str, str]],
+    *,
+    suspended: set[str] | None = None,
+    model_id: int = MODEL_ID,
+    use_zstd: bool = True,
+) -> Path:
+    """Create a minimal .apkg file for testing."""
+    suspended = suspended or set()
+
+    tmp_db = path.parent / "_tmp_test.db"
+    conn = sqlite3.connect(str(tmp_db))
+    cur = conn.cursor()
+    cur.executescript("""
+        CREATE TABLE notes (
+            id INTEGER PRIMARY KEY, guid TEXT NOT NULL,
+            mid INTEGER NOT NULL, mod INTEGER NOT NULL, usn INTEGER NOT NULL,
+            tags TEXT NOT NULL, flds TEXT NOT NULL, sfld INTEGER NOT NULL,
+            csum INTEGER NOT NULL, flags INTEGER NOT NULL, data TEXT NOT NULL
+        );
+        CREATE TABLE cards (
+            id INTEGER PRIMARY KEY, nid INTEGER NOT NULL,
+            did INTEGER NOT NULL, ord INTEGER NOT NULL,
+            mod INTEGER NOT NULL, usn INTEGER NOT NULL,
+            type INTEGER NOT NULL, queue INTEGER NOT NULL,
+            due INTEGER NOT NULL, ivl INTEGER NOT NULL,
+            factor INTEGER NOT NULL, reps INTEGER NOT NULL,
+            lapses INTEGER NOT NULL, left INTEGER NOT NULL,
+            odue INTEGER NOT NULL, odid INTEGER NOT NULL,
+            flags INTEGER NOT NULL, data TEXT NOT NULL
+        );
+    """)
+    card_id = 1000
+    for note_id, note_data in enumerate(notes, start=1):
+        flds = "\x1f".join(note_data.get(k, "") for k in _APKG_FIELD_KEYS)
+        hanzi = note_data.get("hanzi", "")
+        tags = note_data.get("tags", "")
+        cur.execute(
+            "INSERT INTO notes VALUES (?, ?, ?, 0, 0, ?, ?, ?, 0, 0, '')",
+            (note_id, f"guid-{note_id}", model_id, tags, flds, note_id),
+        )
+        queue = -1 if hanzi in suspended else 0
+        for ord_num in range(2):
+            cur.execute(
+                "INSERT INTO cards VALUES (?, ?, 1, ?, 0, 0, 0, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, '')",
+                (card_id, note_id, ord_num, queue),
+            )
+            card_id += 1
+    conn.commit()
+    conn.close()
+    sqlite_bytes = tmp_db.read_bytes()
+    tmp_db.unlink()
+
+    with zipfile.ZipFile(path, "w") as zf:
+        if use_zstd:
+            zf.writestr("collection.anki21b", zstd.ZstdCompressor().compress(sqlite_bytes))
+        else:
+            zf.writestr("collection.anki2", sqlite_bytes)
+        zf.writestr("media", "{}")
+    return path
+
+
+@pytest.fixture
+def build_test_apkg():
+    return _build_test_apkg

@@ -8,8 +8,7 @@ import typer
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
-from ..config import LEARNED_CHARS_PATH
-from ..notes import CharacterNote, filter_from_rsh, load_learned_hanzi, prioritize_learned
+from ..notes import CharacterNote, filter_from_rsh, prioritize_learned
 from ..sentences import SentenceResult
 from .app import AppRuntime
 
@@ -119,7 +118,7 @@ def run_sentences(
         if not force and not pick:
             targets = [n for n in targets if not n.sentence]
         # Prioritize learned characters before applying limit
-        learned = load_learned_hanzi(LEARNED_CHARS_PATH)
+        learned = runtime.load_learned_hanzi(runtime.source_deck_path)
         if learned:
             targets = prioritize_learned(targets, learned)
         if limit > 0:

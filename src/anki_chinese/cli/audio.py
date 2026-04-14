@@ -11,8 +11,7 @@ from ..audio import (
     expected_mandarin_audio_tag,
     expected_sentence_audio_tag,
 )
-from ..config import LEARNED_CHARS_PATH
-from ..notes import CharacterNote, filter_from_rsh, heisig_index, load_learned_hanzi
+from ..notes import CharacterNote, filter_from_rsh, heisig_index
 from .app import AppRuntime
 from .ui import create_audio_progress, format_audio_task_labels, report_audio_summary
 
@@ -113,7 +112,7 @@ def run_audio(
             runtime.console.print(f"[red]✗[/red] No notes found at or after RSH #{start_rsh}")
             raise typer.Exit(1)
 
-    learned = load_learned_hanzi(LEARNED_CHARS_PATH)
+    learned = runtime.load_learned_hanzi(runtime.source_deck_path)
     pending = _collect_pending_audio(
         targets,
         force=force,

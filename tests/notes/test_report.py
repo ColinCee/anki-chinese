@@ -1,12 +1,9 @@
-from pathlib import Path
-
 from anki_chinese.notes import CharacterNote
 from anki_chinese.notes.report import (
     coverage_rows,
     filter_from_rsh,
     flagged_notes,
     heisig_index,
-    load_learned_hanzi,
     prioritize_learned,
     validation_issues,
 )
@@ -74,45 +71,6 @@ def test_validation_issues_reports_duplicates_and_dependent_field_problems() -> 
 
 
 # -- Learned character prioritization -----------------------------------------
-
-
-def test_load_learned_hanzi_parses_anki_export(tmp_path: Path) -> None:
-    export = tmp_path / "learned.txt"
-    export.write_text(
-        "# comment line\ncol0\tcol1\tcol2\t水\ncol0\tcol1\tcol2\t火\ncol0\tcol1\tcol2\t山\n",
-        encoding="utf-8",
-    )
-
-    result = load_learned_hanzi(export)
-
-    assert result == {"水", "火", "山"}
-
-
-def test_load_learned_hanzi_returns_empty_for_missing_file(tmp_path: Path) -> None:
-    result = load_learned_hanzi(tmp_path / "nonexistent.txt")
-
-    assert result == set()
-
-
-def test_load_learned_hanzi_skips_comment_and_blank_lines(tmp_path: Path) -> None:
-    export = tmp_path / "learned.txt"
-    export.write_text(
-        "# header\n\ncol0\tcol1\tcol2\t水\n# another comment\n\ncol0\tcol1\tcol2\t火\n",
-        encoding="utf-8",
-    )
-
-    result = load_learned_hanzi(export)
-
-    assert result == {"水", "火"}
-
-
-def test_load_learned_hanzi_skips_rows_with_too_few_columns(tmp_path: Path) -> None:
-    export = tmp_path / "learned.txt"
-    export.write_text("col0\tcol1\ncol0\tcol1\tcol2\t水\n", encoding="utf-8")
-
-    result = load_learned_hanzi(export)
-
-    assert result == {"水"}
 
 
 def test_prioritize_learned_puts_learned_chars_first() -> None:

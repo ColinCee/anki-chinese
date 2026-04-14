@@ -13,7 +13,13 @@ from rich.console import Console
 from ..audio import TTSProvider, build_tts_provider
 from ..config import ENRICHED_PATH, GENERATED_AUDIO_DIR, SAMPLE_AUDIO_DIR, SOURCE_DECK_PATH
 from ..deck import build_deck
-from ..notes import CharacterNote, JsonNoteStore, enrich_notes, parse_deck_export
+from ..notes import (
+    CharacterNote,
+    JsonNoteStore,
+    enrich_notes,
+    load_learned_hanzi_from_apkg,
+    parse_apkg,
+)
 
 
 @dataclass
@@ -23,6 +29,7 @@ class AppRuntime:
     generated_audio_dir: Path
     sample_audio_dir: Path
     parse_deck_export: Callable[[Path], list[CharacterNote]]
+    load_learned_hanzi: Callable[[Path], set[str]]
     enrich_notes: Callable[..., list[CharacterNote]]
     build_deck: Callable[[list[CharacterNote]], Path]
     tts_provider_factory: Callable[[Path], TTSProvider]
@@ -42,7 +49,8 @@ def build_runtime() -> AppRuntime:
         note_store=JsonNoteStore(ENRICHED_PATH),
         generated_audio_dir=GENERATED_AUDIO_DIR,
         sample_audio_dir=SAMPLE_AUDIO_DIR,
-        parse_deck_export=parse_deck_export,
+        parse_deck_export=parse_apkg,
+        load_learned_hanzi=load_learned_hanzi_from_apkg,
         enrich_notes=enrich_notes,
         build_deck=build_deck,
         tts_provider_factory=lambda generated_audio_dir: build_tts_provider(
