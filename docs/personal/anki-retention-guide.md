@@ -31,7 +31,9 @@ Deck → gear → **Statistics**. Key metric: **True Retention Rate** — pass r
 
 ## Adjusting New Cards/Day
 
-### Increasing (currently 6/day)
+### Increasing (currently 5/day)
+
+Previously tried 6 chars/day (12 cards — production + recognition) but recall dropped to low 80s for a week. Dropped back to 5/day (10 cards).
 
 Increase only if **all** hold:
 
@@ -39,7 +41,7 @@ Increase only if **all** hold:
 2. No review backlog building
 3. Daily reviews feel manageable
 
-Safe method: raise by **2 cards/day** (6→8), run for **2 full weeks**, drop back if retention falls below 85%.
+Safe method: raise by **1 char/day** (5→6, i.e. 10→12 cards), run for **2 full weeks**, drop back if retention falls below 85%.
 
 ### Decreasing
 
@@ -131,4 +133,4 @@ Compared to FSRS-6 defaults (`0.212, 1.293, 2.307, 8.296, ...`):
 | Last month | 83.1% | 86.0% | 83.2% |
 | Last year | 81.9% | 86.4% | 82.0% |
 
-**Assessment:** Monthly retention at 83% — hold at 6 cards/day. Upward trend (82% yearly → 89% weekly) is encouraging. After 学猫叫 batch stabilises, if monthly hits 85%+, try 8/day.
+**Assessment:** Tried increasing to 6 chars/day (12 cards) but recall dropped to low 80s. Dropped back to 5/day (10 cards). Hold here until monthly retention stabilises above 85%, then try 6/day again.
