@@ -251,6 +251,9 @@ def main() -> None:
         "--list", action="store_true", help="List search results without downloading"
     )
 
+    # non-rsh subcommand
+    subparsers.add_parser("non-rsh", help="Export Non-RSH characters as markdown")
+
     # analyze (default) - all flags go on the main parser
     parser.add_argument(
         "--apkg", type=Path, default=APKG_PATH, help="Path to .apkg file"
@@ -291,7 +294,44 @@ def main() -> None:
             raise SystemExit(1)
         return
 
+    if args.command == "non-rsh":
+        export_non_rsh(args)
+        return
+
     analyze(args)
+
+
+def export_non_rsh(args: argparse.Namespace) -> None:
+    """Export Non-RSH characters as markdown for the tracking doc."""
+    _, deck_chars = load_deck_characters(args.apkg)
+
+    songs = []
+    for path in sorted(args.lyrics_dir.glob("*.md")):
+        songs.append(parse_lyric_file(path))
+
+    all_song_chars: set[str] = set()
+    for song in songs:
+        all_song_chars |= song["characters"]
+    all_not_in_deck = all_song_chars - deck_chars
+
+    if not all_not_in_deck:
+        print("No Non-RSH characters found.")
+        return
+
+    print("## Non-RSH Characters by Song")
+    print()
+    print("| Song | Count | Characters |")
+    print("|------|-------|------------|")
+    for song in songs:
+        missing = song["characters"] - deck_chars
+        if missing:
+            title = song.get("title", song["file"])
+            artist = song.get("artist", "")
+            label = f"{title} ({artist})" if artist else title
+            print(f"| {label} | {len(missing)} | {' '.join(sorted(missing))} |")
+    print(f"| **TOTAL (unique)** | **{len(all_not_in_deck)}** | {' '.join(sorted(all_not_in_deck))} |")
+    print()
+    print(f"_Generated from {len(songs)} songs against deck with {len(deck_chars)} characters._")
 
 
 def analyze(args: argparse.Namespace) -> None:
