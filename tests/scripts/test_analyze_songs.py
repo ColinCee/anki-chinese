@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 import textwrap
 from pathlib import Path
@@ -132,8 +133,6 @@ class TestParseLyricFile:
 
 
 # ── Credit line stripping regex ──
-
-import re
 
 _CREDIT_PATTERN = re.compile(r"^(词|曲|编曲|作词|作曲|制作人?|演唱)\s*[：:]")
 

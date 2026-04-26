@@ -11,12 +11,19 @@ import typer
 from rich.console import Console
 
 from ..audio import TTSProvider, build_tts_provider
-from ..config import ENRICHED_PATH, GENERATED_AUDIO_DIR, SAMPLE_AUDIO_DIR, SOURCE_DECK_PATH
+from ..config import (
+    ENRICHED_PATH,
+    GENERATED_AUDIO_DIR,
+    SAMPLE_AUDIO_DIR,
+    SONG_LYRICS_DIR,
+    SOURCE_DECK_PATH,
+)
 from ..deck import build_deck
 from ..notes import (
     CharacterNote,
     JsonNoteStore,
     enrich_notes,
+    load_deck_hanzi_from_apkg,
     load_learned_hanzi_from_apkg,
     parse_apkg,
 )
@@ -25,11 +32,13 @@ from ..notes import (
 @dataclass
 class AppRuntime:
     source_deck_path: Path
+    song_lyrics_dir: Path
     note_store: JsonNoteStore
     generated_audio_dir: Path
     sample_audio_dir: Path
     parse_deck_export: Callable[[Path], list[CharacterNote]]
     load_learned_hanzi: Callable[[Path], set[str]]
+    load_deck_hanzi: Callable[[Path], set[str]]
     enrich_notes: Callable[..., list[CharacterNote]]
     build_deck: Callable[[list[CharacterNote]], Path]
     tts_provider_factory: Callable[[Path], TTSProvider]
@@ -46,11 +55,13 @@ def _build_sentence_tts_provider(generated_audio_dir: Path) -> TTSProvider:
 def build_runtime() -> AppRuntime:
     return AppRuntime(
         source_deck_path=SOURCE_DECK_PATH,
+        song_lyrics_dir=SONG_LYRICS_DIR,
         note_store=JsonNoteStore(ENRICHED_PATH),
         generated_audio_dir=GENERATED_AUDIO_DIR,
         sample_audio_dir=SAMPLE_AUDIO_DIR,
         parse_deck_export=parse_apkg,
         load_learned_hanzi=load_learned_hanzi_from_apkg,
+        load_deck_hanzi=load_deck_hanzi_from_apkg,
         enrich_notes=enrich_notes,
         build_deck=build_deck,
         tts_provider_factory=lambda generated_audio_dir: build_tts_provider(
@@ -70,15 +81,19 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     )
 
     audio_command = import_module(".audio", __package__)
+    activate_command = import_module(".activate", __package__)
     build_command = import_module(".build", __package__)
     init_command = import_module(".init", __package__)
     keywords_command = import_module(".keywords", __package__)
     sentences_command = import_module(".sentences", __package__)
+    songs_command = import_module(".songs", __package__)
     status_command = import_module(".status", __package__)
     test_tts_command = import_module(".test_tts", __package__)
 
+    activate_command.register(app, runtime)
     init_command.register(app, runtime)
     sentences_command.register(app, runtime)
+    songs_command.register(app, runtime)
     keywords_command.register(app, runtime)
     audio_command.register(app, runtime)
     build_command.register(app, runtime)

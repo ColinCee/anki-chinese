@@ -39,7 +39,7 @@ from rich.table import Table
 
 console = Console()
 
-LYRICS_DIR = Path(__file__).parent / "lyrics"
+LYRICS_DIR = Path(__file__).parent.parent / "data" / "songs" / "lyrics"
 APKG_PATH = Path(__file__).parent.parent / "data" / "source" / "All Decks.apkg"
 LRCLIB_SEARCH_URL = "https://lrclib.net/api/search"
 
@@ -142,7 +142,7 @@ def fetch_lyrics(
 
     # Retry without artist filter if no results (handles romanized artist names)
     if not results and artist:
-        print(f"  No results with artist filter, retrying track name only...")
+        print("  No results with artist filter, retrying track name only...")
         resp = requests.get(
             LRCLIB_SEARCH_URL, params={"track_name": song_name}, timeout=10
         )
@@ -152,7 +152,7 @@ def fetch_lyrics(
     # Fallback to free-text search (handles punctuation in titles)
     if not results:
         query = f"{song_name} {artist}" if artist else song_name
-        print(f"  No exact match, trying free-text search...")
+        print("  No exact match, trying free-text search...")
         resp = requests.get(
             LRCLIB_SEARCH_URL, params={"q": query}, timeout=10
         )
@@ -291,7 +291,7 @@ def main() -> None:
             )
         except requests.RequestException as e:
             print(f"  ✗ Network error: {e}")
-            raise SystemExit(1)
+            raise SystemExit(1) from e
         return
 
     if args.command == "non-rsh":

@@ -20,3 +20,19 @@ How-to docs for using and developing the project.
 Exploratory research and provider comparisons.
 
 - [TTS Providers](research/tts-providers.md) — Full comparison of 6 TTS providers for Chinese pronunciation
+
+## Song activation
+
+Song lyrics live in `data/songs/lyrics/` and can be analyzed with:
+
+```bash
+uv run anki-chinese songs analyze
+uv run anki-chinese songs next 学猫叫 --limit 20
+```
+
+Unsuspending existing cards is a live Anki operation via AnkiConnect:
+
+```bash
+uv run anki-chinese songs activate 学猫叫 --limit 20 --dry-run
+uv run anki-chinese activate chars 内 合 哟 著 --dry-run
+```

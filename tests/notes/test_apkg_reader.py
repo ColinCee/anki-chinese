@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from anki_chinese.notes import load_learned_hanzi_from_apkg, parse_apkg
+from anki_chinese.notes import load_deck_hanzi_from_apkg, load_learned_hanzi_from_apkg, parse_apkg
 
 
 def test_parse_apkg_extracts_all_fields(tmp_path, build_test_apkg) -> None:
@@ -213,6 +213,22 @@ def test_load_learned_hanzi_with_image_hanzi(tmp_path, build_test_apkg) -> None:
     learned = load_learned_hanzi_from_apkg(apkg)
 
     assert learned == {"水"}
+
+
+def test_load_deck_hanzi_from_apkg_returns_all_model_chars(tmp_path, build_test_apkg) -> None:
+    apkg = build_test_apkg(
+        tmp_path / "test.apkg",
+        [
+            {"hanzi": "水", "meaning": "water"},
+            {"hanzi": "火", "meaning": "fire"},
+            {"hanzi": "ab", "meaning": "not a character"},
+        ],
+        suspended={"火"},
+    )
+
+    deck_chars = load_deck_hanzi_from_apkg(apkg)
+
+    assert deck_chars == {"水", "火"}
 
 
 def test_parse_real_apkg() -> None:
