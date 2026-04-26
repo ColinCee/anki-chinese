@@ -20,10 +20,3 @@ How-to docs for using and developing the project.
 Exploratory research and provider comparisons.
 
 - [TTS Providers](research/tts-providers.md) — Full comparison of 6 TTS providers for Chinese pronunciation
-
-## Personal
-
-Learning notes and study plans (Colin's personal reference).
-
-- [Anki Retention & Pacing Guide](personal/anki-retention-guide.md) — FSRS parameters, retention targets, button strategy
-- [Song Learning Plan](personal/song-learning-plan.md) — Character learning through songs (学猫叫 → 小苹果)

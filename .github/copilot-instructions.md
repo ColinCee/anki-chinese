@@ -96,4 +96,3 @@ Docs live in `docs/` organized by purpose:
 - `docs/decisions/` — Architecture Decision Records (ADRs)
 - `docs/guides/` — How-to guides (customization, development, TTS setup)
 - `docs/research/` — Exploratory research and provider comparisons
-- `docs/personal/` — Personal learning notes and study plans
