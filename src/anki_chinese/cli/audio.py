@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import typer
 
 from ..audio import (
@@ -20,7 +22,7 @@ def _collect_pending_audio(
     targets: list[CharacterNote],
     *,
     force: bool,
-    is_valid_tag: callable,
+    is_valid_tag: Callable[[str], bool],
     learned: set[str],
     limit: int,
 ) -> list[tuple[CharacterNote, list[str]]]:
