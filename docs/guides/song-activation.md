@@ -44,6 +44,57 @@ export ANKICONNECT_API_KEY="your-key"
 
 No API key is needed with the default AnkiConnect configuration.
 
+## WSL with Windows Anki
+
+If Anki runs on Windows and the CLI runs inside WSL, `127.0.0.1` in WSL may not
+reach Windows Anki unless WSL uses mirrored networking. First verify AnkiConnect
+works from Windows PowerShell:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8765
+```
+
+If PowerShell works but WSL does not:
+
+```bash
+curl http://127.0.0.1:8765
+```
+
+enable WSL mirrored networking. Create or edit this Windows file:
+
+```text
+%UserProfile%\.wslconfig
+```
+
+Add:
+
+```ini
+[wsl2]
+networkingMode=mirrored
+```
+
+Then restart WSL from Windows PowerShell:
+
+```powershell
+wsl --shutdown
+```
+
+Reopen your WSL shell and test again:
+
+```bash
+curl http://127.0.0.1:8765
+```
+
+Expected output:
+
+```json
+{"apiVersion": "AnkiConnect v.6"}
+```
+
+Leave AnkiConnect bound to its default `127.0.0.1`. Do not set
+`webBindAddress` to `0.0.0.0` unless you explicitly want to expose it beyond
+localhost and have configured firewall/API-key protections.
+
 ## Song workflow
 
 Analyze all lyric files against your latest exported deck snapshot:
@@ -120,6 +171,7 @@ If activation fails with an AnkiConnect availability error, check:
 - Anki desktop is open.
 - The AnkiConnect add-on is installed and Anki has been restarted.
 - `curl http://127.0.0.1:8765` prints `AnkiConnect`.
+- If using Windows Anki from WSL, mirrored networking is enabled and WSL has been restarted.
 - If you enabled an API key in AnkiConnect, `ANKICONNECT_API_KEY` is set.
 
 If `songs next` recommends characters that are already active in live Anki,
