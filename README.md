@@ -75,7 +75,8 @@ uv run anki-chinese activate chars 内 合 哟 著
 ```
 
 Install the AnkiConnect add-on in Anki with code `2055492159`, keep Anki open, then run
-activation commands. Lyrics live in `data/songs/lyrics/`.
+activation commands. Lyrics live in `data/songs/lyrics/`. See the
+[Song Activation guide](docs/guides/song-activation.md) for setup and the full workflow.
 
 Use `uv run anki-chinese <command> --help` for full flags and options.
 
@@ -94,6 +95,7 @@ See [docs/](docs/README.md) for full documentation:
 
 - **[Development](docs/guides/development.md)** — repo layout, testing strategy, validation
 - **[Customization](docs/guides/customization.md)** — overrides, card templates, example words
+- **[Song Activation](docs/guides/song-activation.md)** — AnkiConnect setup and song-based unsuspending
 - **[TTS Setup](docs/guides/tts-setup.md)** — Google Cloud + MiniMax API setup
 - **[ADR-001: Sentences](docs/decisions/ADR-001-sentence-generation.md)** — Gemini generation pipeline
 - **[ADR-002: TTS Strategy](docs/decisions/ADR-002-tts-provider-strategy.md)** — hybrid provider approach

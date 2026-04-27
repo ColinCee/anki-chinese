@@ -1,0 +1,127 @@
+# Song activation guide
+
+Use this workflow when you want the CLI to pick characters from song lyrics and
+unsuspend the matching cards in your live Anki collection.
+
+## Two lanes
+
+`anki-chinese` now has two separate workflows:
+
+| Workflow | Command family | What it changes |
+| --- | --- | --- |
+| Content rebuild | `init`, `sentences`, `audio`, `build` | Fields, audio, sentences, templates, generated `.apkg` content |
+| Live activation | `activate`, `songs activate` | Suspended/unsuspended state and optional tags in your open Anki collection |
+
+Keep using `.apkg` export/import for rebuilding audio and sentences. Use
+AnkiConnect only when you want to activate existing cards without manually
+searching in Anki.
+
+## One-time AnkiConnect setup
+
+1. Open Anki desktop.
+2. Go to **Tools -> Add-ons -> Get Add-ons...**.
+3. Enter add-on code `2055492159`.
+4. Restart Anki.
+5. Keep Anki open while running activation commands.
+
+Check it is running:
+
+```bash
+curl http://127.0.0.1:8765
+```
+
+Expected output:
+
+```text
+AnkiConnect
+```
+
+If you configure an AnkiConnect API key, expose it to the CLI:
+
+```bash
+export ANKICONNECT_API_KEY="your-key"
+```
+
+No API key is needed with the default AnkiConnect configuration.
+
+## Song workflow
+
+Analyze all lyric files against your latest exported deck snapshot:
+
+```bash
+uv run anki-chinese songs analyze
+```
+
+Preview the next characters for a specific song:
+
+```bash
+uv run anki-chinese songs next 学猫叫 --limit 20
+```
+
+This uses `data/source/All Decks.apkg` to decide which characters are already
+active and which characters exist in the RSH deck. If your live Anki state has
+changed since the last export, export the deck again before planning.
+
+Dry-run the live Anki activation:
+
+```bash
+uv run anki-chinese songs activate 学猫叫 --limit 20 --dry-run
+```
+
+Actually unsuspend those cards:
+
+```bash
+uv run anki-chinese songs activate 学猫叫 --limit 20
+```
+
+The command:
+
+- skips characters already active in the exported snapshot
+- skips Non-RSH characters by default
+- finds matching live Anki notes by the `Hanzi` field
+- unsuspends all cards for those notes
+- tags activated notes with `activated::song::<song title>` unless you pass `--tag`
+
+Activate all remaining in-deck characters for a song:
+
+```bash
+uv run anki-chinese songs activate 学猫叫 --all --dry-run
+uv run anki-chinese songs activate 学猫叫 --all
+```
+
+## Manual activation
+
+If you already know exactly which characters to activate:
+
+```bash
+uv run anki-chinese activate chars 内 合 哟 著 --dry-run
+uv run anki-chinese activate chars 内 合 哟 著
+```
+
+Add a custom tag:
+
+```bash
+uv run anki-chinese activate chars 内 合 哟 著 --tag batch::song-1
+```
+
+## Recommended routine
+
+1. Export your current Anki deck to `data/source/All Decks.apkg`.
+2. Run `uv run anki-chinese songs analyze`.
+3. Pick a song and run `uv run anki-chinese songs next <song> --limit 20`.
+4. Run `uv run anki-chinese songs activate <song> --limit 20 --dry-run`.
+5. If the dry-run looks right, rerun without `--dry-run`.
+6. Later, export from Anki again so future planning sees the updated active state.
+
+## Troubleshooting
+
+If activation fails with an AnkiConnect availability error, check:
+
+- Anki desktop is open.
+- The AnkiConnect add-on is installed and Anki has been restarted.
+- `curl http://127.0.0.1:8765` prints `AnkiConnect`.
+- If you enabled an API key in AnkiConnect, `ANKICONNECT_API_KEY` is set.
+
+If `songs next` recommends characters that are already active in live Anki,
+your exported `.apkg` snapshot is stale. Export your deck again and rerun the
+planning command.
