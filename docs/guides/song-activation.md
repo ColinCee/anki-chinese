@@ -95,7 +95,34 @@ Leave AnkiConnect bound to its default `127.0.0.1`. Do not set
 `webBindAddress` to `0.0.0.0` unless you explicitly want to expose it beyond
 localhost and have configured firewall/API-key protections.
 
-## Song workflow
+## Song workflow, study target, and lyric variants
+
+This repo's default learner target is **mainland Mandarin with simplified
+characters**.
+
+That matters because some popular Taiwanese songs in `data/songs/lyrics/` use
+traditional-script forms such as `著` inside otherwise familiar Mandarin lines.
+For mainland study, prioritize the simplified form when you activate or review
+cards.
+
+Examples:
+
+| Lyric form | Mainland study form | Pronunciation |
+| --- | --- | --- |
+| `看著` | `看着` | `kàn zhe` |
+| `带著` | `带着` | `dài zhe` |
+| `贪恋著` | `贪恋着` | `tān liàn zhe` |
+
+The pronunciation does **not** change in those cases. Only the written form
+changes for your default study target.
+
+Important: this is context-sensitive. Lexical words such as `著名`, `显著`, and
+`著作` keep `著` and should not be rewritten blindly.
+
+Song planning now normalizes the common aspect-particle use `著 -> 着`, so
+planning and activation target the mainland simplified form by default. That
+normalization is conservative: lexical words such as `著名`, `显著`, and `著作`
+are left untouched.
 
 Analyze all lyric files against your latest exported deck snapshot:
 
@@ -145,14 +172,14 @@ uv run anki-chinese songs activate 学猫叫 --all
 If you already know exactly which characters to activate:
 
 ```bash
-uv run anki-chinese activate chars 内 合 哟 著 --dry-run
-uv run anki-chinese activate chars 内 合 哟 著
+uv run anki-chinese activate chars 内 合 哟 着 --dry-run
+uv run anki-chinese activate chars 内 合 哟 着
 ```
 
 Add a custom tag:
 
 ```bash
-uv run anki-chinese activate chars 内 合 哟 著 --tag batch::song-1
+uv run anki-chinese activate chars 内 合 哟 着 --tag batch::song-1
 ```
 
 ## Recommended routine

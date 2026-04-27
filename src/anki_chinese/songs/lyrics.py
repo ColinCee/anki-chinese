@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n(.*)$", re.DOTALL)
+_LEXICAL_ZHU_NEXT_CHARS = {"作", "名", "者", "录", "錄", "述", "称", "稱"}
+_LEXICAL_ZHU_PREV_CHARS = {"原", "土", "名", "显", "顯", "卓", "昭", "编", "編", "合", "巨", "译", "譯"}
 
 
 @dataclass(frozen=True)
@@ -22,6 +24,10 @@ class LyricSong:
     def label(self) -> str:
         return f"{self.title} ({self.artist})" if self.artist else self.title
 
+    @property
+    def study_characters(self) -> set[str]:
+        return extract_study_cjk(self.lyrics)
+
 
 def is_cjk(char: str) -> bool:
     cp = ord(char)
@@ -30,6 +36,31 @@ def is_cjk(char: str) -> bool:
 
 def extract_cjk(text: str) -> set[str]:
     return {char for char in text if is_cjk(char)}
+
+
+def _should_normalize_particle_zhe(text: str, index: int) -> bool:
+    prev = text[index - 1] if index > 0 else ""
+    next_char = text[index + 1] if index + 1 < len(text) else ""
+    if not is_cjk(prev):
+        return False
+    if prev in _LEXICAL_ZHU_PREV_CHARS:
+        return False
+    return next_char not in _LEXICAL_ZHU_NEXT_CHARS
+
+
+def normalize_lyric_text_for_study(text: str) -> str:
+    """Normalize only the safe traditional forms used in mainland song planning."""
+    chars: list[str] = []
+    for index, char in enumerate(text):
+        if char == "著" and _should_normalize_particle_zhe(text, index):
+            chars.append("着")
+            continue
+        chars.append(char)
+    return "".join(chars)
+
+
+def extract_study_cjk(text: str) -> set[str]:
+    return extract_cjk(normalize_lyric_text_for_study(text))
 
 
 def parse_lyric_file(path: Path) -> LyricSong:

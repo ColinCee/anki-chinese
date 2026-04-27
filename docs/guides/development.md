@@ -60,7 +60,7 @@ Both entrypoint checks must print help text without error.
 | `source/` | Deck imports such as `All Decks.apkg` (native Anki package export) |
 | `manual/` | Hand-maintained overrides and example-word data |
 | `reference/` | Canonical lookup corpora for deterministic offline use; optional local extras like `SUBTLEX_CH.xlsx` also live here |
-| `songs/` | Curated song lyric markdown files used by `anki-chinese songs` analysis and activation commands |
+| `songs/` | Curated song lyric markdown files used by `anki-chinese songs`; lyrics may preserve source-script forms while mainland-simplified planning is handled separately |
 | `state/` | Workflow state such as `enriched.json` |
 | `build/` | Generated audio, sample audio, and built decks |
 

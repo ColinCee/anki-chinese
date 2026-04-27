@@ -5,7 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from anki_chinese.songs import extract_cjk, is_cjk, parse_lyric_file
+from anki_chinese.songs import (
+    extract_cjk,
+    extract_study_cjk,
+    is_cjk,
+    normalize_lyric_text_for_study,
+    parse_lyric_file,
+)
 
 
 def test_is_cjk_detects_hanzi_and_extension_a() -> None:
@@ -19,6 +25,16 @@ def test_extract_cjk_collapses_duplicates() -> None:
     assert extract_cjk("Hello 你好你好！") == {"你", "好"}
 
 
+def test_extract_study_cjk_normalizes_particle_zhe() -> None:
+    assert extract_study_cjk("每天都贪恋著你的好") == {"每", "天", "都", "贪", "恋", "着", "你", "的", "好"}
+
+
+def test_normalize_lyric_text_for_study_preserves_lexical_zhu_words() -> None:
+    text = "他很著名，这本书是原著，也有显著变化。"
+
+    assert normalize_lyric_text_for_study(text) == text
+
+
 def test_parse_lyric_file_reads_frontmatter_and_characters(tmp_path: Path) -> None:
     path = tmp_path / "song.md"
     path.write_text(
@@ -28,7 +44,7 @@ def test_parse_lyric_file_reads_frontmatter_and_characters(tmp_path: Path) -> No
             artist: 小潘潘
             ---
             我们一起学猫叫
-            一起喵喵喵
+            看著你喵喵喵
         """),
         encoding="utf-8",
     )
@@ -39,7 +55,28 @@ def test_parse_lyric_file_reads_frontmatter_and_characters(tmp_path: Path) -> No
     assert song.artist == "小潘潘"
     assert song.file == "song"
     assert song.label == "学猫叫 (小潘潘)"
+    assert "著" in song.characters
+    assert "着" in song.study_characters
     assert "喵" in song.characters
+
+
+def test_audited_lyric_files_no_longer_use_traditional_particle_form() -> None:
+    root = Path(__file__).resolve().parents[2]
+    audited_files = [
+        "01-小潘潘-学猫叫.md",
+        "03-光良-童话.md",
+        "07-周兴哲-你好不好.md",
+        "09-周兴哲-怎么了.md",
+        "11-邓紫棋-泡沫.md",
+        "13-田馥甄-小幸运.md",
+        "14-王晰-不舍.md",
+        "19-买辣椒也用券-起风了.md",
+        "21-陈奕迅-孤勇者.md",
+    ]
+
+    for filename in audited_files:
+        text = (root / "data" / "songs" / "lyrics" / filename).read_text(encoding="utf-8")
+        assert "著" not in text
 
 
 def test_parse_lyric_file_missing_frontmatter_raises(tmp_path: Path) -> None:
