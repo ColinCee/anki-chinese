@@ -52,6 +52,28 @@ def test_plan_song_activation_skips_active_and_non_deck_chars_with_limit() -> No
     assert plan.non_deck_chars == ("喵",)
 
 
+def test_plan_song_activation_normalizes_traditional_particle_to_study_form() -> None:
+    song = LyricSong(
+        file="cat",
+        title="学猫叫",
+        artist="",
+        lyrics="看著我",
+        characters={"看", "著", "我"},
+        path=Path("cat.md"),
+    )
+
+    plan = plan_song_activation(
+        song,
+        active_chars={"我", "看"},
+        deck_chars={"我", "看", "着"},
+        deck_order=["看", "我", "着"],
+    )
+
+    assert plan.chars == ("着",)
+    assert plan.already_active == ("我", "看")
+    assert plan.non_deck_chars == ()
+
+
 def test_find_song_matches_unique_substring() -> None:
     songs = [_song("01-cat", "学猫叫", {"猫"}), _song("02-moon", "月亮代表我的心", {"月"})]
 

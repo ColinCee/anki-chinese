@@ -73,20 +73,24 @@ rule.
 
 ## Current repo state
 
-Today, the docs and some curated lyric files still contain traditional-script
-examples such as `著`, and the song-planning code does not yet normalize them
-automatically. For now:
+The repo now handles the main `著` / `着` learner-facing issue in three ways:
 
-1. Treat traditional lyric forms as recognition aids.
-2. Prefer the simplified mainland form when manually activating or reviewing.
-3. Use the simplified character in examples such as `uv run anki-chinese activate chars ...`.
+1. The audited lyric files were rewritten from safe particle uses such as `看著`
+   to `看着`.
+2. Song planning normalizes the contextual particle use `著 -> 着` so
+   `songs analyze`, `songs next`, and `songs activate` target the mainland study
+   form by default.
+3. The `著` note is now labeled as the **traditional form of `着`** instead of
+   looking like a second primary simplified-study card.
 
 ## Long-term direction
 
-The long-term implementation goal is:
+The remaining long-term implementation goals are:
 
-1. Keep curated lyrics in their original form when that is useful context.
-2. Normalize song-planning and activation to mainland simplified forms by default.
+1. Extend normalization carefully for newly added lyric files and future
+   traditional-script imports.
+2. Review the remaining deck-level traditional/simplified pairs such as `藉/借`
+   and `覆/复` separately instead of auto-merging them.
 3. Keep traditional variants visible as recognition context rather than primary
    study targets.
 

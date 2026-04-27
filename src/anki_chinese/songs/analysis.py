@@ -46,7 +46,7 @@ class SongActivationPlan:
 def _song_frequency(songs: list[LyricSong]) -> Counter[str]:
     freq: Counter[str] = Counter()
     for song in songs:
-        for char in song.characters:
+        for char in song.study_characters:
             freq[char] += 1
     return freq
 
@@ -71,10 +71,10 @@ def _sequence_songs(
     sequence: list[LyricSong] = []
     cumulative = set(active_chars)
     while remaining:
-        remaining.sort(key=lambda song: len((song.characters - cumulative) & deck_chars))
+        remaining.sort(key=lambda song: len((song.study_characters - cumulative) & deck_chars))
         best = remaining.pop(0)
         sequence.append(best)
-        cumulative |= (best.characters - cumulative) & deck_chars
+        cumulative |= (best.study_characters - cumulative) & deck_chars
     return sequence
 
 
@@ -101,7 +101,7 @@ def analyze_song_corpus(
     rows: list[SongProgressRow] = []
     total_days = 0
     for song in sequence:
-        chars = song.characters
+        chars = song.study_characters
         new = (chars - cumulative) & deck_chars
         non_deck = chars - deck_chars
         active_count = len(chars & cumulative)
@@ -125,7 +125,7 @@ def analyze_song_corpus(
 
     song_chars: set[str] = set()
     for song in songs:
-        song_chars |= song.characters
+        song_chars |= song.study_characters
 
     average_songs_per_char = sum(freq.values()) / len(freq) if freq else 0.0
     return SongAnalysis(
@@ -164,7 +164,8 @@ def plan_song_activation(
     deck_order: list[str] | None = None,
     limit: int = 0,
 ) -> SongActivationPlan:
-    activatable_chars = (song.characters - active_chars) & deck_chars
+    study_chars = song.study_characters
+    activatable_chars = (study_chars - active_chars) & deck_chars
     ordered = (
         [char for char in deck_order if char in activatable_chars]
         if deck_order is not None
@@ -182,7 +183,7 @@ def plan_song_activation(
     return SongActivationPlan(
         song=song,
         chars=selected,
-        already_active=tuple(sorted(song.characters & active_chars)),
-        non_deck_chars=tuple(sorted(song.characters - deck_chars)),
+        already_active=tuple(sorted(study_chars & active_chars)),
+        non_deck_chars=tuple(sorted(study_chars - deck_chars)),
         remaining_after_limit=remaining,
     )

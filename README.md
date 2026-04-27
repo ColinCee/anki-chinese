@@ -67,6 +67,8 @@ AnkiConnect while Anki is running.
 Default learner target: **mainland Mandarin with simplified characters**.
 Traditional forms that appear in Taiwanese songs are useful recognition context,
 but they are not the primary study target for this repo.
+Song planning now normalizes the common lyric particle `著` to the mainland
+study form `着`, and the audited lyric files have been cleaned accordingly.
 
 ```bash
 uv run anki-chinese songs analyze

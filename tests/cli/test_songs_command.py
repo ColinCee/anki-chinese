@@ -30,7 +30,7 @@ class StubAnkiClient:
         self.tags.append((note_ids, tag))
 
 
-def _write_song(lyrics_dir: Path) -> None:
+def _write_song(lyrics_dir: Path, body: str = "一二三喵") -> None:
     lyrics_dir.mkdir(parents=True)
     (lyrics_dir / "01-test.md").write_text(
         textwrap.dedent("""\
@@ -38,8 +38,8 @@ def _write_song(lyrics_dir: Path) -> None:
             title: 测试歌
             artist: 测试
             ---
-            一二三喵
-        """),
+            {body}
+        """).format(body=body),
         encoding="utf-8",
     )
 
@@ -92,3 +92,27 @@ def test_run_songs_activate_uses_song_plan_and_activation_service(runtime_factor
 
     assert client.unsuspended == [20, 21, 30, 31]
     assert client.tags == [([2, 3], "activated::song::测试歌")]
+
+
+def test_run_songs_next_normalizes_traditional_particle_for_planning(runtime_factory) -> None:
+    runtime = runtime_factory(
+        parsed_notes=[
+            CharacterNote(hanzi="我", meaning="I"),
+            CharacterNote(hanzi="看", meaning="to look"),
+            CharacterNote(hanzi="你", meaning="you"),
+            CharacterNote(hanzi="着", meaning="aspect particle"),
+        ]
+    )
+    runtime.load_learned_hanzi = lambda path: {"我", "看", "你"}
+    _write_song(runtime.song_lyrics_dir, body="我看著你")
+
+    plan = run_songs_next(
+        runtime,
+        "测试歌",
+        lyrics_dir=runtime.song_lyrics_dir,
+        apkg_path=runtime.source_deck_path,
+        limit=1,
+    )
+
+    assert plan.chars == ("着",)
+    assert plan.non_deck_chars == ()

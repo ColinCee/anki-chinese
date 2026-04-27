@@ -1,6 +1,6 @@
 # ADR-003: Mainland Mandarin Study Target Policy
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-04-27
 
 ## Context
@@ -20,11 +20,11 @@ An empirical audit for this decision found:
 - 38 such lyric occurrences in total
 - 5 user-facing doc examples recommending `著` instead of `着`
 
-The current technical behavior also matters:
+The pre-rollout technical behavior that motivated this decision was:
 
-- `songs/lyrics.py` extracts raw CJK characters with no script normalization
-- `songs/analysis.py` plans activation from those raw characters
-- Taiwanese lyric lines such as `看著` and `贪恋著` therefore surface as `著`
+- `songs/lyrics.py` extracted raw CJK characters with no script normalization
+- `songs/analysis.py` planned activation from those raw characters
+- Taiwanese lyric lines such as `看著` and `贪恋著` therefore surfaced as `著`
   instead of the learner's mainland target `着`
 
 ## Decision
@@ -66,20 +66,21 @@ study target for this repository.
 - Contributors must be careful not to auto-merge unrelated traditional and
   simplified characters that share a pronunciation
 
-## Rollout plan
+## Implementation status
 
-1. **Docs first**
-   - Update README and guides to define the default learning target.
-   - Replace activation examples that currently recommend `著`.
-2. **Song-planning normalization**
-   - Preserve original lyric text.
-   - Add a normalized simplified character set for `songs analyze`,
-     `songs next`, and `songs activate`.
-   - Add regression coverage for `著 -> 着` in song planning.
-3. **Deck-note policy**
-   - Resolve `著` / `着` first because it is the clearest learner-facing
-     duplicate-like pair.
-   - Review `藉` / `借` and `覆` / `复` separately instead of auto-merging them.
+Completed in this rollout phase:
+
+1. README and guides now define the mainland simplified study target.
+2. User-facing activation examples now use `着`.
+3. The audited lyric files were rewritten from safe `著` particle uses to `着`.
+4. Song planning now uses conservative contextual normalization for `著 -> 着`.
+5. Regression coverage was added for lyric normalization and song planning.
+
+Remaining follow-up:
+
+1. Review the remaining deck-level traditional/simplified pairs separately,
+   especially `藉/借` and `覆/复`.
+2. Extend normalization carefully as new lyric files are added.
 
 ## Non-goals
 

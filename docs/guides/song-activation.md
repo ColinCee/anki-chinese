@@ -102,8 +102,8 @@ characters**.
 
 That matters because some popular Taiwanese songs in `data/songs/lyrics/` use
 traditional-script forms such as `著` inside otherwise familiar Mandarin lines.
-For mainland study, treat those as recognition context and prioritize the
-simplified form when you activate or review cards.
+For mainland study, prioritize the simplified form when you activate or review
+cards.
 
 Examples:
 
@@ -119,10 +119,10 @@ changes for your default study target.
 Important: this is context-sensitive. Lexical words such as `著名`, `显著`, and
 `著作` keep `著` and should not be rewritten blindly.
 
-Today, song planning still works on raw lyric characters, so you may need to
-mentally map a traditional lyric form to its mainland simplified target. The
-long-term direction is to normalize planning and activation to simplified forms
-by default while keeping the original lyric text for reference.
+Song planning now normalizes the common aspect-particle use `著 -> 着`, so
+planning and activation target the mainland simplified form by default. That
+normalization is conservative: lexical words such as `著名`, `显著`, and `著作`
+are left untouched.
 
 Analyze all lyric files against your latest exported deck snapshot:
 
