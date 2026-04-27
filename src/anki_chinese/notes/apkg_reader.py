@@ -142,3 +142,29 @@ def load_learned_hanzi_from_apkg(path: Path) -> set[str]:
             conn.close()
 
     return learned
+
+
+def load_deck_hanzi_from_apkg(path: Path) -> set[str]:
+    """Return every single-character hanzi in the configured Chinese model."""
+    with tempfile.TemporaryDirectory() as tmp:
+        db_path = _extract_db(path, Path(tmp))
+        conn = sqlite3.connect(str(db_path))
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT flds
+                FROM notes
+                WHERE mid = ?
+                """,
+                (MODEL_ID,),
+            )
+            deck_chars = {
+                hanzi
+                for (flds,) in cur.fetchall()
+                if len(hanzi := _extract_hanzi(flds.split(_FIELD_SEP)[0])) == 1
+            }
+        finally:
+            conn.close()
+
+    return deck_chars

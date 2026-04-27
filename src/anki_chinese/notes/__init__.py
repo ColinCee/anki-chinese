@@ -1,6 +1,6 @@
 """Note-focused modules: model, parsing, enrichment, storage, and reporting."""
 
-from .apkg_reader import load_learned_hanzi_from_apkg, parse_apkg
+from .apkg_reader import load_deck_hanzi_from_apkg, load_learned_hanzi_from_apkg, parse_apkg
 from .enrich import enrich_notes
 from .model import CharacterNote, apply_overrides, load_overrides
 from .pronunciation import find_phonetic_confusers
@@ -25,6 +25,7 @@ __all__ = [
     "flagged_notes",
     "heisig_index",
     "load_learned_hanzi_from_apkg",
+    "load_deck_hanzi_from_apkg",
     "load_notes",
     "load_overrides",
     "parse_apkg",

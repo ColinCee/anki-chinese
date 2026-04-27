@@ -149,6 +149,9 @@ def runtime_factory(tmp_path: Path):
         def load_learned_hanzi(path: Path) -> set[str]:
             return set()
 
+        def load_deck_hanzi(path: Path) -> set[str]:
+            return {note.hanzi for note in parsed if len(note.hanzi) == 1}
+
         def enrich_notes(
             notes: list[CharacterNote],
         ) -> list[CharacterNote]:
@@ -163,11 +166,13 @@ def runtime_factory(tmp_path: Path):
 
         return AppRuntime(
             source_deck_path=source_deck_path,
+            song_lyrics_dir=tmp_path / "data" / "songs" / "lyrics",
             note_store=note_store,
             generated_audio_dir=tmp_path / "data" / "build" / "audio" / "generated",
             sample_audio_dir=tmp_path / "data" / "build" / "audio" / "samples",
             parse_deck_export=parse_deck_export,
             load_learned_hanzi=load_learned_hanzi,
+            load_deck_hanzi=load_deck_hanzi,
             enrich_notes=enrich_notes,
             build_deck=build_deck,
             tts_provider_factory=lambda generated_audio_dir: active_tts_provider,

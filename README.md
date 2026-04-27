@@ -58,6 +58,26 @@ uv run anki-chinese test-tts --char 早
 uv run anki-chinese test-tts --word 早上
 ```
 
+## Song learning and activation
+
+The `.apkg` import/export workflow remains the source of truth for rebuildable card
+content. Live study-state changes, such as unsuspending a batch of existing cards, use
+AnkiConnect while Anki is running.
+
+```bash
+uv run anki-chinese songs analyze
+uv run anki-chinese songs next 学猫叫 --limit 20
+uv run anki-chinese songs activate 学猫叫 --limit 20 --dry-run
+uv run anki-chinese songs activate 学猫叫 --limit 20
+
+uv run anki-chinese activate chars 内 合 哟 著 --dry-run
+uv run anki-chinese activate chars 内 合 哟 著
+```
+
+Install the AnkiConnect add-on in Anki with code `2055492159`, keep Anki open, then run
+activation commands. Lyrics live in `data/songs/lyrics/`. See the
+[Song Activation guide](docs/guides/song-activation.md) for setup and the full workflow.
+
 Use `uv run anki-chinese <command> --help` for full flags and options.
 
 ## Learning flow
@@ -75,6 +95,7 @@ See [docs/](docs/README.md) for full documentation:
 
 - **[Development](docs/guides/development.md)** — repo layout, testing strategy, validation
 - **[Customization](docs/guides/customization.md)** — overrides, card templates, example words
+- **[Song Activation](docs/guides/song-activation.md)** — AnkiConnect setup and song-based unsuspending
 - **[TTS Setup](docs/guides/tts-setup.md)** — Google Cloud + MiniMax API setup
 - **[ADR-001: Sentences](docs/decisions/ADR-001-sentence-generation.md)** — Gemini generation pipeline
 - **[ADR-002: TTS Strategy](docs/decisions/ADR-002-tts-provider-strategy.md)** — hybrid provider approach

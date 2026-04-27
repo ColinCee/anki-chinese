@@ -38,7 +38,7 @@ _LINE_RE = re.compile(r"^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+/(.+)/$")
 
 # Module-level caches
 _index: dict[str, list[tuple[str, str, str]]] | None = None
-_char_defs: dict[str, list[str]] | None = None
+_char_defs: dict[str, dict[str, list[str]]] | None = None
 
 
 def _is_cjk(word: str) -> bool:

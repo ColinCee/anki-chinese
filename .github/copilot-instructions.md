@@ -10,6 +10,8 @@ A Python CLI tool that builds regenerable Anki flashcard decks for Mandarin stud
 src/anki_chinese/
 ├── cli/          # Typer commands + Rich UI helpers
 ├── notes/        # CharacterNote model, .apkg parsing, enrichment, persistence, reporting
+├── activation/   # Live Anki activation via AnkiConnect (unsuspend/tag existing cards)
+├── songs/        # Lyric parsing, song analysis, and song-to-character planning
 ├── audio/        # TTSProvider protocol, Google/MiniMax implementations, retry, rate limiting
 ├── sentences/    # Gemini Flash Lite sentence generation + self-validation pipeline
 ├── data_sources/ # Pinyin, jyutping, CEDICT, HSK lookups
@@ -25,6 +27,8 @@ src/anki_chinese/
 - **Factory pattern**: `audio/factory.py` builds providers by name. Default is Google.
 - **Narrow CLI surface**: All user interaction goes through `uv run anki-chinese <command>`.
 - **Stable GUIDs**: genanki IDs are based on character identity — re-importing updates notes, never duplicates.
+- **Two-lane Anki workflow**: `.apkg` import/export is for rebuildable content (fields, audio, sentences, templates). Live activation is separate and uses AnkiConnect to unsuspend/tag existing cards in the open Anki collection.
+- **Activation is general infrastructure**: `activate` commands are not song-specific. Songs are one planner/source that produces character batches and then calls the shared activation layer.
 
 ## Data flow
 
@@ -34,6 +38,12 @@ data/source/All Decks.apkg  →  init (parse + enrich)  →  data/state/enriched
                                                      audio (optional TTS)
                                                               ↓
                                                      build  →  data/build/decks/chinese_rsh.apkg
+```
+
+Live activation flow:
+
+```
+manual chars / song planner / future recommender  →  activation service  →  AnkiConnect  →  live Anki cards
 ```
 
 ## TTS strategy
@@ -54,6 +64,7 @@ Uses Gemini Flash Lite with a lean 7-rule prompt + same-model self-validation (7
 | `data/manual/overrides.json` | Per-character field overrides |
 | `data/manual/example_words.json` | Manual example word definitions |
 | `data/reference/hsk_complete.min.json` | HSK vocabulary corpus for auto-picking examples |
+| `data/songs/lyrics/` | Curated lyric markdown files for song-based planning |
 | `data/state/enriched.json` | Enriched notes (workflow state) |
 | `data/build/decks/chinese_rsh.apkg` | Final output deck |
 
@@ -66,8 +77,12 @@ uv run anki-chinese review      # Inspect notes flagged for correction
 uv run anki-chinese audio       # Generate TTS audio
 uv run anki-chinese sentences   # Generate example sentences (Gemini)
 uv run anki-chinese build       # Create final .apkg
+uv run anki-chinese activate    # Unsuspend/tag existing live Anki cards
+uv run anki-chinese songs       # Analyze lyrics and plan song character batches
 uv run anki-chinese test-tts    # Smoke-test audio generation
 ```
+
+Activation uses AnkiConnect at `http://127.0.0.1:8765` by default. If Anki runs on Windows and the CLI runs in WSL, prefer WSL mirrored networking so localhost reaches Windows Anki while AnkiConnect remains bound to 127.0.0.1.
 
 ## Development
 

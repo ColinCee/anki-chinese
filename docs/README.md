@@ -13,6 +13,7 @@ How-to docs for using and developing the project.
 
 - [Customization](guides/customization.md) — Character overrides, card templates, deck settings, example words
 - [Development](guides/development.md) — Repo layout, testing strategy, validation, migration notes
+- [Song Activation](guides/song-activation.md) — AnkiConnect setup and song-based unsuspending workflow
 - [TTS Setup](guides/tts-setup.md) — Google Cloud and MiniMax API key setup, smoke testing, env vars
 
 ## Research
