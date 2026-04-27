@@ -20,4 +20,5 @@ How-to docs for using and developing the project.
 
 Exploratory research and provider comparisons.
 
+- [Anki Ecosystem Pain Points](research/anki-ecosystem-pain-points.md) — Running notes on Anki friction and custom-app triggers
 - [TTS Providers](research/tts-providers.md) — Full comparison of 6 TTS providers for Chinese pronunciation
