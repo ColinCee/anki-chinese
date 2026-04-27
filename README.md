@@ -64,14 +64,18 @@ The `.apkg` import/export workflow remains the source of truth for rebuildable c
 content. Live study-state changes, such as unsuspending a batch of existing cards, use
 AnkiConnect while Anki is running.
 
+Default learner target: **mainland Mandarin with simplified characters**.
+Traditional forms that appear in Taiwanese songs are useful recognition context,
+but they are not the primary study target for this repo.
+
 ```bash
 uv run anki-chinese songs analyze
 uv run anki-chinese songs next 学猫叫 --limit 20
 uv run anki-chinese songs activate 学猫叫 --limit 20 --dry-run
 uv run anki-chinese songs activate 学猫叫 --limit 20
 
-uv run anki-chinese activate chars 内 合 哟 著 --dry-run
-uv run anki-chinese activate chars 内 合 哟 著
+uv run anki-chinese activate chars 内 合 哟 着 --dry-run
+uv run anki-chinese activate chars 内 合 哟 着
 ```
 
 Install the AnkiConnect add-on in Anki with code `2055492159`, keep Anki open, then run
@@ -95,8 +99,10 @@ See [docs/](docs/README.md) for full documentation:
 
 - **[Development](docs/guides/development.md)** — repo layout, testing strategy, validation
 - **[Customization](docs/guides/customization.md)** — overrides, card templates, example words
+- **[Mainland Mandarin Study Target](docs/guides/mainland-mandarin.md)** — simplified-first policy, traditional recognition, Taiwanese song handling
 - **[Song Activation](docs/guides/song-activation.md)** — AnkiConnect setup and song-based unsuspending
 - **[TTS Setup](docs/guides/tts-setup.md)** — Google Cloud + MiniMax API setup
 - **[ADR-001: Sentences](docs/decisions/ADR-001-sentence-generation.md)** — Gemini generation pipeline
 - **[ADR-002: TTS Strategy](docs/decisions/ADR-002-tts-provider-strategy.md)** — hybrid provider approach
+- **[ADR-003: Study Target Policy](docs/decisions/ADR-003-study-target-policy.md)** — mainland Mandarin, simplified-first rollout plan
 - **[TTS Research](docs/research/tts-providers.md)** — full provider comparison
