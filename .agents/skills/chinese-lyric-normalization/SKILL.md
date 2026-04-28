@@ -1,20 +1,23 @@
 ---
 name: chinese-lyric-normalization
-description: Offline audit workflow for Mandarin lyric study-target normalization in anki-chinese, especially distinguishing traditional particle 著 from lexical 著.
+description: Use when auditing or changing anki-chinese song lyrics, song planning, or mainland-simplified study normalization. Distinguishes traditional particle 著 -> 着 from lexical 著 and keeps runtime song commands deterministic.
+when_to_use: Trigger on requests mentioning lyric normalization, Taiwanese/traditional lyric variants, 著/着, mainland Mandarin study target, song activation character planning, or reviews of src/anki_chinese/songs and data/songs/lyrics changes.
+argument-hint: "[lyric-file-or-pr]"
 ---
 
 # Chinese Lyric Normalization
 
-## When to use
+## First response checklist
 
-Use this GitHub Copilot CLI skill when auditing or updating Chinese lyric files
-for this repository's mainland Mandarin, simplified-first study target. It is
-especially relevant when the task involves:
+When this skill is relevant:
 
-- `著` vs `着`
-- Taiwanese/traditional lyric forms in otherwise Mandarin lyrics
-- deciding whether a lyric character should activate a simplified study card
-- creating or reviewing song-planning normalization changes in `anki-chinese`
+1. Treat lyric normalization as **offline curation**, not runtime inference.
+2. Do not add an LLM, network call, OpenCC pass, or pypinyin-based guess to
+   `songs analyze`, `songs next`, or `songs activate`.
+3. Read the relevant lyric line and nearby context before classifying a variant.
+4. Preserve source fidelity with explicit metadata if direct lyric edits are not
+   desired.
+5. Add regression coverage for the curated decision.
 
 ## Instructions
 
@@ -22,8 +25,6 @@ Do not add an LLM, network call, or remote API dependency to runtime song
 planning. Runtime commands such as `uv run anki-chinese songs analyze`,
 `songs next`, and `songs activate` should remain deterministic, fast,
 credential-free, and testable.
-
-Treat lyric normalization as offline curation, not runtime inference.
 
 For each candidate traditional form:
 
@@ -38,6 +39,8 @@ For `著` specifically:
 - Preserve lexical `zhù` words that are still written with `著` in simplified.
   Examples: `著名`, `著作`, `著书`, `专著`, `原著`, `显著`, `名著`, `拙著`, `巨著`.
 - Mark genuinely ambiguous cases for human review instead of guessing.
+
+Do not treat `著` as globally wrong. Remaining lexical `著` can be correct.
 
 ## Recommended workflow
 
@@ -59,6 +62,16 @@ For `著` specifically:
 6. If source fidelity must be preserved, use explicit metadata or a sidecar
    mapping instead of a heuristic hidden inside `extract_cjk`.
 7. Add tests that lock in the curation outcome.
+
+## If reviewing a PR
+
+Focus on whether the PR:
+
+1. Makes normalization decisions explicit and testable.
+2. Keeps song planning deterministic and credential-free.
+3. Avoids broad neighbor-character heuristics for `著`.
+4. Avoids blind OpenCC or pypinyin discrimination for `著`.
+5. Does not reject valid lexical `著` in future lyrics.
 
 ## Output format for audits
 
