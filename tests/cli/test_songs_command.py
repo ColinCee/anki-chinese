@@ -5,7 +5,20 @@ from pathlib import Path
 
 from anki_chinese.activation import LiveNoteCards
 from anki_chinese.cli.songs import run_songs_activate, run_songs_next
-from anki_chinese.notes import CharacterNote
+
+
+class StubKnowledgeClient:
+    """Stub for KnowledgeClient that returns pre-set knowledge state."""
+
+    def __init__(self, studied: set[str], deck_order: list[str]) -> None:
+        self._studied = studied
+        self._deck_order = deck_order
+
+    def find_studied_characters(self) -> set[str]:
+        return self._studied
+
+    def find_all_deck_info(self) -> tuple[list[str], set[str]]:
+        return self._deck_order, set(self._deck_order)
 
 
 class StubAnkiClient:
@@ -44,23 +57,21 @@ def _write_song(lyrics_dir: Path, body: str = "一二三喵") -> None:
     )
 
 
-def test_run_songs_next_plans_from_export_state(runtime_factory) -> None:
-    runtime = runtime_factory(
-        parsed_notes=[
-            CharacterNote(hanzi="一", meaning="one"),
-            CharacterNote(hanzi="二", meaning="two"),
-            CharacterNote(hanzi="三", meaning="three"),
-        ]
-    )
-    runtime.load_learned_hanzi = lambda path: {"一"}
+def test_run_songs_next_plans_from_live_state(runtime_factory) -> None:
+    runtime = runtime_factory(parsed_notes=[])
     _write_song(runtime.song_lyrics_dir)
+
+    knowledge = StubKnowledgeClient(
+        studied={"一"},
+        deck_order=["一", "二", "三"],
+    )
 
     plan = run_songs_next(
         runtime,
         "测试歌",
         lyrics_dir=runtime.song_lyrics_dir,
-        apkg_path=runtime.source_deck_path,
         limit=2,
+        knowledge_client=knowledge,
     )
 
     assert set(plan.chars) == {"二", "三"}
@@ -69,25 +80,23 @@ def test_run_songs_next_plans_from_export_state(runtime_factory) -> None:
 
 
 def test_run_songs_activate_uses_song_plan_and_activation_service(runtime_factory) -> None:
-    runtime = runtime_factory(
-        parsed_notes=[
-            CharacterNote(hanzi="一", meaning="one"),
-            CharacterNote(hanzi="二", meaning="two"),
-            CharacterNote(hanzi="三", meaning="three"),
-        ]
-    )
-    runtime.load_learned_hanzi = lambda path: {"一"}
+    runtime = runtime_factory(parsed_notes=[])
     _write_song(runtime.song_lyrics_dir)
+
+    knowledge = StubKnowledgeClient(
+        studied={"一"},
+        deck_order=["一", "二", "三"],
+    )
     client = StubAnkiClient()
 
     run_songs_activate(
         runtime,
         "测试歌",
         lyrics_dir=runtime.song_lyrics_dir,
-        apkg_path=runtime.source_deck_path,
         limit=2,
         dry_run=False,
         client=client,
+        knowledge_client=knowledge,
     )
 
     assert client.unsuspended == [20, 21, 30, 31]
@@ -95,23 +104,20 @@ def test_run_songs_activate_uses_song_plan_and_activation_service(runtime_factor
 
 
 def test_run_songs_next_normalizes_traditional_particle_for_planning(runtime_factory) -> None:
-    runtime = runtime_factory(
-        parsed_notes=[
-            CharacterNote(hanzi="我", meaning="I"),
-            CharacterNote(hanzi="看", meaning="to look"),
-            CharacterNote(hanzi="你", meaning="you"),
-            CharacterNote(hanzi="着", meaning="aspect particle"),
-        ]
-    )
-    runtime.load_learned_hanzi = lambda path: {"我", "看", "你"}
+    runtime = runtime_factory(parsed_notes=[])
     _write_song(runtime.song_lyrics_dir, body="我看著你")
+
+    knowledge = StubKnowledgeClient(
+        studied={"我", "看", "你"},
+        deck_order=["我", "看", "你", "着"],
+    )
 
     plan = run_songs_next(
         runtime,
         "测试歌",
         lyrics_dir=runtime.song_lyrics_dir,
-        apkg_path=runtime.source_deck_path,
         limit=1,
+        knowledge_client=knowledge,
     )
 
     assert plan.chars == ("着",)

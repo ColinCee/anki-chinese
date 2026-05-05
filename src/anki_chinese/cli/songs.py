@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
+from typing import Protocol
 
 import typer
 from rich.table import Table
 
-from ..activation import AnkiClient
+from ..activation import AnkiClient, AnkiConnectClient, AnkiConnectError
 from ..songs import (
     LyricSong,
     SongActivationPlan,
@@ -25,16 +27,35 @@ from .activate import run_activate_chars
 from .app import AppRuntime
 
 
+class KnowledgeClient(Protocol):
+    """Protocol for querying study state from live Anki."""
+
+    def find_studied_characters(self) -> set[str]: ...
+    def find_all_deck_info(self) -> tuple[list[str], set[str]]: ...
+
+
+def _make_client() -> AnkiConnectClient:
+    return AnkiConnectClient(api_key=os.getenv("ANKICONNECT_API_KEY", "").strip())
+
+
 def _load_song_inputs(
     runtime: AppRuntime,
     *,
     lyrics_dir: Path,
-    apkg_path: Path,
+    client: KnowledgeClient | None = None,
 ) -> tuple[list[LyricSong], set[str], set[str], list[str]]:
+    """Load songs and live knowledge state from AnkiConnect."""
     songs = load_songs(lyrics_dir)
-    active_chars = runtime.load_learned_hanzi(apkg_path)
-    deck_order = [note.hanzi for note in runtime.parse_deck_export(apkg_path) if len(note.hanzi) == 1]
-    deck_chars = set(deck_order) or runtime.load_deck_hanzi(apkg_path)
+    ac: KnowledgeClient = client or _make_client()
+    try:
+        active_chars = ac.find_studied_characters()
+        deck_order, deck_chars = ac.find_all_deck_info()
+    except AnkiConnectError as error:
+        runtime.console.print(f"[red]✗[/red] {error}")
+        runtime.console.print(
+            "[dim]Ensure Anki is open with AnkiConnect installed.[/dim]"
+        )
+        raise typer.Exit(2) from None
     return songs, active_chars, deck_chars, deck_order
 
 
@@ -62,14 +83,12 @@ def run_songs_analyze(
     runtime: AppRuntime,
     *,
     lyrics_dir: Path,
-    apkg_path: Path,
     pace: int = 5,
     show_chars: bool = False,
 ) -> None:
     songs, active_chars, deck_chars, _deck_order = _load_song_inputs(
         runtime,
         lyrics_dir=lyrics_dir,
-        apkg_path=apkg_path,
     )
     if not songs:
         runtime.console.print(f"[red]✗[/red] No lyric files found in {lyrics_dir}")
@@ -141,13 +160,13 @@ def _song_plan_from_query(
     song_query: str,
     *,
     lyrics_dir: Path,
-    apkg_path: Path,
     limit: int,
+    knowledge_client: KnowledgeClient | None = None,
 ) -> SongActivationPlan:
     songs, active_chars, deck_chars, deck_order = _load_song_inputs(
         runtime,
         lyrics_dir=lyrics_dir,
-        apkg_path=apkg_path,
+        client=knowledge_client,
     )
     song = find_song(songs, song_query)
     if song is None:
@@ -167,15 +186,15 @@ def run_songs_next(
     song_query: str,
     *,
     lyrics_dir: Path,
-    apkg_path: Path,
     limit: int = 20,
+    knowledge_client: KnowledgeClient | None = None,
 ) -> SongActivationPlan:
     plan = _song_plan_from_query(
         runtime,
         song_query,
         lyrics_dir=lyrics_dir,
-        apkg_path=apkg_path,
         limit=limit,
+        knowledge_client=knowledge_client,
     )
     _print_song_plan(runtime, plan)
     return plan
@@ -186,20 +205,20 @@ def run_songs_activate(
     song_query: str,
     *,
     lyrics_dir: Path,
-    apkg_path: Path,
     limit: int = 20,
     all_remaining: bool = False,
     dry_run: bool = False,
     tag: str = "",
     client: AnkiClient | None = None,
+    knowledge_client: KnowledgeClient | None = None,
 ) -> None:
     plan_limit = 0 if all_remaining else limit
     plan = run_songs_next(
         runtime,
         song_query,
         lyrics_dir=lyrics_dir,
-        apkg_path=apkg_path,
         limit=plan_limit,
+        knowledge_client=knowledge_client,
     )
     if not plan.chars:
         return
@@ -425,19 +444,13 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             "--lyrics-dir",
             help="Directory of lyric markdown files.",
         ),
-        apkg_path: Path = typer.Option(
-            runtime.source_deck_path,
-            "--apkg",
-            help="Exported .apkg snapshot to analyze.",
-        ),
         pace: int = typer.Option(5, "--pace", min=1, help="New characters per day."),
         show_chars: bool = typer.Option(False, "--chars", help="Show new character lists."),
     ) -> None:
-        """Analyze song lyrics against the exported deck snapshot."""
+        """Analyze song lyrics against the live Anki collection."""
         run_songs_analyze(
             runtime,
             lyrics_dir=lyrics_dir,
-            apkg_path=apkg_path,
             pace=pace,
             show_chars=show_chars,
         )
@@ -451,14 +464,9 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             "--lyrics-dir",
             help="Directory of lyric markdown files.",
         ),
-        apkg_path: Path = typer.Option(
-            runtime.source_deck_path,
-            "--apkg",
-            help="Exported .apkg snapshot to analyze.",
-        ),
     ) -> None:
         """Show the next in-deck characters needed for a song."""
-        run_songs_next(runtime, song, lyrics_dir=lyrics_dir, apkg_path=apkg_path, limit=limit)
+        run_songs_next(runtime, song, lyrics_dir=lyrics_dir, limit=limit)
 
     @songs_app.command("activate")
     def activate_command(
@@ -480,18 +488,12 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             "--lyrics-dir",
             help="Directory of lyric markdown files.",
         ),
-        apkg_path: Path = typer.Option(
-            runtime.source_deck_path,
-            "--apkg",
-            help="Exported .apkg snapshot used for song planning.",
-        ),
     ) -> None:
         """Unsuspend the next live Anki cards needed for a song."""
         run_songs_activate(
             runtime,
             song,
             lyrics_dir=lyrics_dir,
-            apkg_path=apkg_path,
             limit=limit,
             all_remaining=all_remaining,
             dry_run=dry_run,

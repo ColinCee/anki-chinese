@@ -145,3 +145,46 @@ class AnkiConnectClient:
     def add_tags(self, note_ids: list[int], tag: str) -> None:
         if note_ids and tag:
             self._invoke("addTags", {"notes": note_ids, "tags": tag})
+
+    def find_studied_characters(self) -> set[str]:
+        """Return characters that have actually been studied (at least one review).
+
+        Uses ``-is:new -is:suspended`` to find cards the user has seen.
+        A character counts as studied if *any* of its cards match.
+        """
+        query = f'note:"{self.model_name}" -is:new -is:suspended'
+        note_ids = self._invoke("findNotes", {"query": query})
+        if not isinstance(note_ids, list) or not note_ids:
+            return set()
+        infos = self._notes_info(note_ids)
+        return {self._info_character(info) for info in infos} - {""}
+
+    def find_all_deck_info(self) -> tuple[list[str], set[str]]:
+        """Return (deck_order, deck_chars) from the live Anki collection.
+
+        ``deck_order`` is sorted by HeisigNum field (RSH order).
+        ``deck_chars`` is the complete set of characters in the model.
+        """
+        note_ids = self._find_all_model_note_ids()
+        if not note_ids:
+            return [], set()
+        infos = self._notes_info(note_ids)
+
+        entries: list[tuple[int, str]] = []
+        for info in infos:
+            char = self._info_character(info)
+            if not char:
+                continue
+            fields = info.get("fields", {})
+            heisig_field = fields.get("HeisigNum", {})
+            heisig_raw = heisig_field.get("value", "0") if isinstance(heisig_field, dict) else "0"
+            try:
+                heisig_num = int(re.sub(r"<[^>]+>", "", heisig_raw).strip() or "0")
+            except ValueError:
+                heisig_num = 0
+            entries.append((heisig_num, char))
+
+        entries.sort(key=lambda e: e[0])
+        deck_order = [char for _, char in entries]
+        deck_chars = set(deck_order)
+        return deck_order, deck_chars

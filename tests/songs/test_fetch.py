@@ -16,7 +16,6 @@ from anki_chinese.songs.fetch import (
     search_lyrics,
 )
 
-
 _SEARCH_HTML = textwrap.dedent("""\
     <html><body>
     <div class="search_title">按歌曲名搜索結果：</div>
@@ -102,9 +101,11 @@ def test_fetch_lyrics_by_id_strips_credits() -> None:
 
 def test_fetch_lyrics_by_id_raises_on_missing_lyrics() -> None:
     html = "<html><body><h2>Empty</h2></body></html>"
-    with patch("anki_chinese.songs.fetch._fetch_html", return_value=html):
-        with pytest.raises(ValueError, match="No lyrics found"):
-            fetch_lyrics_by_id(999)
+    with (
+        patch("anki_chinese.songs.fetch._fetch_html", return_value=html),
+        pytest.raises(ValueError, match="No lyrics found"),
+    ):
+        fetch_lyrics_by_id(999)
 
 
 def test_save_lyrics_creates_markdown_file(tmp_path: Path) -> None:
