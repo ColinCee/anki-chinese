@@ -65,13 +65,13 @@ def test_audited_lyric_files_no_longer_use_traditional_particle_form() -> None:
     audited_files = [
         "01-小潘潘-学猫叫.md",
         "03-光良-童话.md",
-        "07-周兴哲-你好不好.md",
-        "09-周兴哲-怎么了.md",
-        "11-邓紫棋-泡沫.md",
-        "13-田馥甄-小幸运.md",
-        "14-王晰-不舍.md",
-        "19-买辣椒也用券-起风了.md",
-        "21-陈奕迅-孤勇者.md",
+        "08-周兴哲-怎么了.md",
+        "09-邓紫棋-泡沫.md",
+        "10-周兴哲-你好不好.md",
+        "21-田馥甄-小幸运.md",
+        "22-王晰-不舍.md",
+        "26-买辣椒也用券-起风了.md",
+        "29-陈奕迅-孤勇者.md",
     ]
 
     for filename in audited_files:

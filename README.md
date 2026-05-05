@@ -76,6 +76,10 @@ uv run anki-chinese songs next 学猫叫 --limit 20
 uv run anki-chinese songs activate 学猫叫 --limit 20 --dry-run
 uv run anki-chinese songs activate 学猫叫 --limit 20
 
+uv run anki-chinese songs fetch "天后"              # search lyrics.net.cn
+uv run anki-chinese songs fetch --url https://lyrics.net.cn/lyrics/58445
+uv run anki-chinese songs verify                    # validate all lyric files
+
 uv run anki-chinese activate chars 内 合 哟 着 --dry-run
 uv run anki-chinese activate chars 内 合 哟 着
 ```

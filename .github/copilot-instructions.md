@@ -82,6 +82,16 @@ uv run anki-chinese songs       # Analyze lyrics and plan song character batches
 uv run anki-chinese test-tts    # Smoke-test audio generation
 ```
 
+### Song subcommands
+
+```bash
+uv run anki-chinese songs analyze          # Greedy sequence + stats
+uv run anki-chinese songs fetch "天后"     # Fetch lyrics from lyrics.net.cn
+uv run anki-chinese songs verify           # Validate all lyric files
+uv run anki-chinese songs next 学猫叫     # Preview next chars for a song
+uv run anki-chinese songs activate 学猫叫 # Unsuspend cards for a song
+```
+
 Activation uses AnkiConnect at `http://127.0.0.1:8765` by default. If Anki runs on Windows and the CLI runs in WSL, prefer WSL mirrored networking so localhost reaches Windows Anki while AnkiConnect remains bound to 127.0.0.1.
 
 ## Development

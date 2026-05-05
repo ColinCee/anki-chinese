@@ -130,6 +130,33 @@ Analyze all lyric files against your latest exported deck snapshot:
 uv run anki-chinese songs analyze
 ```
 
+## Adding new songs
+
+Fetch lyrics directly from lyrics.net.cn:
+
+```bash
+# Search by song name
+uv run anki-chinese songs fetch "天后"
+
+# Pick from multiple results
+uv run anki-chinese songs fetch "我会等" --pick 1
+
+# Direct URL (if you already found the page)
+uv run anki-chinese songs fetch --url https://lyrics.net.cn/lyrics/58445
+```
+
+After adding songs, validate and re-analyze:
+
+```bash
+# Check all lyrics for correctness (simplified Chinese, no HTML, no duplicates)
+uv run anki-chinese songs verify
+
+# Re-run greedy analysis to see new optimal order
+uv run anki-chinese songs analyze
+
+# Renumber files to match the new greedy sequence
+```
+
 Preview the next characters for a specific song:
 
 ```bash
