@@ -113,6 +113,19 @@ def _sanitize_filename_part(name: str) -> str:
     return cleaned.strip()
 
 
+def _next_song_number(lyrics_dir: Path) -> int:
+    """Return the next available song number based on existing files."""
+    import re as _re
+
+    max_num = 0
+    if lyrics_dir.exists():
+        for f in lyrics_dir.glob("*.md"):
+            m = _re.match(r"^(\d+)-", f.name)
+            if m:
+                max_num = max(max_num, int(m.group(1)))
+    return max_num + 1
+
+
 def save_lyrics(
     fetched: FetchedLyrics,
     lyrics_dir: Path,
@@ -120,11 +133,12 @@ def save_lyrics(
     artist_override: str = "",
     title_override: str = "",
 ) -> Path:
-    """Save fetched lyrics as a markdown file in the lyrics directory."""
+    """Save fetched lyrics as a numbered markdown file in the lyrics directory."""
     title = _sanitize_filename_part(title_override or fetched.title)
     artist = _sanitize_filename_part(artist_override or fetched.artist)
 
-    filename = f"{artist}-{title}.md"
+    num = _next_song_number(lyrics_dir)
+    filename = f"{num:02d}-{artist}-{title}.md"
     filepath = (lyrics_dir / filename).resolve()
     # Guard against path traversal
     if not str(filepath).startswith(str(lyrics_dir.resolve())):

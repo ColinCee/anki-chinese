@@ -114,7 +114,7 @@ def test_save_lyrics_creates_markdown_file(tmp_path: Path) -> None:
     )
     path = save_lyrics(fetched, tmp_path)
 
-    assert path.name == "陈势安-天后.md"
+    assert path.name == "01-陈势安-天后.md"
     content = path.read_text(encoding="utf-8")
     assert "title: 天后" in content
     assert "artist: 陈势安" in content
@@ -127,9 +127,21 @@ def test_save_lyrics_with_overrides(tmp_path: Path) -> None:
     )
     path = save_lyrics(fetched, tmp_path, artist_override="于冬然", title_override="天后")
 
-    assert path.name == "于冬然-天后.md"
+    assert path.name == "01-于冬然-天后.md"
     content = path.read_text(encoding="utf-8")
     assert "artist: 于冬然" in content
+
+
+def test_save_lyrics_auto_increments_number(tmp_path: Path) -> None:
+    # Create an existing file with number 05
+    (tmp_path / "05-周杰伦-搁浅.md").write_text("existing", encoding="utf-8")
+
+    fetched = FetchedLyrics(
+        title="天后", artist="陈势安", lyrics="歌词内容", source_id=1
+    )
+    path = save_lyrics(fetched, tmp_path)
+
+    assert path.name == "06-陈势安-天后.md"
 
 
 def test_lyrics_search_result_url() -> None:
