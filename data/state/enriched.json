@@ -1560,7 +1560,7 @@
     "sentence_audio": "[sound:cmn_sentence_大家都知道昭君的故事.mp3]",
     "stroke_order": "<img src=\"662d.gif\" />",
     "heisig_num": "87",
-    "lesson": "RSH1-L05",
+    "lesson": "leech RSH1-L05",
     "story": "The <b>Sun</b> (日) on your <b>Landing</b> (1st Tone) is so <b>Bright</b> it actually <b>Summons</b> (召) <b>Joe</b> (<i>zhāo</i>) out of his room.",
     "needs_review": false,
     "review_reason": ""
@@ -4620,7 +4620,7 @@
     "sentence_audio": "[sound:cmn_sentence_我每天都要洗一次澡.mp3]",
     "stroke_order": "<img src=\"6d17.gif\">",
     "heisig_num": "257",
-    "lesson": "RSH1-L11",
+    "lesson": "leech RSH1-L11",
     "story": "<b>She</b> (xıˇ) is out in your <b>Garden</b> (3rd tone) trying to <b>Wash</b> (洗) her costume. She needs to use the <b>Water</b> (氵) <b>Before</b> (先) you wake up and see her.",
     "needs_review": false,
     "review_reason": ""
@@ -4710,7 +4710,7 @@
     "sentence_audio": "[sound:cmn_sentence_这双鞋穿起来很合适.mp3]",
     "stroke_order": "<img src=\"5408.gif\" />",
     "heisig_num": "262",
-    "lesson": "RSH1-L12",
+    "lesson": "activated::song::学猫叫 RSH1-L12",
     "story": "",
     "needs_review": false,
     "review_reason": ""
@@ -9334,7 +9334,7 @@
     "sentence_pinyin": "wǒ yǐ jīng chī guò wǔ fàn le",
     "sentence_english": "I have already eaten lunch.",
     "sentence_audio": "[sound:cmn_sentence_我已经吃过午饭了.mp3]",
-    "stroke_order": "<img src=\"5df2.gif\" />",
+    "stroke_order": "<img src=\"5df2.gif\">",
     "heisig_num": "519",
     "lesson": "RSH1-L20",
     "story": "",
@@ -15114,7 +15114,7 @@
     "sentence_audio": "[sound:cmn_sentence_请把书放在桌子内.mp3]",
     "stroke_order": "<img src=\"5185.gif\" />",
     "heisig_num": "840",
-    "lesson": "RSH1-L26",
+    "lesson": "activated::song::学猫叫 RSH1-L26",
     "story": "",
     "needs_review": false,
     "review_reason": ""
@@ -18714,7 +18714,7 @@
     "sentence_audio": "[sound:cmn_sentence_他正看著那本書呢.mp3]",
     "stroke_order": "<img src=\"8457.gif\" />",
     "heisig_num": "1040",
-    "lesson": "RSH1-L33",
+    "lesson": "activated::song::学猫叫 RSH1-L33",
     "story": "",
     "needs_review": false,
     "review_reason": ""
@@ -43248,7 +43248,7 @@
     "sentence_audio": "[sound:cmn_sentence_哎哟，我的肚子很疼。.mp3]",
     "stroke_order": "<img src=\"54df.gif\" />",
     "heisig_num": "2403",
-    "lesson": "RSH2-L35",
+    "lesson": "activated::song::学猫叫 RSH2-L35",
     "story": "",
     "needs_review": false,
     "review_reason": ""
