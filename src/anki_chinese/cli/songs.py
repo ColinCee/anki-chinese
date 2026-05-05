@@ -18,6 +18,7 @@ from ..songs import (
     extract_cjk,
     fetch_lyrics_by_id,
     find_song,
+    is_cjk,
     load_songs,
     plan_song_activation,
     save_lyrics,
@@ -380,6 +381,15 @@ def run_songs_verify(runtime: AppRuntime, *, lyrics_dir: Path) -> bool:
         if trad_found:
             errors.append((fname, f"Traditional characters found: {' '.join(sorted(trad_found))}"))
 
+        # Check title characters appear in lyrics
+        title_cjk = {c for c in song.title if is_cjk(c)}
+        lyrics_cjk = {c for c in song.lyrics if is_cjk(c)}
+        missing_title_chars = title_cjk - lyrics_cjk
+        if missing_title_chars:
+            warnings.append(
+                (fname, f"Title chars missing from lyrics: {' '.join(sorted(missing_title_chars))}")
+            )
+
         # Check minimum unique character count
         char_count = len(extract_cjk(song.lyrics))
         if char_count < 20:
@@ -428,6 +438,114 @@ def run_songs_verify(runtime: AppRuntime, *, lyrics_dir: Path) -> bool:
         f"[red]{len(errors)} errors[/red] · [yellow]{len(warnings)} warnings[/yellow]"
     )
     return len(errors) == 0
+
+
+def run_songs_verify_online(runtime: AppRuntime, *, lyrics_dir: Path) -> bool:
+    """Verify lyrics against lyrics.net.cn. Returns True if all match."""
+    import time
+
+    files = sorted(lyrics_dir.glob("*.md"))
+    if not files:
+        runtime.console.print(f"[red]✗[/red] No lyric files found in {lyrics_dir}")
+        raise typer.Exit(1)
+
+    from ..songs import parse_lyric_file
+
+    issues: list[tuple[str, str, str]] = []  # (filename, severity, message)
+    skipped: list[str] = []
+
+    for path in files:
+        song = parse_lyric_file(path)
+        runtime.console.print(f"[dim]Checking {song.label}...[/dim]", end=" ")
+
+        try:
+            results = search_lyrics(song.title)
+        except Exception:
+            runtime.console.print("[yellow]search failed[/yellow]")
+            skipped.append(song.label)
+            time.sleep(1)
+            continue
+
+        # Find best artist match
+        match = None
+        for r in results:
+            if (
+                r.artist == song.artist
+                or song.artist in r.artist
+                or r.artist in song.artist
+            ):
+                match = r
+                break
+        if not match:
+            runtime.console.print("[yellow]not found[/yellow]")
+            skipped.append(song.label)
+            time.sleep(1)
+            continue
+
+        try:
+            fetched = fetch_lyrics_by_id(match.id)
+        except Exception:
+            runtime.console.print("[yellow]fetch failed[/yellow]")
+            skipped.append(song.label)
+            time.sleep(1)
+            continue
+
+        # Compare CJK character sets (the meaningful comparison)
+        local_cjk = {c for c in song.lyrics if is_cjk(c)}
+        remote_cjk = {c for c in fetched.lyrics if is_cjk(c)}
+        missing_chars = remote_cjk - local_cjk
+
+        local_lines = len(song.lyrics.strip().split("\n"))
+        remote_lines = len(fetched.lyrics.strip().split("\n"))
+        line_diff = remote_lines - local_lines
+
+        if not missing_chars and abs(line_diff) <= 5:
+            runtime.console.print("[green]✓[/green]")
+        elif missing_chars:
+            missing_display = " ".join(sorted(missing_chars)[:15])
+            severity = "error" if len(missing_chars) > 3 else "warning"
+            msg = f"Missing {len(missing_chars)} chars from source: {missing_display}"
+            if line_diff > 5:
+                msg += f" (remote has {line_diff} more lines)"
+            issues.append((path.stem, severity, msg))
+            runtime.console.print(f"[red]✗ {msg}[/red]")
+        elif line_diff > 5:
+            msg = f"Local is {line_diff} lines shorter than source"
+            issues.append((path.stem, "warning", msg))
+            runtime.console.print(f"[yellow]⚠ {msg}[/yellow]")
+        else:
+            runtime.console.print("[green]✓[/green]")
+
+        time.sleep(0.5)  # rate limit
+
+    # Report
+    runtime.console.print()
+    if skipped:
+        runtime.console.print(
+            f"[dim]Skipped {len(skipped)}: {', '.join(skipped)}[/dim]\n"
+        )
+
+    if not issues:
+        runtime.console.print(
+            "[green]✓[/green] All checked songs match their online source."
+        )
+        return True
+
+    error_count = sum(1 for _, sev, _ in issues if sev == "error")
+    warn_count = sum(1 for _, sev, _ in issues if sev == "warning")
+    table = Table(title="Online Verification Issues", title_style="bold")
+    table.add_column("File", style="cyan")
+    table.add_column("Issue")
+    for fname, severity, msg in issues:
+        style = "red" if severity == "error" else "yellow"
+        table.add_row(fname, f"[{style}]{msg}[/{style}]")
+    runtime.console.print(table)
+    runtime.console.print(
+        f"\n[bold]{len(files)} songs:[/bold] "
+        f"[red]{error_count} errors[/red] · [yellow]{warn_count} warnings[/yellow] · "
+        f"[dim]{len(skipped)} skipped[/dim]"
+    )
+    return error_count == 0
 
 
 def register(app: typer.Typer, runtime: AppRuntime) -> None:
@@ -524,9 +642,17 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             "--lyrics-dir",
             help="Directory of lyric markdown files.",
         ),
+        online: bool = typer.Option(
+            False,
+            "--online",
+            help="Also verify lyrics against lyrics.net.cn (network required).",
+        ),
     ) -> None:
         """Verify integrity of all lyric files (frontmatter, content, duplicates)."""
         ok = run_songs_verify(runtime, lyrics_dir=lyrics_dir)
+        if online:
+            online_ok = run_songs_verify_online(runtime, lyrics_dir=lyrics_dir)
+            ok = ok and online_ok
         if not ok:
             raise typer.Exit(1)
 
