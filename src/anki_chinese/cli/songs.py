@@ -182,20 +182,76 @@ def _song_plan_from_query(
     )
 
 
+def _song_plan_from_next_sequence(
+    runtime: AppRuntime,
+    *,
+    lyrics_dir: Path,
+    limit: int,
+    knowledge_client: KnowledgeClient | None = None,
+) -> SongActivationPlan:
+    songs, active_chars, deck_chars, deck_order = _load_song_inputs(
+        runtime,
+        lyrics_dir=lyrics_dir,
+        client=knowledge_client,
+    )
+    if not songs:
+        runtime.console.print(f"[red]✗[/red] No lyric files found in {lyrics_dir}")
+        raise typer.Exit(1)
+
+    analysis = analyze_song_corpus(
+        songs,
+        active_chars=active_chars,
+        deck_chars=deck_chars,
+    )
+    skipped_complete = 0
+    selected_song: LyricSong | None = None
+    for row in analysis.sequence:
+        if row.new_deck_chars:
+            selected_song = row.song
+            break
+        skipped_complete += 1
+
+    if selected_song is None:
+        runtime.console.print("[green]✓[/green] No songs have remaining in-deck chars")
+        raise typer.Exit(0)
+
+    if skipped_complete:
+        runtime.console.print(
+            f"[dim]Skipped {skipped_complete} songs with 0 new in-deck chars.[/dim]"
+        )
+    runtime.console.print(f"[dim]Auto-selected next song:[/dim] {selected_song.label}")
+    return plan_song_activation(
+        selected_song,
+        active_chars=active_chars,
+        deck_chars=deck_chars,
+        deck_order=deck_order,
+        limit=limit,
+    )
+
+
 def run_songs_next(
     runtime: AppRuntime,
-    song_query: str,
+    song_query: str = "",
     *,
     lyrics_dir: Path,
     limit: int = 20,
     knowledge_client: KnowledgeClient | None = None,
 ) -> SongActivationPlan:
-    plan = _song_plan_from_query(
-        runtime,
-        song_query,
-        lyrics_dir=lyrics_dir,
-        limit=limit,
-        knowledge_client=knowledge_client,
+    plan = (
+        _song_plan_from_query(
+            runtime,
+            song_query,
+            lyrics_dir=lyrics_dir,
+            limit=limit,
+            knowledge_client=knowledge_client,
+        )
+        if song_query
+        else _song_plan_from_next_sequence(
+            runtime,
+            lyrics_dir=lyrics_dir,
+            limit=limit,
+            knowledge_client=knowledge_client,
+        )
     )
     _print_song_plan(runtime, plan)
     return plan
@@ -203,7 +259,7 @@ def run_songs_next(
 
 def run_songs_activate(
     runtime: AppRuntime,
-    song_query: str,
+    song_query: str = "",
     *,
     lyrics_dir: Path,
     limit: int = 20,
@@ -575,7 +631,13 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
 
     @songs_app.command("next")
     def next_command(
-        song: str = typer.Argument(..., help="Song title, file stem, or unique substring."),
+        song: str = typer.Argument(
+            "",
+            help=(
+                "Song title, file stem, or unique substring. "
+                "Omit to select the first analyzed song with new in-deck chars."
+            ),
+        ),
         limit: int = typer.Option(20, "--limit", "-n", min=0, help="Max chars to show."),
         lyrics_dir: Path = typer.Option(
             runtime.song_lyrics_dir,
@@ -588,7 +650,13 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
 
     @songs_app.command("activate")
     def activate_command(
-        song: str = typer.Argument(..., help="Song title, file stem, or unique substring."),
+        song: str = typer.Argument(
+            "",
+            help=(
+                "Song title, file stem, or unique substring. "
+                "Omit to select the first analyzed song with new in-deck chars."
+            ),
+        ),
         limit: int = typer.Option(20, "--limit", "-n", min=1, help="Max chars to activate."),
         all_remaining: bool = typer.Option(
             False,

@@ -1,7 +1,7 @@
 import pytest
 import typer
 
-from anki_chinese.cli.audio import run_audio
+from anki_chinese.cli.audio import run_audio, run_audio_clean
 from anki_chinese.notes import CharacterNote
 
 
@@ -40,3 +40,51 @@ def test_run_audio_exits_when_requested_character_is_missing(runtime_factory) ->
         run_audio(runtime, char="三")
 
     assert exc_info.value.exit_code == 1
+
+
+def test_run_audio_clean_reports_orphans_without_deleting(runtime_factory) -> None:
+    note = CharacterNote(hanzi="水", sentence_audio="[sound:cmn_sentence_我喝水。.mp3]")
+    runtime = runtime_factory(saved_notes=[note])
+    runtime.generated_audio_dir.mkdir(parents=True)
+    kept = runtime.generated_audio_dir / "cmn_sentence_我喝水。.mp3"
+    orphan = runtime.generated_audio_dir / "cmn_sentence_old.mp3"
+    kept.write_bytes(b"ID3")
+    orphan.write_bytes(b"ID3")
+
+    removed = run_audio_clean(runtime)
+
+    assert removed == ["cmn_sentence_old.mp3"]
+    assert orphan.exists()
+    output = runtime.console.file.getvalue()  # type: ignore[union-attr]
+    assert "Dry run" in output
+
+
+def test_run_audio_clean_deletes_orphans_when_applied(runtime_factory) -> None:
+    note = CharacterNote(hanzi="水", sentence_audio="[sound:cmn_sentence_我喝水。.mp3]")
+    runtime = runtime_factory(saved_notes=[note])
+    runtime.generated_audio_dir.mkdir(parents=True)
+    kept = runtime.generated_audio_dir / "cmn_sentence_我喝水。.mp3"
+    orphan = runtime.generated_audio_dir / "cmn_sentence_old.mp3"
+    kept.write_bytes(b"ID3")
+    orphan.write_bytes(b"ID3")
+
+    removed = run_audio_clean(runtime, apply=True)
+
+    assert removed == ["cmn_sentence_old.mp3"]
+    assert kept.exists()
+    assert not orphan.exists()
+
+
+def test_run_audio_clean_can_filter_to_sentence_orphans(runtime_factory) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="水")])
+    runtime.generated_audio_dir.mkdir(parents=True)
+    sentence_orphan = runtime.generated_audio_dir / "cmn_sentence_old.mp3"
+    mandarin_orphan = runtime.generated_audio_dir / "cmn_旧_jiù.mp3"
+    sentence_orphan.write_bytes(b"ID3")
+    mandarin_orphan.write_bytes(b"ID3")
+
+    removed = run_audio_clean(runtime, apply=True, kind="sentence")
+
+    assert removed == ["cmn_sentence_old.mp3"]
+    assert not sentence_orphan.exists()
+    assert mandarin_orphan.exists()

@@ -119,6 +119,60 @@ class TestCharCheckRetries:
         assert result.sentence == ""
 
 
+class TestPhoneticConfuserRetries:
+    def test_retries_when_sentence_has_phonetic_confuser(self):
+        gen = SentenceGenerator(api_key="fake")
+        responses = [
+            _mock_response(
+                _sentence_json(
+                    "他的工作表现很卓越",
+                    pinyin="tā de gōng zuò biǎo xiàn hěn zhuó yuè",
+                    meaning="eminent",
+                    character_pinyin="zhuó",
+                )
+            ),
+            _mock_response(
+                _sentence_json(
+                    "他表现很卓越",
+                    pinyin="tā biǎo xiàn hěn zhuó yuè",
+                    meaning="eminent",
+                    character_pinyin="zhuó",
+                )
+            ),
+            _mock_response(_validation_json()),
+        ]
+        gen._client = MagicMock()
+        gen._client.models.generate_content = MagicMock(side_effect=responses)
+
+        result = gen.generate("卓", pinyin="zhuó")
+
+        assert result.valid is True
+        assert result.sentence == "他表现很卓越"
+        assert gen._client.models.generate_content.call_count == 3
+
+    def test_returns_error_after_confuser_retries_exhausted(self):
+        gen = SentenceGenerator(api_key="fake")
+        responses = [
+            _mock_response(
+                _sentence_json(
+                    "他的工作表现很卓越",
+                    pinyin="tā de gōng zuò biǎo xiàn hěn zhuó yuè",
+                    meaning="eminent",
+                    character_pinyin="zhuó",
+                )
+            )
+            for _ in range(3)
+        ]
+        gen._client = MagicMock()
+        gen._client.models.generate_content = MagicMock(side_effect=responses)
+
+        result = gen.generate("卓", pinyin="zhuó")
+
+        assert result.valid is False
+        assert "phonetic confusers" in result.error
+        assert result.sentence == ""
+
+
 class TestValidationFlagging:
     """Validation flags error → returns sentence marked invalid for review."""
 

@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 
 from ..config import CEDICT_PATH
 from ..data_sources import lookup_char_defs
-from ..notes import find_phonetic_confusers
+from ..notes import PhoneticConfuser, find_phonetic_confuser_details
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ SYSTEM_INSTRUCTION = (
     "2. 6–10 Chinese characters long\n"
     "3. Natural — something a native speaker would actually say in daily life\n"
     "4. Use the character in its most common, everyday meaning\n"
-    "5. Keep other vocabulary simple and common\n"
+    "5. Keep other vocabulary simple, common, and useful for day-to-day adult speech\n"
     "6. For the meaning field: give the character's CORE dictionary meaning first. "
     "If the character appears in a compound with a different meaning, add "
     "'; in [compound]: compound meaning' (e.g. 'silver; in 银行: bank'). "
@@ -171,22 +171,12 @@ class SentenceGenerator:
             )
         history: list[types.Content] = [types.Content(role="user", parts=[types.Part(text=prompt)])]
 
-        # Step 1: generate + code char-check with retries (1 API call usually)
-        parsed = self._generate_with_char_check(hanzi, history, gen_config)
+        # Step 1: generate + deterministic code checks with retries (1 API call usually)
+        parsed, error = self._generate_with_code_checks(hanzi, pinyin, history, gen_config)
         if parsed is None:
-            return SentenceResult(
-                "", "", "", "", "", valid=False, error="target char missing after retries"
-            )
+            return SentenceResult("", "", "", "", "", valid=False, error=error)
 
-        # Step 2: Code-level phonetic confuser check
-        confusers = find_phonetic_confusers(
-            hanzi, parsed.character_pinyin or pinyin, parsed.sentence, parsed.pinyin
-        )
-        if confusers:
-            labels = ", ".join(f"{ch}({py})[{sev}]" for ch, py, sev in confusers)
-            logger.warning("%s: phonetic confusers in sentence: %s", hanzi, labels)
-
-        # Step 3: LLM self-validation (1 API call) — flag but don't retry
+        # Step 2: LLM self-validation (1 API call) — flag but don't retry
         validation = self._validate(history, val_config)
         if validation is None or (validation.grammar_correct and validation.natural):
             return self._to_result(parsed, valid=True)
@@ -197,27 +187,63 @@ class SentenceGenerator:
 
     # -- Private helpers (all hidden behind generate()) --------------------
 
-    def _generate_with_char_check(
+    def _generate_with_code_checks(
         self,
         hanzi: str,
+        pinyin: str,
         history: list[types.Content],
         config: types.GenerateContentConfig,
-    ) -> _SentenceSchema | None:
+    ) -> tuple[_SentenceSchema | None, str]:
         parsed = None
+        last_error = "target char missing after retries"
         for _ in range(_MAX_CHAR_RETRIES + 1):
             resp = self._call(history, config)
             if resp is None:
                 continue
             parsed = _SentenceSchema.model_validate_json(resp)
             history.append(types.Content(role="model", parts=[types.Part(text=resp)]))
-            if hanzi in parsed.sentence:
-                return parsed
+            if hanzi not in parsed.sentence:
+                retry_msg = (
+                    f'WRONG. Your sentence "{parsed.sentence}" does not contain '
+                    f"the character {hanzi}. Try again."
+                )
+                history.append(types.Content(role="user", parts=[types.Part(text=retry_msg)]))
+                last_error = "target char missing after retries"
+                continue
+
+            confusers = self._find_blocking_confusers(hanzi, pinyin, parsed)
+            if not confusers:
+                return parsed, ""
+
+            labels = self._format_confusers(confusers)
+            logger.warning("%s: phonetic confusers in sentence: %s", hanzi, labels)
             retry_msg = (
-                f'WRONG. Your sentence "{parsed.sentence}" does not contain '
-                f"the character {hanzi}. Try again."
+                f'WRONG. Your sentence "{parsed.sentence}" contains characters that sound '
+                f"too similar to target {hanzi} ({parsed.character_pinyin or pinyin}): "
+                f"{labels}. Generate a different common day-to-day sentence. Avoid exact "
+                "homophones, same-base syllables with different tones, and zh/z, ch/c, "
+                "or sh/s near-collisions with the same final."
             )
             history.append(types.Content(role="user", parts=[types.Part(text=retry_msg)]))
-        return None
+            last_error = f"phonetic confusers after retries: {labels}"
+        return None, last_error
+
+    @staticmethod
+    def _find_blocking_confusers(
+        hanzi: str,
+        fallback_pinyin: str,
+        parsed: _SentenceSchema,
+    ) -> list[PhoneticConfuser]:
+        return find_phonetic_confuser_details(
+            hanzi,
+            parsed.character_pinyin or fallback_pinyin,
+            parsed.sentence,
+            parsed.pinyin,
+        )
+
+    @staticmethod
+    def _format_confusers(confusers: list[PhoneticConfuser]) -> str:
+        return ", ".join(f"{c.character}({c.pinyin})[{c.severity}]" for c in confusers)
 
     def _validate(
         self,

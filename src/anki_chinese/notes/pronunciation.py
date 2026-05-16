@@ -4,7 +4,31 @@ from __future__ import annotations
 
 __all__: list[str] = []  # Internal module — import from package instead
 
+import re
+from dataclasses import dataclass
+from typing import Literal
+
 from pypinyin.contrib.tone_convert import to_normal
+
+ConfuserSeverity = Literal["exact", "same-base", "near-retroflex", "same-final"]
+
+_RETROFLEX_PAIRS = {
+    ("zh", "z"),
+    ("z", "zh"),
+    ("ch", "c"),
+    ("c", "ch"),
+    ("sh", "s"),
+    ("s", "sh"),
+}
+
+
+@dataclass(frozen=True)
+class PhoneticConfuser:
+    character: str
+    pinyin: str
+    severity: ConfuserSeverity
+    position: int
+
 
 # Pinyin initials sorted longest-first for greedy matching
 _INITIALS = (
@@ -92,7 +116,8 @@ def _split_pinyin_tokens(sentence_pinyin: str, num_chars: int) -> list[str] | No
     on boundaries between a tone vowel's consonant cluster and the next onset.
     Returns None if the result doesn't align with *num_chars*.
     """
-    tokens = sentence_pinyin.replace(",", "").replace(".", "").replace("?", "").split()
+    cleaned = re.sub(r"[，。！？；：、,.?!;:]", " ", sentence_pinyin)
+    tokens = cleaned.split()
     if len(tokens) == num_chars:
         return tokens
 
@@ -100,24 +125,52 @@ def _split_pinyin_tokens(sentence_pinyin: str, num_chars: int) -> list[str] | No
     return None
 
 
-def find_phonetic_confusers(
+def _classify_confuser(
+    target_pinyin: str,
+    other_pinyin: str,
+    *,
+    include_same_final: bool = False,
+) -> ConfuserSeverity | None:
+    target_base = to_normal(target_pinyin).lower().strip()
+    other_base = to_normal(other_pinyin).lower().strip()
+    if not target_base or not other_base:
+        return None
+
+    target_tone = _tone_number(target_pinyin)
+    other_tone = _tone_number(other_pinyin)
+    if target_base == other_base:
+        return "exact" if target_tone == other_tone else "same-base"
+
+    target_initial, target_final = _split_syllable(target_base)
+    other_initial, other_final = _split_syllable(other_base)
+    if target_final == other_final and (target_initial, other_initial) in _RETROFLEX_PAIRS:
+        return "near-retroflex"
+
+    if include_same_final and target_final == other_final:
+        return "same-final"
+
+    return None
+
+
+def find_phonetic_confuser_details(
     hanzi: str,
     char_pinyin: str,
     sentence: str,
     sentence_pinyin: str,
-) -> list[tuple[str, str, str]]:
+    *,
+    include_same_final: bool = False,
+) -> list[PhoneticConfuser]:
     """Find characters in *sentence* that sound confusingly similar to *hanzi*.
 
-    Returns list of (character, its_pinyin, severity) where severity is:
+    Returns a list of confusers where severity is:
     - "exact": same syllable + same tone (true homophone)
     - "same-base": same syllable, different tone
+    - "near-retroflex": zh/z, ch/c, or sh/s with the same final
+    - "same-final": same final/rhyme, only when include_same_final is true
     """
     from pypinyin import Style, lazy_pinyin
 
-    char_base = to_normal(char_pinyin).lower().strip()
-    char_tone = _tone_number(char_pinyin)
-
-    if not char_base:
+    if not to_normal(char_pinyin).strip():
         return []
 
     cjk_chars = [ch for ch in sentence if "\u4e00" <= ch <= "\u9fff"]
@@ -129,19 +182,38 @@ def find_phonetic_confusers(
     if len(syllables) != len(cjk_chars):
         return []
 
-    confusers: list[tuple[str, str, str]] = []
-    for ch, syl in zip(cjk_chars, syllables, strict=True):
+    confusers: list[PhoneticConfuser] = []
+    for position, (ch, syl) in enumerate(zip(cjk_chars, syllables, strict=True)):
         if ch == hanzi:
             continue
 
-        s_base = to_normal(syl).lower().strip()
-        s_tone = _tone_number(syl)
-
-        if s_base == char_base:
-            severity = "exact" if s_tone == char_tone else "same-base"
-            confusers.append((ch, syl, severity))
+        severity = _classify_confuser(
+            char_pinyin,
+            syl,
+            include_same_final=include_same_final,
+        )
+        if severity:
+            confusers.append(PhoneticConfuser(ch, syl, severity, position))
 
     return confusers
+
+
+def find_phonetic_confusers(
+    hanzi: str,
+    char_pinyin: str,
+    sentence: str,
+    sentence_pinyin: str,
+) -> list[tuple[str, str, str]]:
+    """Compatibility wrapper returning (character, pinyin, severity) tuples."""
+    return [
+        (confuser.character, confuser.pinyin, confuser.severity)
+        for confuser in find_phonetic_confuser_details(
+            hanzi,
+            char_pinyin,
+            sentence,
+            sentence_pinyin,
+        )
+    ]
 
 
 def reading_matches(

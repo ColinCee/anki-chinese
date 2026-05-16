@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from anki_chinese.cli.sentences import apply_sentence, run_sentences
+from anki_chinese.cli import create_app
+from anki_chinese.cli.sentences import (
+    apply_sentence,
+    run_repair_confusers,
+    run_sentence_audit,
+    run_sentences,
+)
 from anki_chinese.notes import CharacterNote
 from anki_chinese.sentences.generator import SentenceResult
 
@@ -185,6 +191,165 @@ class TestAllSentencesExist:
 
         output = runtime.console.file.getvalue()  # type: ignore[union-attr]
         assert "already have" in output.lower()
+
+
+class TestSentenceAudit:
+    def test_reports_ambiguous_sentences_without_mutating_notes(self, runtime_factory):
+        notes = [
+            CharacterNote(
+                hanzi="卓",
+                meaning="eminent",
+                pinyin="zhuó",
+                sentence="他的工作表现很卓越",
+                sentence_pinyin="tā de gōng zuò biǎo xiàn hěn zhuó yuè",
+                sentence_audio="[sound:old.mp3]",
+                heisig_num="48",
+            ),
+            CharacterNote(
+                hanzi="水",
+                meaning="water",
+                pinyin="shuǐ",
+                sentence="我喝水。",
+                sentence_pinyin="wǒ hē shuǐ.",
+            ),
+        ]
+        runtime = runtime_factory(saved_notes=notes)
+
+        issues = run_sentence_audit(runtime)
+
+        assert len(issues) == 1
+        assert issues[0][0].hanzi == "卓"
+        assert issues[0][1][0].character == "作"
+        saved = runtime.note_store.load()
+        assert saved[0].sentence == "他的工作表现很卓越"
+        assert saved[0].sentence_audio == "[sound:old.mp3]"
+        output = runtime.console.file.getvalue()  # type: ignore[union-attr]
+        assert "phonetic ambiguity" in output
+        assert "near-retroflex" in output
+
+    def test_reports_clean_deck(self, runtime_factory):
+        runtime = runtime_factory(
+            saved_notes=[
+                CharacterNote(
+                    hanzi="水",
+                    meaning="water",
+                    pinyin="shuǐ",
+                    sentence="我喝水。",
+                    sentence_pinyin="wǒ hē shuǐ.",
+                )
+            ]
+        )
+
+        assert run_sentence_audit(runtime) == []
+        output = runtime.console.file.getvalue()  # type: ignore[union-attr]
+        assert "No sentence phonetic ambiguity" in output
+
+
+class TestRepairConfusers:
+    def test_dry_run_reports_without_mutating_or_requiring_api_key(self, runtime_factory):
+        notes = [
+            CharacterNote(
+                hanzi="卓",
+                meaning="eminent",
+                pinyin="zhuó",
+                sentence="他的工作表现很卓越",
+                sentence_pinyin="tā de gōng zuò biǎo xiàn hěn zhuó yuè",
+                sentence_audio="[sound:old.mp3]",
+            )
+        ]
+        runtime = runtime_factory(saved_notes=notes)
+
+        with patch.dict("os.environ", {"GEMINI_API_KEY": ""}, clear=False):
+            run_repair_confusers(runtime)
+
+        saved = runtime.note_store.load()
+        assert saved[0].sentence == "他的工作表现很卓越"
+        assert saved[0].sentence_audio == "[sound:old.mp3]"
+        output = runtime.console.file.getvalue()  # type: ignore[union-attr]
+        assert "Dry run" in output
+
+    def test_apply_regenerates_ambiguous_sentence_and_clears_audio(self, runtime_factory):
+        notes = [
+            CharacterNote(
+                hanzi="卓",
+                meaning="eminent",
+                pinyin="zhuó",
+                sentence="他的工作表现很卓越",
+                sentence_pinyin="tā de gōng zuò biǎo xiàn hěn zhuó yuè",
+                sentence_audio="[sound:old.mp3]",
+            )
+        ]
+        runtime = runtime_factory(saved_notes=notes)
+        result = SentenceResult(
+            sentence="他表现很卓越",
+            pinyin="tā biǎo xiàn hěn zhuó yuè",
+            english="His performance is outstanding.",
+            meaning="eminent; outstanding",
+            character_pinyin="zhuó",
+            valid=True,
+        )
+
+        with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
+            MockGen.return_value.generate.return_value = result
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}):
+                run_repair_confusers(runtime, apply=True)
+
+        MockGen.return_value.generate.assert_called_once_with("卓", pinyin="zhuó")
+        saved = runtime.note_store.load()
+        assert saved[0].sentence == "他表现很卓越"
+        assert saved[0].sentence_audio == ""
+
+    def test_apply_skips_still_ambiguous_replacement(self, runtime_factory):
+        notes = [
+            CharacterNote(
+                hanzi="卓",
+                meaning="eminent",
+                pinyin="zhuó",
+                sentence="他的工作表现很卓越",
+                sentence_pinyin="tā de gōng zuò biǎo xiàn hěn zhuó yuè",
+                sentence_audio="[sound:old.mp3]",
+            )
+        ]
+        runtime = runtime_factory(saved_notes=notes)
+        result = SentenceResult(
+            sentence="他的工作表现很卓越",
+            pinyin="tā de gōng zuò biǎo xiàn hěn zhuó yuè",
+            english="His work performance is outstanding.",
+            meaning="eminent; outstanding",
+            character_pinyin="zhuó",
+            valid=True,
+        )
+
+        with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
+            MockGen.return_value.generate.return_value = result
+            with patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}):
+                run_repair_confusers(runtime, apply=True)
+
+        saved = runtime.note_store.load()
+        assert saved[0].sentence == "他的工作表现很卓越"
+        assert saved[0].sentence_audio == "[sound:old.mp3]"
+        output = runtime.console.file.getvalue()  # type: ignore[union-attr]
+        assert "still ambiguous" in output
+
+    def test_nested_repair_command_is_available(self, runtime_factory, runner):
+        runtime = runtime_factory(
+            saved_notes=[
+                CharacterNote(
+                    hanzi="卓",
+                    meaning="eminent",
+                    pinyin="zhuó",
+                    sentence="他的工作表现很卓越",
+                    sentence_pinyin="tā de gōng zuò biǎo xiàn hěn zhuó yuè",
+                )
+            ]
+        )
+        app = create_app(runtime)
+
+        result = runner.invoke(app, ["sentences", "repair-confusers"])
+
+        assert result.exit_code == 0
+        output = runtime.console.file.getvalue()  # type: ignore[union-attr]
+        assert "Dry run" in output
 
 
 class TestApplySentence:

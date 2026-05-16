@@ -4,11 +4,13 @@ from .errors import TTSConfigurationError, TTSError, TTSRateLimitError, classify
 from .factory import PROVIDER_NAMES, build_tts_provider
 from .files import (
     audio_tasks_for_note,
+    collect_orphaned_audio,
     expected_cantonese_audio_tag,
     expected_mandarin_audio_tag,
     expected_sentence_audio_tag,
     is_valid_audio_tag,
     preview_mandarin_filename,
+    remove_orphaned_audio,
 )
 from .provider import ProviderCapabilities, TTSProvider
 from .rate_limit import NoOpRateLimiter, RateLimiter, SlidingWindowRateLimiter
@@ -28,9 +30,11 @@ __all__ = [
     "synthesize_with_retry",
     "audio_tasks_for_note",
     "build_tts_provider",
+    "collect_orphaned_audio",
     "expected_cantonese_audio_tag",
     "expected_mandarin_audio_tag",
     "expected_sentence_audio_tag",
     "is_valid_audio_tag",
     "preview_mandarin_filename",
+    "remove_orphaned_audio",
 ]

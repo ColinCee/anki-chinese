@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import os
+from collections import Counter
 
 import typer
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
-from ..notes import CharacterNote, filter_from_rsh, prioritize_learned
+from ..notes import (
+    CharacterNote,
+    PhoneticConfuser,
+    filter_from_rsh,
+    find_phonetic_confuser_details,
+    prioritize_learned,
+)
 from ..sentences import SentenceResult
 from .app import AppRuntime
 
@@ -39,6 +46,191 @@ def _candidates_table(candidates: list[SentenceResult]) -> Table:
         ok = "[green]✓[/green]" if c.valid else "[red]✗[/red]"
         table.add_row(str(i), c.sentence, c.pinyin, c.english, c.meaning, c.character_pinyin, ok)
     return table
+
+
+def _format_confusers(confusers: list[PhoneticConfuser]) -> str:
+    return ", ".join(f"{c.character}({c.pinyin}, {c.severity})" for c in confusers)
+
+
+def _sentence_audit_table(
+    issues: list[tuple[CharacterNote, list[PhoneticConfuser]]],
+    *,
+    limit: int = 0,
+) -> Table:
+    table = Table(title="Sentence phonetic ambiguity")
+    table.add_column("RSH", justify="right")
+    table.add_column("Char", style="bold cyan")
+    table.add_column("Pinyin", style="magenta")
+    table.add_column("Sentence")
+    table.add_column("Confusers", style="yellow")
+
+    shown = issues[:limit] if limit > 0 else issues
+    for note, confusers in shown:
+        table.add_row(
+            note.heisig_num,
+            note.hanzi,
+            note.pinyin,
+            note.sentence,
+            _format_confusers(confusers),
+        )
+    return table
+
+
+def _find_sentence_confuser_issues(
+    notes: list[CharacterNote],
+    *,
+    include_same_final: bool = False,
+    char: str = "",
+    limit: int = 0,
+) -> list[tuple[CharacterNote, list[PhoneticConfuser]]]:
+    issues: list[tuple[CharacterNote, list[PhoneticConfuser]]] = []
+
+    for note in notes:
+        if char and note.hanzi != char:
+            continue
+        if not note.sentence or not note.pinyin:
+            continue
+        confusers = find_phonetic_confuser_details(
+            note.hanzi,
+            note.pinyin,
+            note.sentence,
+            note.sentence_pinyin,
+            include_same_final=include_same_final,
+        )
+        if confusers:
+            issues.append((note, confusers))
+
+    return issues[:limit] if limit > 0 else issues
+
+
+def run_sentence_audit(
+    runtime: AppRuntime,
+    *,
+    include_same_final: bool = False,
+    limit: int = 0,
+) -> list[tuple[CharacterNote, list[PhoneticConfuser]]]:
+    """Report sentences with other characters that can sound like the target."""
+    notes = runtime.note_store.load()
+    issues = _find_sentence_confuser_issues(
+        notes,
+        include_same_final=include_same_final,
+    )
+
+    if not issues:
+        runtime.console.print("[green]✓[/green] No sentence phonetic ambiguity found")
+        return issues
+
+    severity_counts = Counter(
+        confuser.severity for _, confusers in issues for confuser in confusers
+    )
+    summary = ", ".join(f"{severity}: {count}" for severity, count in severity_counts.items())
+    runtime.console.print(
+        f"[yellow]⚠[/yellow] {len(issues)} sentences with phonetic ambiguity"
+        f" ({summary})"
+    )
+    runtime.console.print(_sentence_audit_table(issues, limit=limit))
+    if limit > 0 and len(issues) > limit:
+        runtime.console.print(f"[dim]... and {len(issues) - limit} more[/dim]")
+    return issues
+
+
+def _result_confusers(note: CharacterNote, result: SentenceResult) -> list[PhoneticConfuser]:
+    return find_phonetic_confuser_details(
+        note.hanzi,
+        result.character_pinyin or note.pinyin,
+        result.sentence,
+        result.pinyin,
+    )
+
+
+def run_repair_confusers(
+    runtime: AppRuntime,
+    *,
+    apply: bool = False,
+    char: str = "",
+    limit: int = 0,
+    attempts: int = 3,
+) -> list[CharacterNote]:
+    """Regenerate only sentences currently failing the phonetic ambiguity audit."""
+    notes = runtime.note_store.load()
+    if char and not any(note.hanzi == char for note in notes):
+        runtime.console.print(f"[red]✗[/red] Character '{char}' not found")
+        raise typer.Exit(1)
+
+    issues = _find_sentence_confuser_issues(notes, char=char, limit=limit)
+    if not issues:
+        runtime.console.print("[green]✓[/green] No sentence confusers to repair")
+        return notes
+
+    runtime.console.print(
+        f"[yellow]⚠[/yellow] {len(issues)} sentence"
+        f"{'' if len(issues) == 1 else 's'} selected for confuser repair"
+    )
+    runtime.console.print(_sentence_audit_table(issues))
+
+    if not apply:
+        runtime.console.print(
+            "[dim]Dry run only. Re-run with --apply to regenerate these sentences.[/dim]"
+        )
+        return notes
+
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        runtime.console.print(
+            "[red]✗[/red] GEMINI_API_KEY not set — cannot repair sentences.\n"
+            "  Set it in .env or environment, then re-run with --apply."
+        )
+        raise typer.Exit(1)
+
+    from ..sentences import SentenceGenerator
+
+    generator = SentenceGenerator(api_key=api_key)
+    repaired = 0
+    failed: list[str] = []
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        console=runtime.console,
+    ) as progress:
+        task_id = progress.add_task("Repairing", total=len(issues))
+        for note, _confusers in issues:
+            progress.update(task_id, description=f"[cyan]{note.hanzi}[/cyan]")
+            result: SentenceResult | None = None
+            confusers: list[PhoneticConfuser] = []
+            failure = "no sentence returned"
+            for _ in range(max(1, attempts)):
+                result = generator.generate(note.hanzi, pinyin=note.pinyin)
+                confusers = _result_confusers(note, result) if result.sentence else []
+                if not result.sentence:
+                    failure = result.error or "no sentence returned"
+                elif confusers:
+                    failure = f"still ambiguous ({_format_confusers(confusers)})"
+                elif not result.valid:
+                    failure = f"validation failed ({result.error})"
+                else:
+                    break
+            if result is not None and result.sentence and not confusers and result.valid:
+                old_sentence = note.sentence
+                apply_sentence(note, result)
+                runtime.note_store.save(notes)
+                repaired += 1
+                runtime.console.print(
+                    f"[green]✓[/green] {note.hanzi}: {old_sentence} → {result.sentence}"
+                )
+            else:
+                failed.append(f"{note.hanzi}: {failure}")
+            progress.advance(task_id)
+
+    runtime.note_store.save(notes)
+    runtime.console.print(f"[green]✓[/green] Repaired {repaired}/{len(issues)} sentences")
+    if failed:
+        runtime.console.print(f"[yellow]⚠ {len(failed)} repairs failed[/yellow]")
+        for item in failed[:20]:
+            runtime.console.print(f"  • {item}")
+    return notes
 
 
 def _pick_sentence(runtime: AppRuntime, generator, note: CharacterNote, count: int) -> None:
@@ -180,8 +372,15 @@ def run_sentences(
 
 
 def register(app: typer.Typer, runtime: AppRuntime) -> None:
-    @app.command()
+    sentences_app = typer.Typer(
+        name="sentences",
+        help="Generate, audit, and repair example sentences.",
+        no_args_is_help=False,
+    )
+
+    @sentences_app.callback(invoke_without_command=True)
     def sentences(
+        ctx: typer.Context,
         char: str = typer.Option("", "--char", "-c", help="Generate for one character only."),
         limit: int = typer.Option(0, "--limit", "-n", help="Max notes to process."),
         start_rsh: int = typer.Option(0, "--from-rsh", help="Start from RSH number."),
@@ -193,4 +392,46 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
         ),
     ) -> None:
         """Generate example sentences using Gemini AI."""
+        if ctx.invoked_subcommand is not None:
+            return
         run_sentences(runtime, char=char, limit=limit, start_rsh=start_rsh, force=force, pick=pick)
+
+    @sentences_app.command("audit")
+    def audit_command(
+        include_same_final: bool = typer.Option(
+            False,
+            "--include-same-final",
+            help="Also flag broad same-rhyme/final matches. This can be noisy.",
+        ),
+        limit: int = typer.Option(0, "--limit", "-n", help="Max rows to display."),
+    ) -> None:
+        """Audit existing example sentences for audio-confusing characters."""
+        run_sentence_audit(runtime, include_same_final=include_same_final, limit=limit)
+
+    @sentences_app.command("repair-confusers")
+    def repair_confusers_command(
+        apply: bool = typer.Option(
+            False,
+            "--apply",
+            help="Regenerate and save replacements. Without this, only shows a dry run.",
+        ),
+        char: str = typer.Option("", "--char", "-c", help="Repair one character only."),
+        limit: int = typer.Option(0, "--limit", "-n", help="Max notes to repair."),
+        attempts: int = typer.Option(3, "--attempts", min=1, help="Generation attempts per note."),
+    ) -> None:
+        """Regenerate sentences that contain phonetic confusers."""
+        run_repair_confusers(runtime, apply=apply, char=char, limit=limit, attempts=attempts)
+
+    app.add_typer(sentences_app, name="sentences")
+
+    @app.command("sentences-audit")
+    def sentences_audit(
+        include_same_final: bool = typer.Option(
+            False,
+            "--include-same-final",
+            help="Also flag broad same-rhyme/final matches. This can be noisy.",
+        ),
+        limit: int = typer.Option(0, "--limit", "-n", help="Max rows to display."),
+    ) -> None:
+        """Audit existing example sentences for audio-confusing characters."""
+        run_sentence_audit(runtime, include_same_final=include_same_final, limit=limit)

@@ -43,16 +43,22 @@ class StubAnkiClient:
         self.tags.append((note_ids, tag))
 
 
-def _write_song(lyrics_dir: Path, body: str = "一二三喵") -> None:
-    lyrics_dir.mkdir(parents=True)
-    (lyrics_dir / "01-test.md").write_text(
+def _write_song(
+    lyrics_dir: Path,
+    body: str = "一二三喵",
+    *,
+    file_name: str = "01-test.md",
+    title: str = "测试歌",
+) -> None:
+    lyrics_dir.mkdir(parents=True, exist_ok=True)
+    (lyrics_dir / file_name).write_text(
         textwrap.dedent("""\
             ---
-            title: 测试歌
+            title: {title}
             artist: 测试
             ---
             {body}
-        """).format(body=body),
+        """).format(title=title, body=body),
         encoding="utf-8",
     )
 
@@ -101,6 +107,78 @@ def test_run_songs_activate_uses_song_plan_and_activation_service(runtime_factor
 
     assert client.unsuspended == [20, 21, 30, 31]
     assert client.tags == [([2, 3], "activated::song::测试歌")]
+
+
+def test_run_songs_next_without_song_selects_first_analyzed_song_with_new_chars(
+    runtime_factory,
+) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    _write_song(
+        runtime.song_lyrics_dir,
+        body="一",
+        file_name="01-known.md",
+        title="已会一",
+    )
+    _write_song(
+        runtime.song_lyrics_dir,
+        body="一",
+        file_name="02-known.md",
+        title="已会二",
+    )
+    _write_song(
+        runtime.song_lyrics_dir,
+        body="一二",
+        file_name="03-next.md",
+        title="下一首",
+    )
+    _write_song(
+        runtime.song_lyrics_dir,
+        body="一二三",
+        file_name="04-later.md",
+        title="后一首",
+    )
+
+    knowledge = StubKnowledgeClient(
+        studied={"一"},
+        deck_order=["一", "二", "三"],
+    )
+
+    plan = run_songs_next(
+        runtime,
+        lyrics_dir=runtime.song_lyrics_dir,
+        limit=1,
+        knowledge_client=knowledge,
+    )
+
+    output = runtime.console.file.getvalue()
+    assert plan.song.title == "下一首"
+    assert plan.chars == ("二",)
+    assert "Skipped 2 songs with 0 new in-deck chars" in output
+    assert "Auto-selected next song" in output
+
+
+def test_run_songs_activate_without_song_uses_auto_selected_song(runtime_factory) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    _write_song(runtime.song_lyrics_dir, body="一", file_name="01-known.md", title="已会")
+    _write_song(runtime.song_lyrics_dir, body="一二", file_name="02-next.md", title="下一首")
+
+    knowledge = StubKnowledgeClient(
+        studied={"一"},
+        deck_order=["一", "二", "三"],
+    )
+    client = StubAnkiClient()
+
+    run_songs_activate(
+        runtime,
+        lyrics_dir=runtime.song_lyrics_dir,
+        limit=1,
+        dry_run=False,
+        client=client,
+        knowledge_client=knowledge,
+    )
+
+    assert client.unsuspended == [20, 21]
+    assert client.tags == [([2], "activated::song::下一首")]
 
 
 def test_run_songs_next_normalizes_traditional_particle_for_planning(runtime_factory) -> None:

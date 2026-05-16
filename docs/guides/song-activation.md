@@ -157,20 +157,34 @@ uv run anki-chinese songs analyze
 # Renumber files to match the new greedy sequence
 ```
 
+Preview the next characters for the next song in the greedy analysis sequence:
+
+```bash
+uv run anki-chinese songs next
+```
+
+Omitting the song skips any analyzed songs with `0` new in-deck characters and
+selects the first song that still needs new RSH cards.
+
 Preview the next characters for a specific song:
 
 ```bash
 uv run anki-chinese songs next 学猫叫 --limit 20
 ```
 
-This uses `data/source/All Decks.apkg` to decide which characters are already
-active and which characters exist in the RSH deck. If your live Anki state has
-changed since the last export, export the deck again before planning.
+This queries live Anki through AnkiConnect to decide which characters are already
+active and which characters exist in the RSH deck.
 
 Dry-run the live Anki activation:
 
 ```bash
 uv run anki-chinese songs activate 学猫叫 --limit 20 --dry-run
+```
+
+Or dry-run the auto-selected next song:
+
+```bash
+uv run anki-chinese songs activate --limit 20 --dry-run
 ```
 
 Actually unsuspend those cards:
@@ -179,9 +193,15 @@ Actually unsuspend those cards:
 uv run anki-chinese songs activate 学猫叫 --limit 20
 ```
 
+For the auto-selected next song:
+
+```bash
+uv run anki-chinese songs activate --limit 20
+```
+
 The command:
 
-- skips characters already active in the exported snapshot
+- skips characters already active in live Anki
 - skips Non-RSH characters by default
 - finds matching live Anki notes by the `Hanzi` field
 - unsuspends all cards for those notes
@@ -211,12 +231,11 @@ uv run anki-chinese activate chars 内 合 哟 着 --tag batch::song-1
 
 ## Recommended routine
 
-1. Export your current Anki deck to `data/source/All Decks.apkg`.
+1. Open Anki with AnkiConnect running.
 2. Run `uv run anki-chinese songs analyze`.
-3. Pick a song and run `uv run anki-chinese songs next <song> --limit 20`.
-4. Run `uv run anki-chinese songs activate <song> --limit 20 --dry-run`.
-5. If the dry-run looks right, rerun without `--dry-run`.
-6. Later, export from Anki again so future planning sees the updated active state.
+3. Run `uv run anki-chinese songs next --limit 20`.
+4. Run `uv run anki-chinese songs activate --limit 20 --dry-run`.
+5. If the dry-run looks right and you have a backup/undo path, rerun without `--dry-run`.
 
 ## Troubleshooting
 
@@ -229,5 +248,5 @@ If activation fails with an AnkiConnect availability error, check:
 - If you enabled an API key in AnkiConnect, `ANKICONNECT_API_KEY` is set.
 
 If `songs next` recommends characters that are already active in live Anki,
-your exported `.apkg` snapshot is stale. Export your deck again and rerun the
-planning command.
+check that AnkiConnect is talking to the collection you are studying and rerun
+the planning command.

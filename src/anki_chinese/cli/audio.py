@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 
 import typer
 
 from ..audio import (
     TTSRateLimitError,
     audio_tasks_for_note,
+    collect_orphaned_audio,
     expected_cantonese_audio_tag,
     expected_mandarin_audio_tag,
     expected_sentence_audio_tag,
@@ -16,6 +18,8 @@ from ..audio import (
 from ..notes import CharacterNote, filter_from_rsh, heisig_index
 from .app import AppRuntime
 from .ui import create_audio_progress, format_audio_task_labels, report_audio_summary
+
+AudioCleanKind = str
 
 
 def _collect_pending_audio(
@@ -204,6 +208,53 @@ def run_audio(
     return notes
 
 
+def _audio_file_matches_kind(filename: str, kind: AudioCleanKind) -> bool:
+    if kind == "all":
+        return True
+    if kind == "sentence":
+        return filename.startswith("cmn_sentence_")
+    if kind == "mandarin":
+        return filename.startswith("cmn_") and not filename.startswith("cmn_sentence_")
+    if kind == "cantonese":
+        return filename.startswith("yue_")
+    return False
+
+
+def run_audio_clean(
+    runtime: AppRuntime,
+    *,
+    apply: bool = False,
+    kind: AudioCleanKind = "all",
+) -> list[str]:
+    """Report or remove generated audio files no note currently references."""
+    notes = runtime.note_store.load()
+    orphans = [
+        path
+        for path in collect_orphaned_audio(notes, runtime.generated_audio_dir)
+        if _audio_file_matches_kind(path.name, kind)
+    ]
+    if not orphans:
+        runtime.console.print("[green]✓[/green] No orphaned generated audio files")
+        return []
+
+    runtime.console.print(f"[yellow]⚠[/yellow] {len(orphans)} orphaned generated audio files")
+    for path in orphans[:20]:
+        runtime.console.print(f"  • {path.name}")
+    if len(orphans) > 20:
+        runtime.console.print(f"  … and {len(orphans) - 20} more")
+
+    if not apply:
+        runtime.console.print("[dim]Dry run only. Re-run with --apply to delete them.[/dim]")
+        return [path.name for path in orphans]
+
+    removed: list[Path] = []
+    for path in orphans:
+        path.unlink()
+        removed.append(path)
+    runtime.console.print(f"[green]✓[/green] Removed {len(removed)} orphaned audio files")
+    return [path.name for path in removed]
+
+
 def register(app: typer.Typer, runtime: AppRuntime) -> None:
     @app.command()
     def audio(
@@ -245,3 +296,22 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             force=force,
             fail_fast=fail_fast,
         )
+
+    @app.command("audio-clean")
+    def audio_clean(
+        apply: bool = typer.Option(
+            False,
+            "--apply",
+            help="Delete orphaned files. Without this, only shows a dry run.",
+        ),
+        kind: str = typer.Option(
+            "all",
+            "--kind",
+            help="Audio kind to clean: all, sentence, mandarin, or cantonese.",
+        ),
+    ) -> None:
+        """Remove generated audio files that are no longer referenced by notes."""
+        if kind not in {"all", "sentence", "mandarin", "cantonese"}:
+            runtime.console.print("[red]✗[/red] --kind must be all, sentence, mandarin, or cantonese")
+            raise typer.Exit(1)
+        run_audio_clean(runtime, apply=apply, kind=kind)
