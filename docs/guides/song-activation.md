@@ -178,6 +178,31 @@ The command:
 - unsuspends all cards for matching notes
 - tags activated notes with `activated::song::<song title>` unless `--tag` is passed
 
+## Recover from a mistaken song activation
+
+If a song activation was a mistake, reverse it by the activation tag instead of
+recomputing "new" characters. After activation, those cards are already active in
+live Anki, so the planner can no longer distinguish them from intentionally
+active cards.
+
+Dry-run first:
+
+```bash
+uv run anki-chinese songs resuspend 学猫叫 --dry-run
+```
+
+Resuspend after checking the preview:
+
+```bash
+uv run anki-chinese songs resuspend 学猫叫
+```
+
+The command resolves the song the same way as `songs activate` and defaults to
+the tag `activated::song::<song title>`. It writes an undo snapshot under
+`data/build/anki_backups/` before any real mutation, suspends currently active
+cards on the tagged notes, and removes the activation tag. Use `--keep-tag` to
+leave the tag in place, or `--tag` to reverse a custom activation tag.
+
 ## Manual activation
 
 ```bash

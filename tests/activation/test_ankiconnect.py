@@ -60,6 +60,45 @@ def test_find_notes_by_chars_filters_exact_hanzi(monkeypatch: pytest.MonkeyPatch
     assert requests[0]["params"]["query"] == 'note:"Chinese RSH" Hanzi:水'
 
 
+def test_find_notes_by_tag_and_resuspend_actions(monkeypatch: pytest.MonkeyPatch) -> None:
+    requests: list[dict[str, Any]] = []
+
+    def fake_urlopen(request, timeout: int = 10):  # noqa: ANN001, ARG001
+        payload = json.loads(request.data.decode("utf-8"))
+        requests.append(payload)
+        if payload["action"] == "findNotes":
+            return FakeResponse({"result": [1], "error": None})
+        if payload["action"] == "notesInfo":
+            return FakeResponse(
+                {
+                    "result": [
+                        {
+                            "noteId": 1,
+                            "fields": {"Hanzi": {"value": "火"}},
+                            "cards": [20, 21],
+                        },
+                    ],
+                    "error": None,
+                }
+            )
+        return FakeResponse({"result": None, "error": None})
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    client = AnkiConnectClient(url="http://anki.test", model_name="Chinese RSH")
+
+    result = client.find_notes_by_tag("activated::song::测试歌")
+    client.suspend_cards([20, 21])
+    client.remove_tags([1], "activated::song::测试歌")
+
+    assert result["火"].note_ids == (1,)
+    assert result["火"].card_ids == (20, 21)
+    assert requests[0]["params"]["query"] == 'note:"Chinese RSH" tag:"activated::song::测试歌"'
+    assert requests[2]["action"] == "suspend"
+    assert requests[2]["params"] == {"cards": [20, 21]}
+    assert requests[3]["action"] == "removeTags"
+    assert requests[3]["params"] == {"notes": [1], "tags": "activated::song::测试歌"}
+
+
 def test_ankiconnect_error_is_raised_for_api_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_urlopen(request, timeout: int = 10):  # noqa: ANN001, ARG001
         return FakeResponse({"result": None, "error": "bad query"})

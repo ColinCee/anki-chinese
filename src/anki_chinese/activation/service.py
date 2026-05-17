@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Protocol
 
 from ..songs import is_cjk
@@ -30,6 +33,54 @@ class ActivationPreview:
         return bool(self.suspended_card_ids)
 
 
+@dataclass(frozen=True)
+class ResuspendPreview:
+    tag: str
+    notes: tuple[LiveNoteCards, ...]
+    already_suspended_card_ids: tuple[int, ...]
+    cards_to_suspend: tuple[int, ...]
+
+    @property
+    def found_chars(self) -> tuple[str, ...]:
+        return tuple(note.character for note in self.notes)
+
+    @property
+    def note_ids(self) -> tuple[int, ...]:
+        return tuple(
+            sorted({note_id for note in self.notes for note_id in note.note_ids})
+        )
+
+    @property
+    def card_ids(self) -> tuple[int, ...]:
+        return tuple(
+            sorted({card_id for note in self.notes for card_id in note.card_ids})
+        )
+
+    @property
+    def note_ids_to_suspend(self) -> tuple[int, ...]:
+        cards_to_suspend = set(self.cards_to_suspend)
+        return tuple(
+            sorted(
+                {
+                    note_id
+                    for note in self.notes
+                    for note_id in note.note_ids
+                    if any(card_id in cards_to_suspend for card_id in note.card_ids)
+                }
+            )
+        )
+
+    @property
+    def will_change_cards(self) -> bool:
+        return bool(self.cards_to_suspend)
+
+
+@dataclass(frozen=True)
+class ResuspendResult:
+    preview: ResuspendPreview
+    snapshot_path: Path | None
+
+
 class AnkiClient(Protocol):
     def find_notes_by_chars(self, chars: list[str]) -> dict[str, LiveNoteCards]:
         """Return note/card IDs for exact Hanzi field matches."""
@@ -45,6 +96,24 @@ class AnkiClient(Protocol):
 
     def add_tags(self, note_ids: list[int], tag: str) -> None:
         """Add a tag to the supplied live Anki note IDs."""
+        ...
+
+
+class ResuspendClient(Protocol):
+    def find_notes_by_tag(self, tag: str) -> dict[str, LiveNoteCards]:
+        """Return note/card IDs for notes matching a tag."""
+        ...
+
+    def suspended_card_ids(self, card_ids: list[int]) -> set[int]:
+        """Return the subset of card IDs that are currently suspended."""
+        ...
+
+    def suspend_cards(self, card_ids: list[int]) -> None:
+        """Suspend the supplied live Anki card IDs."""
+        ...
+
+    def remove_tags(self, note_ids: list[int], tag: str) -> None:
+        """Remove a tag from the supplied live Anki note IDs."""
         ...
 
 
@@ -116,3 +185,92 @@ def activate_characters(
     if tag and preview.note_ids:
         client.add_tags(list(preview.note_ids), tag)
     return preview
+
+
+def preview_tag_resuspension(client: ResuspendClient, tag: str) -> ResuspendPreview:
+    normalized_tag = tag.strip()
+    note_map = client.find_notes_by_tag(normalized_tag) if normalized_tag else {}
+    notes = tuple(note_map[char] for char in sorted(note_map))
+    card_ids = sorted({card_id for note in notes for card_id in note.card_ids})
+    suspended = (
+        tuple(sorted(client.suspended_card_ids(card_ids)))
+        if card_ids
+        else ()
+    )
+    suspended_set = set(suspended)
+    cards_to_suspend = tuple(
+        card_id for card_id in card_ids if card_id not in suspended_set
+    )
+    return ResuspendPreview(
+        tag=normalized_tag,
+        notes=notes,
+        already_suspended_card_ids=suspended,
+        cards_to_suspend=cards_to_suspend,
+    )
+
+
+def write_resuspend_undo_snapshot(
+    preview: ResuspendPreview,
+    snapshot_dir: Path,
+    *,
+    remove_tag: bool,
+) -> Path:
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    created_at = datetime.now(UTC).replace(microsecond=0)
+    timestamp = created_at.strftime("%Y%m%d-%H%M%S")
+    path = snapshot_dir / f"resuspend-{timestamp}.json"
+    counter = 2
+    while path.exists():
+        path = snapshot_dir / f"resuspend-{timestamp}-{counter}.json"
+        counter += 1
+
+    data = {
+        "created_at": created_at.isoformat().replace("+00:00", "Z"),
+        "operation": "resuspend-tagged-cards",
+        "tag": preview.tag,
+        "remove_tag": remove_tag,
+        "found_chars": list(preview.found_chars),
+        "note_ids": list(preview.note_ids),
+        "card_ids": list(preview.card_ids),
+        "pre_change_suspended_card_ids": list(preview.already_suspended_card_ids),
+        "card_ids_to_suspend": list(preview.cards_to_suspend),
+        "note_ids_to_suspend": list(preview.note_ids_to_suspend),
+        "characters": [
+            {
+                "character": note.character,
+                "note_ids": list(note.note_ids),
+                "card_ids": list(note.card_ids),
+            }
+            for note in preview.notes
+        ],
+    }
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def resuspend_tagged_cards(
+    client: ResuspendClient,
+    tag: str,
+    *,
+    dry_run: bool = False,
+    remove_tag: bool = True,
+    snapshot_dir: Path,
+) -> ResuspendResult:
+    preview = preview_tag_resuspension(client, tag)
+    should_remove_tag = remove_tag and bool(preview.note_ids)
+    if dry_run or not (preview.cards_to_suspend or should_remove_tag):
+        return ResuspendResult(preview=preview, snapshot_path=None)
+
+    snapshot_path = write_resuspend_undo_snapshot(
+        preview,
+        snapshot_dir,
+        remove_tag=remove_tag,
+    )
+    if preview.cards_to_suspend:
+        client.suspend_cards(list(preview.cards_to_suspend))
+    if should_remove_tag:
+        client.remove_tags(list(preview.note_ids), preview.tag)
+    return ResuspendResult(preview=preview, snapshot_path=snapshot_path)

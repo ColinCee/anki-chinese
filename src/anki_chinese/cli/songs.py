@@ -10,7 +10,15 @@ from typing import Protocol
 import typer
 from rich.table import Table
 
-from ..activation import AnkiClient, AnkiConnectClient, AnkiConnectError
+from ..activation import (
+    AnkiClient,
+    AnkiConnectClient,
+    AnkiConnectError,
+    ResuspendClient,
+    ResuspendResult,
+    resuspend_tagged_cards,
+)
+from ..config import ANKI_BACKUP_DIR
 from ..songs import (
     LyricSong,
     SongActivationPlan,
@@ -182,6 +190,23 @@ def _song_plan_from_query(
     )
 
 
+def _song_from_query(
+    runtime: AppRuntime,
+    song_query: str,
+    *,
+    lyrics_dir: Path,
+) -> LyricSong:
+    songs = load_songs(lyrics_dir)
+    if not songs:
+        runtime.console.print(f"[red]✗[/red] No lyric files found in {lyrics_dir}")
+        raise typer.Exit(1)
+    song = find_song(songs, song_query)
+    if song is None:
+        runtime.console.print(f"[red]✗[/red] Song not found or ambiguous: {song_query}")
+        raise typer.Exit(1)
+    return song
+
+
 def _song_plan_from_next_sequence(
     runtime: AppRuntime,
     *,
@@ -287,6 +312,81 @@ def run_songs_activate(
         tag=activation_tag,
         client=client,
     )
+
+
+def _print_resuspend_result(
+    runtime: AppRuntime,
+    result: ResuspendResult,
+    *,
+    dry_run: bool,
+    remove_tag: bool,
+) -> None:
+    preview = result.preview
+    runtime.console.print(f"[bold]Tag:[/bold] {preview.tag}")
+    runtime.console.print(f"[bold]Tagged notes:[/bold] {len(preview.note_ids)}")
+    if preview.found_chars:
+        runtime.console.print("  " + " ".join(preview.found_chars))
+
+    if not preview.note_ids:
+        runtime.console.print("[green]✓[/green] No tagged notes found")
+        return
+
+    if preview.cards_to_suspend:
+        action = "Would resuspend" if dry_run else "Resuspended"
+        runtime.console.print(
+            f"[green]✓[/green] {action} {len(preview.cards_to_suspend)} cards "
+            f"across {len(preview.note_ids_to_suspend)} notes"
+        )
+    else:
+        runtime.console.print("[green]✓[/green] No active cards to resuspend")
+
+    if preview.already_suspended_card_ids:
+        runtime.console.print(
+            f"[dim]Already suspended cards:[/dim] {len(preview.already_suspended_card_ids)}"
+        )
+
+    if remove_tag:
+        tag_action = "Would remove" if dry_run else "Removed"
+        runtime.console.print(
+            f"  [dim]{tag_action} tag from {len(preview.note_ids)} notes[/dim]"
+        )
+    else:
+        runtime.console.print("  [dim]Kept activation tag[/dim]")
+
+    if result.snapshot_path is not None:
+        runtime.console.print(f"  [dim]Undo snapshot:[/dim] {result.snapshot_path}")
+
+
+def run_songs_resuspend(
+    runtime: AppRuntime,
+    song_query: str,
+    *,
+    lyrics_dir: Path,
+    dry_run: bool = False,
+    tag: str = "",
+    keep_tag: bool = False,
+    snapshot_dir: Path = ANKI_BACKUP_DIR,
+    client: ResuspendClient | None = None,
+) -> ResuspendResult:
+    song = _song_from_query(runtime, song_query, lyrics_dir=lyrics_dir)
+    activation_tag = tag or f"activated::song::{song.title}"
+    ac: ResuspendClient = client or _make_client()
+    try:
+        result = resuspend_tagged_cards(
+            ac,
+            activation_tag,
+            dry_run=dry_run,
+            remove_tag=not keep_tag,
+            snapshot_dir=snapshot_dir,
+        )
+    except AnkiConnectError as error:
+        runtime.console.print(f"[red]✗[/red] {error}")
+        runtime.console.print("[dim]Ensure Anki is open with AnkiConnect installed.[/dim]")
+        raise typer.Exit(2) from None
+
+    runtime.console.print(f"[bold]Song:[/bold] {song.label}")
+    _print_resuspend_result(runtime, result, dry_run=dry_run, remove_tag=not keep_tag)
+    return result
 
 
 def run_songs_fetch(
@@ -684,6 +784,45 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             all_remaining=all_remaining,
             dry_run=dry_run,
             tag=tag,
+        )
+
+    @songs_app.command("resuspend")
+    def resuspend_command(
+        song: str = typer.Argument(
+            ...,
+            help="Song title, file stem, or unique substring to reverse by activation tag.",
+        ),
+        dry_run: bool = typer.Option(
+            False,
+            "--dry-run",
+            help="Show tagged notes/cards without changing Anki.",
+        ),
+        tag: str = typer.Option("", "--tag", help="Override the activation tag to reverse."),
+        keep_tag: bool = typer.Option(
+            False,
+            "--keep-tag",
+            help="Suspend cards but leave the activation tag on notes.",
+        ),
+        lyrics_dir: Path = typer.Option(
+            runtime.song_lyrics_dir,
+            "--lyrics-dir",
+            help="Directory of lyric markdown files.",
+        ),
+        snapshot_dir: Path = typer.Option(
+            ANKI_BACKUP_DIR,
+            "--snapshot-dir",
+            help="Directory for live Anki undo snapshots.",
+        ),
+    ) -> None:
+        """Resuspend cards from a mistaken song activation."""
+        run_songs_resuspend(
+            runtime,
+            song,
+            lyrics_dir=lyrics_dir,
+            dry_run=dry_run,
+            tag=tag,
+            keep_tag=keep_tag,
+            snapshot_dir=snapshot_dir,
         )
 
     @songs_app.command("fetch")

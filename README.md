@@ -101,6 +101,14 @@ uv run anki-chinese songs activate --limit 20 --dry-run
 uv run anki-chinese songs activate --limit 20
 ```
 
+If a song activation was a mistake, dry-run the tag-based recovery command
+before resuspending:
+
+```bash
+uv run anki-chinese songs resuspend 学猫叫 --dry-run
+uv run anki-chinese songs resuspend 学猫叫
+```
+
 Lyrics live in `data/songs/lyrics/` and can be fetched from lyrics.net.cn:
 
 ```bash
@@ -113,7 +121,7 @@ uv run anki-chinese songs verify --online
 
 - Do not change `MODEL_ID` or `DECK_ID` after first import; Anki will treat the next import as a different model/deck.
 - `.apkg` rebuilds update note content. They are not the source of truth for live suspended state after AnkiConnect changes.
-- `activate` and `songs activate` mutate the open Anki collection. Use `--dry-run` first and keep an Anki backup or targeted undo path.
+- `activate`, `songs activate`, and `songs resuspend` mutate the open Anki collection. Use `--dry-run` first and keep an Anki backup or targeted undo path.
 - Keep `.env`, API keys, Google service-account files, generated audio, and generated deck outputs out of commits.
 
 ## Documentation

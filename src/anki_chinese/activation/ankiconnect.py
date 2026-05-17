@@ -130,6 +130,35 @@ class AnkiConnectClient:
             found.update(self._collect_exact_infos(missing, self._notes_info(all_note_ids)))
         return found
 
+    def find_notes_by_tag(self, tag: str) -> dict[str, LiveNoteCards]:
+        if not tag:
+            return {}
+        result = self._invoke(
+            "findNotes",
+            {"query": f'note:"{self.model_name}" tag:"{tag}"'},
+        )
+        if not isinstance(result, list):
+            raise AnkiConnectError("findNotes returned an unexpected response shape.")
+        note_ids = [int(note_id) for note_id in result]
+        if not note_ids:
+            return {}
+        infos = self._notes_info(note_ids)
+        found: dict[str, LiveNoteCards] = {}
+        for info in infos:
+            char = self._info_character(info)
+            if not char:
+                continue
+            existing = found.get(char)
+            note_ids = tuple([*(existing.note_ids if existing else ()), int(info["noteId"])])
+            card_ids = tuple(
+                [
+                    *(existing.card_ids if existing else ()),
+                    *(int(card_id) for card_id in info.get("cards", [])),
+                ]
+            )
+            found[char] = LiveNoteCards(character=char, note_ids=note_ids, card_ids=card_ids)
+        return found
+
     def suspended_card_ids(self, card_ids: list[int]) -> set[int]:
         if not card_ids:
             return set()
@@ -142,9 +171,17 @@ class AnkiConnectClient:
         if card_ids:
             self._invoke("unsuspend", {"cards": card_ids})
 
+    def suspend_cards(self, card_ids: list[int]) -> None:
+        if card_ids:
+            self._invoke("suspend", {"cards": card_ids})
+
     def add_tags(self, note_ids: list[int], tag: str) -> None:
         if note_ids and tag:
             self._invoke("addTags", {"notes": note_ids, "tags": tag})
+
+    def remove_tags(self, note_ids: list[int], tag: str) -> None:
+        if note_ids and tag:
+            self._invoke("removeTags", {"notes": note_ids, "tags": tag})
 
     def find_studied_characters(self) -> set[str]:
         """Return characters that have actually been studied (at least one review).

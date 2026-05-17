@@ -5,9 +5,15 @@ from .service import (
     ActivationPreview,
     AnkiClient,
     LiveNoteCards,
+    ResuspendClient,
+    ResuspendPreview,
+    ResuspendResult,
     activate_characters,
     normalize_character_args,
     preview_activation,
+    preview_tag_resuspension,
+    resuspend_tagged_cards,
+    write_resuspend_undo_snapshot,
 )
 
 __all__ = [
@@ -16,7 +22,13 @@ __all__ = [
     "AnkiConnectClient",
     "AnkiConnectError",
     "LiveNoteCards",
+    "ResuspendClient",
+    "ResuspendPreview",
+    "ResuspendResult",
     "activate_characters",
     "normalize_character_args",
     "preview_activation",
+    "preview_tag_resuspension",
+    "resuspend_tagged_cards",
+    "write_resuspend_undo_snapshot",
 ]
