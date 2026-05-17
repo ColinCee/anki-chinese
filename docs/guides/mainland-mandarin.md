@@ -73,15 +73,19 @@ rule.
 
 ## Current repo state
 
-The repo now handles the main `著` / `着` learner-facing issue in three ways:
+The repo handles the main `著` / `着` learner-facing issue in three ways:
 
-1. The audited lyric files were rewritten from safe particle uses such as `看著`
-   to `看着`.
-2. Song planning normalizes the contextual particle use `著 -> 着` so
+1. Curated lyric files may preserve source text, but audited learner-facing
+   examples use mainland simplified forms where appropriate.
+2. Song planning normalizes contextual particle use `著 -> 着` so
    `songs analyze`, `songs next`, and `songs activate` target the mainland study
    form by default.
 3. The `著` note is now labeled as the **traditional form of `着`** instead of
    looking like a second primary simplified-study card.
+
+The current curated song corpus contains 30 lyric files. Remaining `著`
+occurrences are not automatically wrong; lexical words and unaudited source forms
+must be reviewed in context.
 
 ## Long-term direction
 

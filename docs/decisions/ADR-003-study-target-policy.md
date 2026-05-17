@@ -82,6 +82,14 @@ Remaining follow-up:
    especially `藉/借` and `覆/复`.
 2. Extend normalization carefully as new lyric files are added.
 
+### Current-state note
+
+The historical audit above covered the corpus at decision time. The current
+curated lyric corpus contains 30 files. Song planning uses
+`LyricSong.study_characters` and conservative `normalize_lyric_text_for_study`
+logic so particle `著` maps to `着` for study planning while lexical `著` words
+remain valid.
+
 ## Non-goals
 
 - Converting the entire project to a traditional-character learning track

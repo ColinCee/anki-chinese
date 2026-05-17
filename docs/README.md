@@ -1,26 +1,45 @@
 # Documentation
 
-## Decisions
+This is the canonical documentation map for **anki-chinese**. The README is the public landing page; these docs hold the detailed setup, workflows, reference material, architecture notes, and historical decisions.
 
-Architecture Decision Records for major technical choices.
+## Start here
 
-- [ADR-001: Sentence Generation Strategy](decisions/ADR-001-sentence-generation.md) — Gemini Flash Lite generation with self-validation pipeline (v6, production)
-- [ADR-002: TTS Provider Strategy](decisions/ADR-002-tts-provider-strategy.md) — Hybrid Google + MiniMax approach for character vs sentence audio
-- [ADR-003: Mainland Mandarin Study Target Policy](decisions/ADR-003-study-target-policy.md) — Proposed default track: mainland Mandarin, simplified-first, traditional recognition support
+- [Getting started](getting-started.md) — first-run setup from an Anki export to a rebuilt `.apkg`
+- [Architecture overview](architecture/overview.md) — how the content rebuild and live activation lanes fit together
 
 ## Guides
 
-How-to docs for using and developing the project.
+Task-oriented docs for common workflows.
 
-- [Customization](guides/customization.md) — Character overrides, card templates, deck settings, example words
-- [Development](guides/development.md) — Repo layout, testing strategy, validation, migration notes
-- [Mainland Mandarin Study Target](guides/mainland-mandarin.md) — Default learner target, traditional recognition policy, Taiwanese lyric handling
-- [Song Activation](guides/song-activation.md) — AnkiConnect setup and song-based unsuspending workflow
-- [TTS Setup](guides/tts-setup.md) — Google Cloud and MiniMax API key setup, smoke testing, env vars
+- [Deck rebuild workflow](guides/deck-rebuild.md) — export, enrich, generate optional content, build, and import
+- [TTS setup](guides/tts-setup.md) — Google Cloud ADC/service-account auth, MiniMax setup, and smoke tests
+- [Sentence generation](guides/sentence-generation.md) — Gemini setup, sentence generation, meaning repair, and confuser audits
+- [Song activation](guides/song-activation.md) — AnkiConnect setup and song-driven unsuspending
+- [Mainland Mandarin study target](guides/mainland-mandarin.md) — simplified-first policy and traditional recognition notes
+- [Customization](guides/customization.md) — overrides, templates, deck settings, and manual data
+- [Development](guides/development.md) — contributor setup, tests, linting, and project layout
+
+## Reference
+
+Stable facts that should match the current code.
+
+- [CLI reference](reference/cli.md) — command map and when to use each command
+- [Configuration reference](reference/configuration.md) — environment variables and credentials
+- [Data layout](reference/data-layout.md) — committed inputs, generated state, and ignored build outputs
+- [Anki model reference](reference/anki-model.md) — stable IDs, fields, card templates, and import behavior
+
+## Decisions
+
+Architecture Decision Records explain why major choices were made. They may include historical context; use the guides and reference docs for current setup instructions.
+
+- [ADR-001: Sentence generation strategy](decisions/ADR-001-sentence-generation.md)
+- [ADR-002: TTS provider strategy](decisions/ADR-002-tts-provider-strategy.md)
+- [ADR-003: Mainland Mandarin study target policy](decisions/ADR-003-study-target-policy.md)
 
 ## Research
 
-Exploratory research and provider comparisons.
+Research docs are point-in-time notes, not setup instructions.
 
-- [Anki Ecosystem Pain Points](research/anki-ecosystem-pain-points.md) — Running notes on Anki friction and custom-app triggers
-- [TTS Providers](research/tts-providers.md) — Full comparison of 6 TTS providers for Chinese pronunciation
+- [Research index](research/README.md)
+- [Anki ecosystem pain points](research/anki-ecosystem-pain-points.md)
+- [TTS providers](research/tts-providers.md)

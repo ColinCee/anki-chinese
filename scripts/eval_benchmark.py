@@ -122,7 +122,7 @@ def generate_one(client: genai.Client, hanzi: str) -> dict:
 
     # --- Step 1 + 2: Generate + code char-check with retries ---------------
     parsed = None
-    for char_attempt in range(1, MAX_CHAR_RETRIES + 2):
+    for _char_attempt in range(1, MAX_CHAR_RETRIES + 2):
         try:
             resp = client.models.generate_content(
                 model=GEMINI_MODEL, contents=history, config=gen_config
@@ -150,8 +150,6 @@ def generate_one(client: genai.Client, hanzi: str) -> dict:
 
     if parsed is None or hanzi not in parsed.sentence:
         return _error_result(hanzi, "target char missing after retries")
-
-    first_sentence = parsed.sentence
 
     # --- Step 3: LLM validation --------------------------------------------
     history.append(

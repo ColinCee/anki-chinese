@@ -2,116 +2,86 @@
 
 ## Project overview
 
-A Python CLI tool that builds regenerable Anki flashcard decks for Mandarin study with Cantonese support, following the Heisig RSH (Remembering Simplified Hanzi) character order. Parses an Anki `.apkg` export, enriches each character with readings, example words, and sentences, optionally generates TTS audio, and outputs a clean `.apkg`.
+`anki-chinese` is a Python CLI that rebuilds an Anki deck for Mandarin study with Cantonese support. It parses an Anki `.apkg` export, enriches character notes, optionally generates Gemini sentences and TTS audio, and builds a regenerated `.apkg`. Live suspended-state changes are handled separately through AnkiConnect.
 
-## Architecture
+For current user-facing setup and command docs, prefer:
 
-```
+- `docs/getting-started.md`
+- `docs/architecture/overview.md`
+- `docs/reference/cli.md`
+- `docs/reference/configuration.md`
+- `docs/guides/tts-setup.md`
+- `docs/guides/song-activation.md`
+
+## Architecture map
+
+```text
 src/anki_chinese/
 ├── cli/          # Typer commands + Rich UI helpers
 ├── notes/        # CharacterNote model, .apkg parsing, enrichment, persistence, reporting
-├── activation/   # Live Anki activation via AnkiConnect (unsuspend/tag existing cards)
-├── songs/        # Lyric parsing, song analysis, and song-to-character planning
-├── audio/        # TTSProvider protocol, Google/MiniMax implementations, retry, rate limiting
-├── sentences/    # Gemini Flash Lite sentence generation + self-validation pipeline
-├── data_sources/ # Pinyin, jyutping, CEDICT, HSK lookups
+├── activation/   # Live Anki activation via AnkiConnect
+├── songs/        # Lyric parsing, study normalization, song analysis, activation planning
+├── audio/        # TTSProvider protocol, Google/MiniMax providers, retry, rate limiting
+├── sentences/    # Gemini sentence generation + contextual meaning repair
+├── data_sources/ # Pinyin, jyutping, CEDICT, HSK, optional SUBTLEX lookups
 ├── cards/        # HTML/CSS card templates
-├── config.py     # Paths, deck metadata, field order, voice defaults
-├── deck.py       # genanki .apkg creation
-└── pipeline/     # Pipeline orchestration
+├── config.py     # Paths, deck metadata, stable IDs, field order
+└── deck.py       # genanki .apkg creation
 ```
 
-### Key patterns
+## Core patterns
 
-- **Provider-neutral boundaries**: `audio/provider.py` defines a `TTSProvider` Protocol. Concrete implementations (Google, MiniMax) are deep and contained.
-- **Factory pattern**: `audio/factory.py` builds providers by name. Default is Google.
-- **Narrow CLI surface**: All user interaction goes through `uv run anki-chinese <command>`.
-- **Stable GUIDs**: genanki IDs are based on character identity — re-importing updates notes, never duplicates.
-- **Two-lane Anki workflow**: `.apkg` import/export is for rebuildable content (fields, audio, sentences, templates). Live activation is separate and uses AnkiConnect to unsuspend/tag existing cards in the open Anki collection.
-- **Activation is general infrastructure**: `activate` commands are not song-specific. Songs are one planner/source that produces character batches and then calls the shared activation layer.
+- Keep the CLI surface narrow: user workflows go through `uv run anki-chinese ...`.
+- Preserve stable Anki identity: do not change `MODEL_ID`, `DECK_ID`, field order, or GUID behavior without an explicit migration.
+- Keep rebuild and live activation separate:
+  - `.apkg` import/export is for rebuildable content.
+  - AnkiConnect is for live suspended state and tags.
+- Keep provider-specific code behind `audio/provider.py` and `audio/factory.py`.
+- Keep AnkiConnect details behind `activation/`.
+- Treat generated files under `data/build/` and `data/state/enriched.json` as generated artifacts.
 
-## Data flow
-
-```
-data/source/All Decks.apkg  →  init (parse + enrich)  →  data/state/enriched.json
-                                                              ↓
-                                                     audio (optional TTS)
-                                                              ↓
-                                                     build  →  data/build/decks/chinese_rsh.apkg
-```
-
-Live activation flow:
-
-```
-manual chars / song planner / future recommender  →  activation service  →  AnkiConnect  →  live Anki cards
-```
-
-## TTS strategy
-
-- **Google Cloud TTS WaveNet**: Single characters — SSML `<phoneme>` tags force exact pinyin/jyutping pronunciation.
-- **MiniMax speech-2.8-turbo**: Sentences and example words — context disambiguates polyphonic characters, natural prosody.
-- Provider choice is via `--provider` flag or factory default in `audio/factory.py`.
-
-## Sentence generation
-
-Uses Gemini Flash Lite with a lean 7-rule prompt + same-model self-validation (7-point grammar checklist). Documented in `docs/decisions/ADR-001-sentence-generation.md`.
-
-## Key data files
-
-| Path | Purpose |
-|------|---------|
-| `data/source/All Decks.apkg` | Native Anki package export (input) |
-| `data/manual/overrides.json` | Per-character field overrides |
-| `data/manual/example_words.json` | Manual example word definitions |
-| `data/reference/hsk_complete.min.json` | HSK vocabulary corpus for auto-picking examples |
-| `data/songs/lyrics/` | Curated lyric markdown files for song-based planning |
-| `data/state/enriched.json` | Enriched notes (workflow state) |
-| `data/build/decks/chinese_rsh.apkg` | Final output deck |
-
-## Commands
-
-Run `uv run anki-chinese --help` (or `<command> --help`) for the full, authoritative option reference. The list below is orientation only.
+## Current workflows
 
 ```bash
-uv run anki-chinese init        # Parse source deck + enrich
-uv run anki-chinese status      # Coverage and validation report
-uv run anki-chinese review      # Inspect notes flagged for correction
-uv run anki-chinese audio       # Generate TTS audio
-uv run anki-chinese sentences   # Generate example sentences (Gemini)
-uv run anki-chinese build       # Create final .apkg
-uv run anki-chinese activate    # Unsuspend/tag existing live Anki cards
-uv run anki-chinese songs       # Lyrics analysis and song-based activation
-uv run anki-chinese test-tts    # Smoke-test audio generation
+uv sync --group dev
+uv run ruff check
+uv run pyright
+uv run pytest
+uv run anki-chinese --help
+uv run python -m anki_chinese.cli --help
 ```
 
-`songs` subcommands: `analyze`, `fetch`, `verify`, `next`, `activate`. Run `uv run anki-chinese songs --help` or `uv run anki-chinese songs activate --help` for flags such as `--dry-run`, `--limit`, and `--all`.
+Core CLI families:
 
-Activation uses AnkiConnect at `http://127.0.0.1:8765` by default. If Anki runs on Windows and the CLI runs in WSL, prefer WSL mirrored networking so localhost reaches Windows Anki while AnkiConnect remains bound to 127.0.0.1.
+- `init`, `status`, `review`, `build`
+- `sentences`, `keywords`
+- `audio`, `audio-clean`, `test-tts`
+- `songs`
+- `activate`
 
-## Development
+Use `uv run anki-chinese <command> --help` as the authoritative command reference.
 
-```bash
-uv sync --group dev     # Install dev dependencies
-uv run pyright          # Type checking (standard mode, Python 3.13)
-uv run pytest           # Tests
-uv run ruff check       # Linting (E, F, I, UP, B, SIM rules)
-```
+## TTS and AI setup
 
-### Conventions
+- Google Cloud Text-to-Speech uses ADC/service-account auth. Use `GOOGLE_APPLICATION_CREDENTIALS` or `gcloud auth application-default login`; do not document an API-key setup path for Google TTS.
+- MiniMax uses `MINIMAX_API_KEY` and optional region/model/voice overrides.
+- Gemini sentence and keyword commands use `GEMINI_API_KEY`.
+- AnkiConnect can use `ANKICONNECT_API_KEY` only if the local add-on requires it.
 
-- Python 3.13+, managed with `uv`
-- Type annotations everywhere; `pyright` in standard mode
-- `ruff` for linting and formatting (line length 100)
-- Tests mirror feature layout: `tests/notes/`, `tests/audio/`, `tests/cli/`, etc.
-- `tests/regressions/` for real bug regressions; `tests/integration/` for workflow checks
-- Favor regression value over test count; test public behavior and risky seams first
-- The `meaning` field contains rich definitions: core CEDICT meaning + compound context (e.g., "silver; in 银行: bank")
-- `__all__: list[str] = []` marks internal modules — import from the package instead
+## Study target and songs
+
+The default learner target is mainland Mandarin with simplified characters for active study and traditional characters as recognition support. Song planning uses normalized study characters: particle `著` can map to `着`, while lexical `著` words such as `著名` and `原著` remain valid.
+
+Do not add LLM calls, network translation, OpenCC passes, or pypinyin guessing to runtime song planning. Keep `songs analyze`, `songs next`, and `songs activate` deterministic apart from local AnkiConnect state.
 
 ## Documentation
 
-Docs live in `docs/` organized by purpose:
+Docs are organized by purpose:
 
-- `docs/decisions/` — Architecture Decision Records (ADRs)
-- `docs/guides/` — How-to guides (customization, development, TTS setup)
-- `docs/research/` — Exploratory research and provider comparisons
+- `docs/guides/` — task workflows
+- `docs/reference/` — stable command/config/data facts
+- `docs/architecture/` — system overview
+- `docs/decisions/` — ADRs and historical decision context
+- `docs/research/` — point-in-time research
+
+Update docs when setup, CLI behavior, environment variables, or data layout changes.

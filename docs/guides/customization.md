@@ -1,6 +1,6 @@
 # Customization guide
 
-Non-default tweaks only. For normal install, workflow, and repo layout see the [development guide](development.md).
+Non-default tweaks only. For normal setup and rebuild workflow see [Getting started](../getting-started.md) and the [deck rebuild guide](deck-rebuild.md).
 
 ## Character data overrides
 
@@ -34,11 +34,11 @@ Update `src/anki_chinese/config.py`:
 - `DECK_NAME` — display name in Anki
 - `FIELDS` — field list (must match card templates)
 
-⚠️ Do not change `MODEL_ID` or `DECK_ID` after first import — Anki will create duplicates.
+Do not change `MODEL_ID` or `DECK_ID` after first import — Anki will create duplicates. See the [Anki model reference](../reference/anki-model.md).
 
 ## TTS settings
 
-See the [TTS setup guide](tts-setup.md) for API key configuration.
+See the [TTS setup guide](tts-setup.md) for credential setup.
 
 Runtime defaults for MiniMax live in `src/anki_chinese/audio/minimax.py`. Runtime defaults for Google live in `src/anki_chinese/audio/google_tts.py`. Override with environment variables only when needed:
 
@@ -48,7 +48,10 @@ Runtime defaults for MiniMax live in `src/anki_chinese/audio/minimax.py`. Runtim
 | `MINIMAX_TTS_MODEL` | Different MiniMax speech model |
 | `MINIMAX_MANDARIN_VOICE_ID` | Different Mandarin voice |
 | `MINIMAX_CANTONESE_VOICE_ID` | Different Cantonese voice |
-| `GOOGLE_TTS_API_KEY` | Google Cloud TTS API key |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Google service-account JSON path |
+| `GOOGLE_TTS_ENDPOINT` | Different Google TTS endpoint |
+| `GOOGLE_TTS_MANDARIN_VOICE` | Different Google Mandarin voice |
+| `GOOGLE_TTS_CANTONESE_VOICE` | Different Google Cantonese voice |
 
 Provider-specific code is contained in `src/anki_chinese/audio/`. The CLI and note pipeline remain provider-neutral.
 
@@ -68,4 +71,4 @@ Then rerun `uv run anki-chinese init`.
 - Manual entries always override auto-generated examples.
 - If `pinyin` is omitted, the tool derives it automatically.
 - Auto-pick uses frequency-based selection from HSK vocabulary (`hsk_complete.min.json`).
-- Listening front shows the example only when `ExampleWord` is present.
+Manual example-word data feeds enrichment and lookup behavior; generated card fields are documented in the [Anki model reference](../reference/anki-model.md).

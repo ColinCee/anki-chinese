@@ -1,6 +1,6 @@
 # ADR-001: Example Sentence Generation Strategy
 
-**Status:** Accepted (v6 — production pipeline)
+**Status:** Accepted (v6 — implemented)
 **Date:** 2026-03-28
 **Supersedes:** v2 keyword-hint, v3 no-hint, v4 lean+selfcheck, v5 topic-diversity
 
@@ -10,20 +10,20 @@ Each Anki note needs a short example sentence showing the target character in na
 
 ## Decision
 
-Generate with **Gemini Flash Lite** (lean 7-rule prompt), validate with a **code-level character check**, **phonetic confuser check**, and **LLM self-validation** (7-point checklist), retry once on failure.
+Generate with **Gemini Flash Lite** (lean 7-rule prompt), validate with deterministic character/phonetic-confuser checks and **LLM self-validation** (7-point checklist). The current implementation retries deterministic code-check failures and flags LLM validation failures for review.
 
 ### Configuration
 
 | Setting         | Value                          | Rationale                                              |
 | --------------- | ------------------------------ | ------------------------------------------------------ |
-| Model           | gemini-3.1-flash-lite          | Cheapest, fastest; quality matches larger models       |
+| Model           | `gemini-3.1-flash-lite-preview` in current code | Cheapest, fastest tested option; monitor preview expiry |
 | Thinking        | Minimal                        | Same quality as Medium at 2.5× speed                   |
 | Gen temperature | 0.7                            | Good variety without hallucination                     |
 | Val temperature | 0.0                            | Deterministic validation judgments                     |
 | Length          | 6–10 Chinese characters        | Adult beginner sweet spot                              |
 | Char check      | Code: `hanzi in sentence`      | Deterministic, max 2 retries with conversation feedback |
 | LLM validation  | 7-point checklist, same model  | Catches grammar the model misses during generation     |
-| Retry           | 1 regen on validation failure  | Error description fed back for targeted fix            |
+| Retry           | Code-check failures only in current implementation | LLM validation failures are flagged for review |
 | Keyword         | Model provides as English output | NOT hinted — avoids steering toward wrong usage       |
 
 ### Pipeline (v6)
@@ -196,7 +196,7 @@ These are style/semantic issues, not grammar. A semantic quality gate could catc
 **Mitigation:**
 1. Rule 7 in system prompt tells Gemini to avoid phonetically similar words
 2. Code-level confuser check in `_generate_one()` logs warnings
-3. `scripts/fix_confusers.py --exact-only` regenerates sentences with exact homophones
+3. `uv run anki-chinese sentences repair-confusers --apply` regenerates sentences with exact blocking confusers
 4. Some exact homophones are unavoidable (仁/人 — 人 is the most common Chinese character)
 
 **Verified:** 4 parallel Sonnet 4.6 agents verified all 57 detected confusers (100% correct detections) and spot-checked 60 clean sentences (0 false negatives).
@@ -217,25 +217,21 @@ Gemini preview models expire (e.g. `gemini-2.5-flash-lite-preview-06-17` → 404
 
 23 style nitpicks identified by judges (redundancy, collocation preferences, semantic implausibility). None teach wrong Chinese. Not worth another pipeline iteration — diminishing returns.
 
-## Artifacts
+## Current implementation
 
-| File                              | Purpose                                                   |
-| --------------------------------- | --------------------------------------------------------- |
-| `scripts/eval_v6_final.py`        | **Production pipeline** — v6 generate+validate script     |
-| `scripts/fix_confusers.py`        | **Confuser fix** — detect and regenerate confuser sentences |
-| `scripts/eval_v5_validated.py`    | v5 with topic seeds (historical, superseded)              |
-| `scripts/eval_v3_no_keyword.py`   | v3 evaluation script (historical)                         |
-| `data/build/eval_v6.json`         | v6 results (212 sentences, production quality)            |
-| `data/build/eval_v5.json`         | v5 results (212 sentences)                                |
-| `data/build/eval_v3.json`         | v3 results (212 sentences)                                |
-| `data/build/judge_results_v6.json` | v3 vs v6 AI judge results (212 pairs)                    |
-| `data/build/judge_results_v5.json` | v3 vs v5 AI judge results (212 pairs)                    |
-| `data/build/judge_results.json`   | v2 vs v3 AI judge results (212 pairs)                     |
+The production implementation lives in:
 
-## Production TODO
+| Path | Purpose |
+| --- | --- |
+| `src/anki_chinese/sentences/generator.py` | Gemini generation, code checks, self-validation, phonetic confuser handling |
+| `src/anki_chinese/sentences/keyword_fixer.py` | Contextual meaning repair |
+| `src/anki_chinese/cli/sentences.py` | `sentences`, `sentences audit`, and `sentences repair-confusers` commands |
+| `src/anki_chinese/cli/keywords.py` | `keywords` command |
 
-1. Extract v6 pipeline into production code (`src/anki_chinese/`)
-2. Add `example_sentence`, `example_pinyin`, `example_english`, `keyword` to CharacterNote
-3. Wire sentence audio through MiniMax TTS
-4. Update Anki card template to show sentence on back
-5. Add lightweight dedup for cross-sentence variety (optional)
+Historical evaluation scripts may remain under `scripts/`; treat them as research artifacts rather than the primary user workflow.
+
+## Future work
+
+1. Add lightweight deduplication for cross-sentence variety if repetition becomes a real learning issue.
+2. Add manual exception handling for classical/literary characters that do not fit modern colloquial sentences.
+3. Revisit model naming if the current Gemini preview model expires or a stable equivalent becomes available.

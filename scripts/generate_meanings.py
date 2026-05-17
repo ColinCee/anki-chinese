@@ -43,7 +43,7 @@ CEDICT_PATH = PROJECT_ROOT / "data" / "reference" / "cedict_1_0_ts_utf-8_mdbg.tx
 
 # Add src/ to path so we can import the shared CEDICT module
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
-from anki_chinese.data_sources._cedict import lookup_char_defs  # noqa: E402
+from anki_chinese.data_sources._cedict import lookup_char_defs  # noqa: E402, I001
 
 
 # -- Pydantic schemas --------------------------------------------------------

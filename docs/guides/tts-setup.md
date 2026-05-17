@@ -1,76 +1,117 @@
 # TTS setup guide
 
-Audio generation uses two providers: **Google Cloud TTS** for single-character pronunciation and **MiniMax** for sentence audio. See [ADR-002](../decisions/ADR-002-tts-provider-strategy.md) for the rationale.
+Audio generation uses two providers behind the same `TTSProvider` boundary:
 
-## Google Cloud TTS (single characters)
+| Audio | Current provider | Notes |
+| --- | --- | --- |
+| Single-character Mandarin | Google Cloud Text-to-Speech | Uses custom pronunciations with pinyin tone numbers. |
+| Single-character Cantonese | Google Cloud Text-to-Speech | Uses the configured `yue-HK` voice. |
+| Sentence audio | MiniMax `speech-2.8-turbo` | Better naturalness for longer Mandarin text. |
 
-Google provides SSML `<phoneme>` control for exact pinyin/jyutping pronunciation.
+See [ADR-002](../decisions/ADR-002-tts-provider-strategy.md) for the architectural rationale.
+
+## Google Cloud Text-to-Speech
+
+The current Google provider uses **Application Default Credentials** or a service-account JSON file. It does not use a Google TTS API-key environment variable.
 
 ### Setup
 
-1. Create a Google Cloud project and enable the [Text-to-Speech API](https://console.cloud.google.com/apis/library/texttospeech.googleapis.com)
-2. Create an API key in **APIs & Services → Credentials**
-3. Copy `.env.example` to `.env` and set:
+1. Create or choose a Google Cloud project.
+2. Enable the Text-to-Speech API.
+3. Authenticate with one of the following methods.
 
-```dotenv
-GOOGLE_TTS_API_KEY=your-key
+For local ADC:
+
+```bash
+gcloud auth application-default login
 ```
 
-### Free tier
+For a service account:
 
-WaveNet: 4M chars/month ongoing (our ~6K single-char workload is ~660× under the limit).
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+```
 
-## MiniMax (sentences)
+If using `.env`:
 
-MiniMax provides natural Chinese-first speech via `speech-2.8-turbo`.
+```dotenv
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+```
+
+### Optional overrides
+
+| Variable | Purpose |
+| --- | --- |
+| `GOOGLE_TTS_ENDPOINT` | Override the REST endpoint. |
+| `GOOGLE_TTS_MANDARIN_VOICE` | Override Mandarin voice; default is `cmn-CN-Chirp3-HD-Leda`. |
+| `GOOGLE_TTS_CANTONESE_VOICE` | Override Cantonese voice; default is `yue-HK-Chirp3-HD-Leda`. |
+
+## MiniMax
+
+MiniMax provides natural Chinese-first sentence audio.
 
 ### Setup
 
-1. Create a MiniMax API key at [API Keys](https://platform.minimax.io/user-center/basic-information/interface-key)
-2. Set in `.env`:
+Create a MiniMax API key and set:
 
 ```dotenv
 MINIMAX_API_KEY=your-key
 ```
 
-### Billing
+Mainland-region keys usually need:
 
-- Pay-as-you-go balance: [Balance page](https://platform.minimax.io/user-center/payment/balance)
-- Audio subscription: [Subscription page](https://platform.minimax.io/subscribe/audio-subscription)
-- Full rebuild cost: ~$0.37 (sentence portion only)
-- Starter subscription ($5/month, 100K credits) gives ~8 full rebuilds
+```dotenv
+MINIMAX_API_HOST=https://api.minimaxi.com
+```
 
-The repo does not care whether usage is paid by free credits, pay-as-you-go, or subscription.
+### Optional overrides
 
-## Smoke test
+| Variable | Purpose |
+| --- | --- |
+| `MINIMAX_API_HOST` | API host; defaults to `https://api.minimax.io`. |
+| `MINIMAX_TTS_MODEL` | Speech model; default is `speech-2.8-turbo`. |
+| `MINIMAX_MANDARIN_VOICE_ID` | Mandarin voice ID. |
+| `MINIMAX_CANTONESE_VOICE_ID` | Cantonese voice ID. |
+
+## Smoke tests
 
 ```bash
-# Test single-character audio (Google)
-uv run anki-chinese test-tts --char 一
+# Google character audio
+uv run anki-chinese test-tts --char 一 --provider google
 
-# Test with specific provider
-uv run anki-chinese test-tts --char 早 --provider google
+# MiniMax arbitrary Mandarin text
 uv run anki-chinese test-tts --word 早上 --provider minimax
 ```
 
-## Provider architecture
+Samples are written under:
 
-The `TTSProvider` Protocol in `src/anki_chinese/audio/provider.py` defines the boundary. Implementations:
+```text
+data/build/audio/samples/
+```
 
-| Provider | File | Default for |
-|----------|------|-------------|
-| Google | `audio/google_tts.py` | Single characters (factory default) |
-| MiniMax | `audio/minimax.py` | Sentences/examples |
+## Generate deck audio
 
-Selection is via `--provider` CLI flag or the factory default in `audio/factory.py`.
+```bash
+uv run anki-chinese audio --limit 20
+uv run anki-chinese audio
+```
 
-## Environment variable reference
+Useful options:
 
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `GOOGLE_TTS_API_KEY` | For audio | Google Cloud TTS authentication |
-| `MINIMAX_API_KEY` | For audio | MiniMax TTS authentication |
-| `MINIMAX_API_HOST` | No | Override for mainland-region keys |
-| `MINIMAX_TTS_MODEL` | No | Override default speech model |
-| `MINIMAX_MANDARIN_VOICE_ID` | No | Override default Mandarin voice |
-| `MINIMAX_CANTONESE_VOICE_ID` | No | Override default Cantonese voice |
+```bash
+uv run anki-chinese audio --char 早
+uv run anki-chinese audio --start-rsh 500
+uv run anki-chinese audio --force
+uv run anki-chinese audio-clean
+uv run anki-chinese audio-clean --apply
+```
+
+After audio generation:
+
+```bash
+uv run anki-chinese build
+```
+
+## Cost and limits
+
+Provider pricing, free tiers, and model availability change over time. Treat [TTS provider research](../research/tts-providers.md) as point-in-time background and verify pricing against the provider before a large run.
