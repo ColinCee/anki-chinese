@@ -65,6 +65,10 @@ The snapshot should include:
 This enables a targeted undo by suspending only the cards that were suspended
 before the activation and optionally removing any activation tag if needed.
 
+If the current public CLI does not provide an automated snapshot command for the
+operation, require a manual Anki backup/export before the real mutation instead
+of implying that the source `.apkg` is enough.
+
 ### Level 3: Dry-run only
 
 Use `--dry-run` before every unfamiliar activation command:

@@ -1,98 +1,76 @@
 # Development guide
 
-Everything you need to work on **anki-chinese**: setup, layout, testing, and migration notes.
+Everything needed to work on **anki-chinese** locally.
 
-## Quick setup
-
-### Prerequisites
-
-- Python 3.13+
-- [uv](https://docs.astral.sh/uv/)
-
-### Install
+## Setup
 
 ```bash
-git clone <repo-url> && cd anki-chinese
+git clone https://github.com/ColinCee/anki-chinese.git
+cd anki-chinese
 uv sync --group dev
 ```
 
-### Validate
+## Validation
 
-Run these four checks before pushing any change:
+Run these before opening a PR:
 
 ```bash
-uv run pyright          # type checking
-uv run pytest           # test suite
-uv run anki-chinese --help                # CLI entrypoint (package)
-uv run python -m anki_chinese.cli --help  # CLI entrypoint (module)
+uv run ruff check
+uv run pyright
+uv run pytest
+uv run anki-chinese --help
+uv run python -m anki_chinese.cli --help
 ```
 
-Both entrypoint checks must print help text without error.
+`pyright`, `pytest`, and CLI entrypoint checks run in CI. `ruff` is the project linter and should stay clean for local changes.
 
-## Repo layout
-
-### Source code — `src/anki_chinese/`
+## Source layout
 
 | Path | Purpose |
-|------|---------|
-| `cli/` | Typer commands and shared Rich UI helpers |
-| `notes/` | Note model, parsing, enrichment, persistence, and reporting |
-| `audio/` | Provider code, retry policy, and audio file/tag helpers |
-| `data_sources/` | Pinyin, jyutping, and example-word lookup data |
-| `deck.py` | Anki package creation |
-| `config.py` | Paths, deck metadata, and voice defaults |
-| `cards/` | Packaged card HTML/CSS files |
+| --- | --- |
+| `src/anki_chinese/cli/` | Typer commands and Rich UI helpers. |
+| `src/anki_chinese/notes/` | Character note model, `.apkg` parsing, enrichment, storage, reporting. |
+| `src/anki_chinese/deck.py` | `genanki` package creation. |
+| `src/anki_chinese/cards/` | Packaged Anki card templates and CSS. |
+| `src/anki_chinese/audio/` | TTS provider protocol, Google/MiniMax implementations, retry/rate limiting. |
+| `src/anki_chinese/sentences/` | Gemini sentence generation and contextual meaning repair. |
+| `src/anki_chinese/songs/` | Lyric parsing, study normalization, analysis, activation planning. |
+| `src/anki_chinese/activation/` | AnkiConnect client and live activation service. |
+| `src/anki_chinese/data_sources/` | CEDICT, HSK, pinyin, jyutping, SUBTLEX helpers. |
+| `src/anki_chinese/config.py` | Paths, deck metadata, stable IDs, field order. |
 
-### Top-level directories
+## Data layout
 
-| Path | Purpose |
-|------|---------|
-| `src/` | All production code |
-| `tests/` | Automated tests, mirrored by feature (see [Testing](#testing)) |
-| `data/` | Runtime data, split by purpose (see below) |
-| `docs/` | Guides and reference documentation |
-| `dist/` | Python packaging output; ignored in normal workflow |
+See [data layout](../reference/data-layout.md) for the full reference. Generated state and build outputs should not be edited by hand.
 
-### `data/` subdirectories
+## Testing conventions
 
-| Path | Purpose |
-|------|---------|
-| `source/` | Deck imports such as `All Decks.apkg` (native Anki package export) |
-| `manual/` | Hand-maintained overrides and example-word data |
-| `reference/` | Canonical lookup corpora for deterministic offline use; optional local extras like `SUBTLEX_CH.xlsx` also live here |
-| `songs/` | Curated song lyric markdown files used by `anki-chinese songs`; lyrics may preserve source-script forms while mainland-simplified planning is handled separately |
-| `state/` | Workflow state such as `enriched.json` |
-| `build/` | Generated audio, sample audio, and built decks |
+Tests live in top-level `tests/` and mirror feature areas:
 
-## Testing
+- `tests/notes/`
+- `tests/audio/`
+- `tests/cli/`
+- `tests/songs/`
+- `tests/sentences/`
+- `tests/activation/`
+- `tests/integration/`
+- `tests/regressions/`
 
-### Directory structure
+Prefer high-signal tests that cover public behavior, risky seams, and real regressions.
 
-Tests live in top-level `tests/` and mirror the feature layout:
+## Code conventions
 
-- `tests/notes/`, `tests/audio/`, `tests/cli/`, `tests/data_sources/`, `tests/deck/` — focused feature tests
-- `tests/regressions/` — real bug regressions
-- `tests/integration/` — a small number of high-level workflow and CLI orchestration checks, usually with stubbed external dependencies
+- Python 3.13+
+- Type annotations for production code
+- `pyright` in standard mode
+- `ruff` for linting/import ordering
+- Internal modules can mark `__all__: list[str] = []`; import through package boundaries when possible
+- Keep provider-specific behavior behind narrow boundaries such as `TTSProvider`
+- Keep AnkiConnect behavior inside `activation/` and CLI orchestration, not scattered ad hoc scripts
 
-### Philosophy
+## Documentation conventions
 
-- Favor regression value over test count.
-- Keep fixtures light and explicit.
-- Test public behavior and risky seams first.
-- Every real bug should earn a regression test.
-
-## Migration notes
-
-This cleanup intentionally removed undocumented compatibility surfaces:
-
-- `anki_chinese.models`
-- `anki_chinese.pipeline.*`
-- Old top-level helper scripts like `main.py` and `generate_test_audio.py`
-
-If you still have local automation importing those paths, migrate to the real modules:
-
-| Removed path | Replacement |
-|--------------|-------------|
-| `anki_chinese.models` | `anki_chinese.notes` — note models, parsing, storage, and reporting |
-| `anki_chinese.pipeline.*` | `anki_chinese.notes.enrich` for `enrich_notes`; `anki_chinese.audio` for TTS; `anki_chinese.deck` for deck creation |
-| `main.py` / `generate_test_audio.py` | `anki-chinese` CLI (see `uv run anki-chinese --help`) |
+- Update public docs when CLI behavior, setup, environment variables, or data layout changes.
+- Keep README concise and link to canonical docs for details.
+- Keep ADRs focused on decisions and historical context; use guides/reference for current setup.
+- Label research as point-in-time when it includes pricing or provider capabilities.

@@ -2,6 +2,8 @@
 
 Research and comparison of TTS providers for Chinese character and sentence audio generation.
 
+This is point-in-time research. Use the [TTS setup guide](../guides/tts-setup.md) and [configuration reference](../reference/configuration.md) for current setup instructions.
+
 ## The problem
 
 Single Chinese characters are often **polyphonic** (多音字) — multiple valid pronunciations depending on context. When a TTS model receives an isolated character with no surrounding context, it guesses which reading to use and frequently guesses wrong.
@@ -25,7 +27,7 @@ Best-in-class phoneme control for both Mandarin and Cantonese.
 | Mandarin voices | cmn-CN / cmn-TW: Standard, WaveNet, Neural2, Chirp 3 HD |
 | Cantonese voices | yue-HK: Standard, WaveNet |
 | API | REST at `texttospeech.googleapis.com/v1/text:synthesize` |
-| Auth | API key or service account |
+| Auth | OAuth/ADC or service account in the current implementation |
 | Reliability | Google infrastructure, no chronic rate-limit issues |
 
 #### Model tiers
@@ -63,7 +65,8 @@ Best-in-class phoneme control for both Mandarin and Cantonese.
 
 ```bash
 curl -X POST \
-  "https://texttospeech.googleapis.com/v1/text:synthesize?key=$GOOGLE_TTS_API_KEY" \
+  "https://texttospeech.googleapis.com/v1/text:synthesize" \
+  -H "Authorization: Bearer $GOOGLE_OAUTH_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "input": {
@@ -76,7 +79,7 @@ curl -X POST \
 
 ### MiniMax ⭐ (sentences)
 
-Best fit for sentence and example-word audio where context helps disambiguation.
+Best fit for sentence audio where context helps disambiguation.
 
 | Feature | Details |
 |---------|---------|
@@ -140,7 +143,7 @@ No official Python SDK for `speech-2.8-turbo`. The repo uses a small direct HTTP
 
 | Provider | Price/1M chars | Free tier | ~12K workload cost |
 |----------|----------------|-----------|---------------------|
-| Google WaveNet | $4 | 4M/month ongoing | **Free** |
+| Google WaveNet | $4 | 4M/month ongoing | **Free at the time of research** |
 | Google Standard | $4 | 4M/month ongoing | **Free** |
 | Google Neural2 | $16 | 1M/month | **Free** |
 | MiniMax | $60 | ~10K/month | $0.73/rebuild |
@@ -152,28 +155,28 @@ No official Python SDK for `speech-2.8-turbo`. The repo uses a small direct HTTP
 | Google WaveNet | 1,000 | 5,000 bytes |
 | MiniMax | 60 | 10,000 chars |
 
-### Current workload
+### Workload snapshot at time of research
 
-From `data/state/enriched.json`:
+The original full-rebuild estimate was based on:
 
 - 3,018 Mandarin audio items → **3,018 characters**
 - 3,018 Cantonese audio items → **3,018 characters**
-- 3,015 example-word audio items → **6,188 characters**
-- **12,224 total synthesized characters** per full rebuild
+- sentence audio for the deck's generated example sentences
+- about **12K synthesized characters** per full rebuild
 
-MiniMax full rebuild cost: ~$0.73. Google WaveNet: free (330× under 4M/month limit).
+MiniMax full rebuild cost was estimated at ~$0.73 at the time of research. Verify current pricing before large rebuilds.
 
 ## Recommendation
 
-**Hybrid approach**: Google Cloud TTS for single characters, MiniMax for sentences.
+**Hybrid approach**: Google Cloud Text-to-Speech for single characters, MiniMax for sentences.
 
 | Audio type | Provider | Why |
 |------------|----------|-----|
-| Single-character Mandarin | Google WaveNet | SSML `<phoneme>` forces exact pinyin |
-| Single-character Cantonese | Google WaveNet | SSML `<phoneme>` forces exact jyutping |
-| Sentence/example audio | MiniMax | Natural prosody, context disambiguates polyphonic chars |
+| Single-character Mandarin | Google Cloud TTS | Custom pronunciations/phoneme control force exact pinyin |
+| Single-character Cantonese | Google Cloud TTS | Dedicated Cantonese voice |
+| Sentence audio | MiniMax | Natural prosody, context disambiguates polyphonic chars |
 
-Google is the only provider with full phoneme control for both Mandarin and Cantonese. MiniMax produces more natural sentence-level audio with its Chinese-first model. The provider boundary in `audio/provider.py` supports this cleanly.
+Google gives the project the strongest control for short character audio. MiniMax produces more natural sentence-level audio with its Chinese-first model. The provider boundary in `audio/provider.py` supports this cleanly.
 
 ## Pinyin/jyutping conversion notes
 
@@ -181,4 +184,4 @@ The provider interface passes pinyin (diacritical marks, e.g., "nǐ") and jyutpi
 
 ## Setup
 
-See [TTS Setup Guide](../guides/tts-setup.md) for API key configuration and smoke testing.
+See [TTS setup guide](../guides/tts-setup.md) for current credential setup and smoke testing.

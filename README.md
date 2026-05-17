@@ -1,16 +1,19 @@
 # anki-chinese
 
-Build a regenerable Anki deck for Mandarin study with Cantonese support.
+Build a regenerable Anki deck for Mandarin study with Cantonese support, AI-generated example sentences, controlled pronunciation audio, and song-driven card activation.
 
-Parses an Anki `.apkg` export, enriches each character with readings and example words, optionally generates TTS audio, and outputs a clean `.apkg` for Anki.
+The project is optimized for a mainland Mandarin learner using simplified characters while still keeping Cantonese readings and traditional-script song exposure useful as support.
 
-## Project goals
+## Why this exists
 
-- **Character-first learning** across the RSH book
-- **Mandarin reading + pronunciation** with Cantonese as support
-- **Common usage phrase** on each listening card
-- **Explicit example-word pinyin** so audio uses the intended reading
-- **Regenerable deck** without losing Anki review history
+Anki is excellent at scheduling reviews, but maintaining a high-quality Chinese deck by hand is slow. `anki-chinese` keeps Anki as the review engine and automates the rebuildable parts:
+
+- parse an existing Anki `.apkg` export
+- enrich each character with Mandarin pinyin, Cantonese jyutping, meanings, and metadata
+- generate short, common Mandarin example sentences with Gemini
+- generate single-character and sentence audio with provider-specific TTS
+- rebuild a clean `.apkg` with stable IDs so imports update notes instead of duplicating them
+- use AnkiConnect to unsuspend/tag existing live cards from song lyric plans
 
 ## Quick start
 
@@ -19,96 +22,123 @@ Parses an Anki `.apkg` export, enriches each character with readings and example
 - Python 3.13+
 - [uv](https://docs.astral.sh/uv/)
 - Anki desktop
+- A source Anki export at `data/source/All Decks.apkg`
 
 ### Install
 
 ```bash
-git clone <repo-url> && cd anki-chinese
+git clone https://github.com/ColinCee/anki-chinese.git
+cd anki-chinese
 uv sync
 ```
 
-### Minimal run (no audio)
+### Build without optional network features
 
 ```bash
 uv run anki-chinese init
+uv run anki-chinese status
 uv run anki-chinese build
 ```
 
-Output: `data/build/decks/chinese_rsh.apkg`
+Import the generated package into Anki:
 
-## Core workflow
-
-```bash
-uv run anki-chinese init       # 1. Parse source export + enrich
-uv run anki-chinese status     # 2. Inspect coverage and validation
-uv run anki-chinese review     # 3. Inspect notes flagged for correction
-uv run anki-chinese audio      # 4. Generate TTS audio (optional)
-uv run anki-chinese build      # 5. Create final .apkg
+```text
+data/build/decks/chinese_rsh.apkg
 ```
 
-- `init` must run before `build` (produces `data/state/enriched.json`)
-- `audio` is optional and network-bound
-- Default source: `data/source/All Decks.apkg`
-- Example words auto-generate when missing; manual overrides from `data/manual/example_words.json`
-- Stable GUIDs per character — re-importing updates notes, never duplicates
+See [Getting started](docs/getting-started.md) for export/import details and optional credentials.
+
+## Main workflows
+
+### Rebuild deck content
 
 ```bash
-# Smoke-test audio
-uv run anki-chinese test-tts --char 早
-uv run anki-chinese test-tts --word 早上
+uv run anki-chinese init
+uv run anki-chinese sentences       # optional, requires GEMINI_API_KEY
+uv run anki-chinese audio           # optional, requires TTS credentials
+uv run anki-chinese build
 ```
 
-## Song learning and activation
+For one-command rebuilds:
 
-The `.apkg` import/export workflow remains the source of truth for rebuildable card
-content. Live study-state changes, such as unsuspending a batch of existing cards, use
-AnkiConnect while Anki is running.
+```bash
+uv run anki-chinese build --full --skip-audio
+uv run anki-chinese build --full --audio-limit 50
+```
 
-Default learner target: **mainland Mandarin with simplified characters**.
-Traditional forms that appear in Taiwanese songs are useful recognition context,
-but they are not the primary study target for this repo.
-Song planning now normalizes the common lyric particle `著` to the mainland
-study form `着`, and the audited lyric files have been cleaned accordingly.
+### Generate and audit sentences
+
+```bash
+uv run anki-chinese sentences --limit 20
+uv run anki-chinese sentences --char 早 --pick 3
+uv run anki-chinese keywords
+uv run anki-chinese sentences audit
+uv run anki-chinese sentences repair-confusers --apply
+```
+
+### Generate audio
+
+```bash
+uv run anki-chinese test-tts --char 早 --provider google
+uv run anki-chinese test-tts --word 早上 --provider minimax
+uv run anki-chinese audio --limit 20
+uv run anki-chinese audio-clean
+```
+
+Current provider split:
+
+- **Google Cloud Text-to-Speech** for single-character Mandarin/Cantonese audio
+- **MiniMax** for sentence audio
+
+### Activate cards from songs
+
+Live activation uses AnkiConnect while Anki is open. Always dry-run first.
 
 ```bash
 uv run anki-chinese songs analyze
-uv run anki-chinese songs next 学猫叫 --limit 20
-uv run anki-chinese songs activate 学猫叫 --limit 20 --dry-run
-uv run anki-chinese songs activate 学猫叫 --limit 20
-
-uv run anki-chinese songs fetch "天后"              # search lyrics.net.cn
-uv run anki-chinese songs fetch --url https://lyrics.net.cn/lyrics/58445
-uv run anki-chinese songs verify                    # validate all lyric files
-
-uv run anki-chinese activate chars 内 合 哟 着 --dry-run
-uv run anki-chinese activate chars 内 合 哟 着
+uv run anki-chinese songs next --limit 20
+uv run anki-chinese songs activate --limit 20 --dry-run
+uv run anki-chinese songs activate --limit 20
 ```
 
-Install the AnkiConnect add-on in Anki with code `2055492159`, keep Anki open, then run
-activation commands. Lyrics live in `data/songs/lyrics/`. See the
-[Song Activation guide](docs/guides/song-activation.md) for setup and the full workflow.
+Lyrics live in `data/songs/lyrics/` and can be fetched from lyrics.net.cn:
 
-Use `uv run anki-chinese <command> --help` for full flags and options.
+```bash
+uv run anki-chinese songs fetch "天后"
+uv run anki-chinese songs verify
+uv run anki-chinese songs verify --online
+```
 
-## Learning flow
+## Safety notes
 
-The deck is opinionated:
+- Do not change `MODEL_ID` or `DECK_ID` after first import; Anki will treat the next import as a different model/deck.
+- `.apkg` rebuilds update note content. They are not the source of truth for live suspended state after AnkiConnect changes.
+- `activate` and `songs activate` mutate the open Anki collection. Use `--dry-run` first and keep an Anki backup or targeted undo path.
+- Keep `.env`, API keys, Google service-account files, generated audio, and generated deck outputs out of commits.
 
-- `recall_front` is listening-first: Mandarin audio + optional example phrase
-- Keyword text intentionally removed from the listening front
-- Example selection: manual first → HSK/CEDICT auto-pick → blank
-- Pronunciation from `Pinyin` and `Jyutping`, not the English keyword
+## Documentation
 
-## Docs
+Start with [docs/](docs/README.md):
 
-See [docs/](docs/README.md) for full documentation:
+- [Getting started](docs/getting-started.md)
+- [Architecture overview](docs/architecture/overview.md)
+- [Deck rebuild workflow](docs/guides/deck-rebuild.md)
+- [TTS setup](docs/guides/tts-setup.md)
+- [Sentence generation](docs/guides/sentence-generation.md)
+- [Song activation](docs/guides/song-activation.md)
+- [CLI reference](docs/reference/cli.md)
+- [Configuration reference](docs/reference/configuration.md)
+- [Development guide](docs/guides/development.md)
 
-- **[Development](docs/guides/development.md)** — repo layout, testing strategy, validation
-- **[Customization](docs/guides/customization.md)** — overrides, card templates, example words
-- **[Mainland Mandarin Study Target](docs/guides/mainland-mandarin.md)** — simplified-first policy, traditional recognition, Taiwanese song handling
-- **[Song Activation](docs/guides/song-activation.md)** — AnkiConnect setup and song-based unsuspending
-- **[TTS Setup](docs/guides/tts-setup.md)** — Google Cloud + MiniMax API setup
-- **[ADR-001: Sentences](docs/decisions/ADR-001-sentence-generation.md)** — Gemini generation pipeline
-- **[ADR-002: TTS Strategy](docs/decisions/ADR-002-tts-provider-strategy.md)** — hybrid provider approach
-- **[ADR-003: Study Target Policy](docs/decisions/ADR-003-study-target-policy.md)** — mainland Mandarin, simplified-first rollout plan
-- **[TTS Research](docs/research/tts-providers.md)** — full provider comparison
+## Development
+
+```bash
+uv sync --group dev
+uv run pyright
+uv run pytest
+uv run ruff check
+uv run anki-chinese --help
+uv run python -m anki_chinese.cli --help
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contributor setup and PR expectations.
