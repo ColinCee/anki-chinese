@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import typer
 
 from ..activation import (
     ActivationPreview,
+    ActivationResult,
     AnkiClient,
     AnkiConnectClient,
     AnkiConnectError,
     activate_characters,
     normalize_character_args,
 )
+from ..config import ANKI_BACKUP_DIR
 from .app import AppRuntime
 
 
@@ -55,6 +58,18 @@ def _print_preview(
         runtime.console.print(f"  [dim]{tag_action} notes with:[/dim] {tag}")
 
 
+def _print_result(
+    runtime: AppRuntime,
+    result: ActivationResult,
+    *,
+    dry_run: bool,
+    tag: str,
+) -> None:
+    _print_preview(runtime, result.preview, dry_run=dry_run, tag=tag)
+    if result.snapshot_path is not None:
+        runtime.console.print(f"  [dim]Undo snapshot:[/dim] {result.snapshot_path}")
+
+
 def run_activate_chars(
     runtime: AppRuntime,
     chars: list[str],
@@ -62,7 +77,9 @@ def run_activate_chars(
     dry_run: bool = False,
     tag: str = "",
     client: AnkiClient | None = None,
-) -> ActivationPreview:
+    snapshot_dir: Path = ANKI_BACKUP_DIR,
+    operation: str = "activate-chars",
+) -> ActivationResult:
     normalized = normalize_character_args(chars)
     if not normalized:
         runtime.console.print("[red]✗[/red] No Chinese characters supplied")
@@ -70,19 +87,26 @@ def run_activate_chars(
 
     client = client or _default_client()
     try:
-        preview = activate_characters(client, normalized, tag=tag, dry_run=dry_run)
+        result = activate_characters(
+            client,
+            normalized,
+            tag=tag,
+            dry_run=dry_run,
+            snapshot_dir=snapshot_dir,
+            operation=operation,
+        )
     except AnkiConnectError as error:
         runtime.console.print(f"[red]✗[/red] {error}")
         raise typer.Exit(2) from None
 
-    _print_preview(runtime, preview, dry_run=dry_run, tag=tag)
-    return preview
+    _print_result(runtime, result, dry_run=dry_run, tag=tag)
+    return result
 
 
 def register(app: typer.Typer, runtime: AppRuntime) -> None:
     activate_app = typer.Typer(
         name="activate",
-        help="Unsuspend existing cards in the live Anki collection.",
+        help="Unsuspend existing cards in the live Anki collection with undo snapshots.",
         no_args_is_help=True,
     )
 

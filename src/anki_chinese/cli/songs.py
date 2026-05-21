@@ -11,6 +11,8 @@ import typer
 from rich.table import Table
 
 from ..activation import (
+    ActivationResult,
+    ActiveStateClient,
     AnkiClient,
     AnkiConnectClient,
     AnkiConnectError,
@@ -36,11 +38,8 @@ from .activate import run_activate_chars
 from .app import AppRuntime
 
 
-class KnowledgeClient(Protocol):
+class KnowledgeClient(ActiveStateClient, Protocol):
     """Protocol for querying study state from live Anki."""
-
-    def find_studied_characters(self) -> set[str]: ...
-    def find_all_deck_info(self) -> tuple[list[str], set[str]]: ...
 
 
 def _make_client() -> AnkiConnectClient:
@@ -57,7 +56,7 @@ def _load_song_inputs(
     songs = load_songs(lyrics_dir)
     ac: KnowledgeClient = client or _make_client()
     try:
-        active_chars = ac.find_studied_characters()
+        active_chars = ac.find_active_characters()
         deck_order, deck_chars = ac.find_all_deck_info()
     except AnkiConnectError as error:
         runtime.console.print(f"[red]✗[/red] {error}")
@@ -291,9 +290,10 @@ def run_songs_activate(
     all_remaining: bool = False,
     dry_run: bool = False,
     tag: str = "",
+    snapshot_dir: Path = ANKI_BACKUP_DIR,
     client: AnkiClient | None = None,
     knowledge_client: KnowledgeClient | None = None,
-) -> None:
+) -> ActivationResult | None:
     plan_limit = 0 if all_remaining else limit
     plan = run_songs_next(
         runtime,
@@ -305,11 +305,13 @@ def run_songs_activate(
     if not plan.chars:
         return
     activation_tag = tag or f"activated::song::{plan.song.title}"
-    run_activate_chars(
+    return run_activate_chars(
         runtime,
         list(plan.chars),
         dry_run=dry_run,
         tag=activation_tag,
+        snapshot_dir=snapshot_dir,
+        operation="activate-song",
         client=client,
     )
 
@@ -775,7 +777,7 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             help="Directory of lyric markdown files.",
         ),
     ) -> None:
-        """Unsuspend the next live Anki cards needed for a song."""
+        """Unsuspend song cards after writing an undo snapshot."""
         run_songs_activate(
             runtime,
             song,

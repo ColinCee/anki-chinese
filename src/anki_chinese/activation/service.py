@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 
+from ..config import MODEL_NAME
 from ..songs import is_cjk
 
 
@@ -31,6 +32,12 @@ class ActivationPreview:
     @property
     def will_change(self) -> bool:
         return bool(self.suspended_card_ids)
+
+
+@dataclass(frozen=True)
+class ActivationResult:
+    preview: ActivationPreview
+    snapshot_path: Path | None
 
 
 @dataclass(frozen=True)
@@ -96,6 +103,16 @@ class AnkiClient(Protocol):
 
     def add_tags(self, note_ids: list[int], tag: str) -> None:
         """Add a tag to the supplied live Anki note IDs."""
+        ...
+
+
+class ActiveStateClient(Protocol):
+    def find_active_characters(self) -> set[str]:
+        """Return characters with at least one unsuspended live card."""
+        ...
+
+    def find_all_deck_info(self) -> tuple[list[str], set[str]]:
+        """Return deck order and all character notes in the live model."""
         ...
 
 
@@ -170,21 +187,70 @@ def preview_activation(client: AnkiClient, chars: list[str]) -> ActivationPrevie
     )
 
 
+def write_activation_undo_snapshot(
+    preview: ActivationPreview,
+    snapshot_dir: Path,
+    *,
+    tag: str,
+    operation: str = "activate-chars",
+    model_name: str = MODEL_NAME,
+) -> Path:
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    created_at = datetime.now(UTC).replace(microsecond=0)
+    timestamp = created_at.strftime("%Y%m%d-%H%M%S")
+    path = snapshot_dir / f"activation-{timestamp}.json"
+    counter = 2
+    while path.exists():
+        path = snapshot_dir / f"activation-{timestamp}-{counter}.json"
+        counter += 1
+
+    data = {
+        "created_at": created_at.isoformat().replace("+00:00", "Z"),
+        "operation": operation,
+        "model_name": model_name,
+        "requested_chars": list(preview.requested_chars),
+        "found_chars": list(preview.found_chars),
+        "missing_chars": list(preview.missing_chars),
+        "already_active_chars": list(preview.already_active_chars),
+        "note_ids": list(preview.note_ids),
+        "card_ids": list(preview.card_ids),
+        "pre_change_suspended_card_ids": list(preview.suspended_card_ids),
+        "tag": tag,
+    }
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def activate_characters(
     client: AnkiClient,
     chars: list[str],
     *,
     tag: str = "",
     dry_run: bool = False,
-) -> ActivationPreview:
+    snapshot_dir: Path | None = None,
+    operation: str = "activate-chars",
+    model_name: str = MODEL_NAME,
+) -> ActivationResult:
     preview = preview_activation(client, chars)
     if dry_run or not preview.suspended_card_ids:
-        return preview
+        return ActivationResult(preview=preview, snapshot_path=None)
+    if snapshot_dir is None:
+        raise ValueError("snapshot_dir is required before mutating live Anki cards")
 
+    snapshot_path = write_activation_undo_snapshot(
+        preview,
+        snapshot_dir,
+        tag=tag,
+        operation=operation,
+        model_name=model_name,
+    )
     client.unsuspend_cards(list(preview.suspended_card_ids))
     if tag and preview.note_ids:
         client.add_tags(list(preview.note_ids), tag)
-    return preview
+    return ActivationResult(preview=preview, snapshot_path=snapshot_path)
 
 
 def preview_tag_resuspension(client: ResuspendClient, tag: str) -> ResuspendPreview:

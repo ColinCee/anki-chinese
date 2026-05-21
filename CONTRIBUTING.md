@@ -36,7 +36,7 @@ uv run anki-chinese songs verify
 - Update docs when setup, CLI behavior, environment variables, data layout, or safety expectations change.
 - Add or update tests for behavior changes and regressions.
 - Do not change `MODEL_ID`, `DECK_ID`, note fields, or card template field references without an explicit migration plan.
-- For live Anki activation changes, preserve dry-run behavior and clear affected note/card counts.
+- For live Anki activation changes, preserve dry-run behavior, undo snapshots before real mutations, and clear affected note/card counts.
 
 ## Documentation structure
 

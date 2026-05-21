@@ -196,6 +196,29 @@ class AnkiConnectClient:
         infos = self._notes_info(note_ids)
         return {self._info_character(info) for info in infos} - {""}
 
+    def find_active_characters(self) -> set[str]:
+        """Return characters where at least one live card is unsuspended."""
+        note_ids = self._find_all_model_note_ids()
+        if not note_ids:
+            return set()
+        infos = self._notes_info(note_ids)
+        card_ids = [
+            int(card_id)
+            for info in infos
+            for card_id in info.get("cards", [])
+        ]
+        suspended = self.suspended_card_ids(card_ids)
+
+        active: set[str] = set()
+        for info in infos:
+            char = self._info_character(info)
+            if not char:
+                continue
+            note_card_ids = [int(card_id) for card_id in info.get("cards", [])]
+            if any(card_id not in suspended for card_id in note_card_ids):
+                active.add(char)
+        return active
+
     def find_all_deck_info(self) -> tuple[list[str], set[str]]:
         """Return (deck_order, deck_chars) from the live Anki collection.
 

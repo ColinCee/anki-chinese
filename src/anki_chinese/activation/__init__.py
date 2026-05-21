@@ -3,6 +3,8 @@
 from .ankiconnect import AnkiConnectClient, AnkiConnectError
 from .service import (
     ActivationPreview,
+    ActivationResult,
+    ActiveStateClient,
     AnkiClient,
     LiveNoteCards,
     ResuspendClient,
@@ -13,11 +15,14 @@ from .service import (
     preview_activation,
     preview_tag_resuspension,
     resuspend_tagged_cards,
+    write_activation_undo_snapshot,
     write_resuspend_undo_snapshot,
 )
 
 __all__ = [
+    "ActiveStateClient",
     "ActivationPreview",
+    "ActivationResult",
     "AnkiClient",
     "AnkiConnectClient",
     "AnkiConnectError",
@@ -30,5 +35,6 @@ __all__ = [
     "preview_activation",
     "preview_tag_resuspension",
     "resuspend_tagged_cards",
+    "write_activation_undo_snapshot",
     "write_resuspend_undo_snapshot",
 ]

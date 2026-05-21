@@ -13,7 +13,7 @@ When this skill is relevant:
 
 1. Say whether the task will mutate live Anki state.
 2. If it will mutate state, run or recommend a `--dry-run` first.
-3. Create or request a backup/undo snapshot before the real mutation.
+3. Create or verify a backup/undo snapshot before the real mutation.
 4. Use live AnkiConnect state for follow-up planning after any live activation.
 5. Report exact changed card and note counts.
 
@@ -65,9 +65,11 @@ The snapshot should include:
 This enables a targeted undo by suspending only the cards that were suspended
 before the activation and optionally removing any activation tag if needed.
 
-If the current public CLI does not provide an automated snapshot command for the
-operation, require a manual Anki backup/export before the real mutation instead
-of implying that the source `.apkg` is enough.
+The public `activate chars`, `songs activate`, and `songs resuspend` commands
+write targeted undo snapshots automatically for real mutations. If a future or
+custom operation does not provide an automated snapshot command, require a
+manual Anki backup/export before the real mutation instead of implying that the
+source `.apkg` is enough.
 
 ### Level 3: Dry-run only
 
@@ -102,8 +104,9 @@ For any live activation task:
 1. Check `git status --short` so repo changes are not confused with live Anki
    changes.
 2. Run the activation command with `--dry-run`.
-3. Create an activation undo snapshot from AnkiConnect.
-4. Run the real activation.
+3. Run the real activation only through a path that writes an activation undo
+   snapshot before mutating Anki.
+4. Verify/report the snapshot path from command output.
 5. Report exactly how many cards and notes changed.
 6. If planning another song immediately afterward, query live AnkiConnect state
    instead of relying on the exported `.apkg`.

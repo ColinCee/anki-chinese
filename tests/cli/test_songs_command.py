@@ -11,12 +11,12 @@ from anki_chinese.cli.songs import run_songs_activate, run_songs_next, run_songs
 class StubKnowledgeClient:
     """Stub for KnowledgeClient that returns pre-set knowledge state."""
 
-    def __init__(self, studied: set[str], deck_order: list[str]) -> None:
-        self._studied = studied
+    def __init__(self, active: set[str], deck_order: list[str]) -> None:
+        self._active = active
         self._deck_order = deck_order
 
-    def find_studied_characters(self) -> set[str]:
-        return self._studied
+    def find_active_characters(self) -> set[str]:
+        return self._active
 
     def find_all_deck_info(self) -> tuple[list[str], set[str]]:
         return self._deck_order, set(self._deck_order)
@@ -88,7 +88,7 @@ def test_run_songs_next_plans_from_live_state(runtime_factory) -> None:
     _write_song(runtime.song_lyrics_dir)
 
     knowledge = StubKnowledgeClient(
-        studied={"一"},
+        active={"一"},
         deck_order=["一", "二", "三"],
     )
 
@@ -105,12 +105,15 @@ def test_run_songs_next_plans_from_live_state(runtime_factory) -> None:
     assert "Next chars" in runtime.console.file.getvalue()
 
 
-def test_run_songs_activate_uses_song_plan_and_activation_service(runtime_factory) -> None:
+def test_run_songs_activate_uses_song_plan_and_activation_service(
+    runtime_factory,
+    tmp_path,
+) -> None:
     runtime = runtime_factory(parsed_notes=[])
     _write_song(runtime.song_lyrics_dir)
 
     knowledge = StubKnowledgeClient(
-        studied={"一"},
+        active={"一"},
         deck_order=["一", "二", "三"],
     )
     client = StubAnkiClient()
@@ -123,10 +126,51 @@ def test_run_songs_activate_uses_song_plan_and_activation_service(runtime_factor
         dry_run=False,
         client=client,
         knowledge_client=knowledge,
+        snapshot_dir=tmp_path,
     )
 
     assert client.unsuspended == [20, 21, 30, 31]
     assert client.tags == [([2, 3], "activated::song::测试歌")]
+    output = runtime.console.file.getvalue()
+    assert "Activated 4 cards across 2 notes" in output
+    assert "Undo snapshot:" in output
+    snapshots = list(tmp_path.glob("activation-*.json"))
+    assert len(snapshots) == 1
+    snapshot = json.loads(snapshots[0].read_text(encoding="utf-8"))
+    assert snapshot["operation"] == "activate-song"
+    assert snapshot["tag"] == "activated::song::测试歌"
+    assert snapshot["pre_change_suspended_card_ids"] == [20, 21, 30, 31]
+
+
+def test_run_songs_activate_dry_run_does_not_snapshot_or_mutate(
+    runtime_factory,
+    tmp_path,
+) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    _write_song(runtime.song_lyrics_dir)
+    knowledge = StubKnowledgeClient(
+        active={"一"},
+        deck_order=["一", "二", "三"],
+    )
+    client = StubAnkiClient()
+
+    result = run_songs_activate(
+        runtime,
+        "测试歌",
+        lyrics_dir=runtime.song_lyrics_dir,
+        limit=2,
+        dry_run=True,
+        client=client,
+        knowledge_client=knowledge,
+        snapshot_dir=tmp_path,
+    )
+
+    assert result is not None
+    assert result.snapshot_path is None
+    assert client.unsuspended == []
+    assert client.tags == []
+    assert not list(tmp_path.glob("activation-*.json"))
+    assert "Would activate 4 cards across 2 notes" in runtime.console.file.getvalue()
 
 
 def test_run_songs_next_without_song_selects_first_analyzed_song_with_new_chars(
@@ -159,7 +203,7 @@ def test_run_songs_next_without_song_selects_first_analyzed_song_with_new_chars(
     )
 
     knowledge = StubKnowledgeClient(
-        studied={"一"},
+        active={"一"},
         deck_order=["一", "二", "三"],
     )
 
@@ -177,13 +221,16 @@ def test_run_songs_next_without_song_selects_first_analyzed_song_with_new_chars(
     assert "Auto-selected next song" in output
 
 
-def test_run_songs_activate_without_song_uses_auto_selected_song(runtime_factory) -> None:
+def test_run_songs_activate_without_song_uses_auto_selected_song(
+    runtime_factory,
+    tmp_path,
+) -> None:
     runtime = runtime_factory(parsed_notes=[])
     _write_song(runtime.song_lyrics_dir, body="一", file_name="01-known.md", title="已会")
     _write_song(runtime.song_lyrics_dir, body="一二", file_name="02-next.md", title="下一首")
 
     knowledge = StubKnowledgeClient(
-        studied={"一"},
+        active={"一"},
         deck_order=["一", "二", "三"],
     )
     client = StubAnkiClient()
@@ -195,6 +242,7 @@ def test_run_songs_activate_without_song_uses_auto_selected_song(runtime_factory
         dry_run=False,
         client=client,
         knowledge_client=knowledge,
+        snapshot_dir=tmp_path,
     )
 
     assert client.unsuspended == [20, 21]
@@ -206,7 +254,7 @@ def test_run_songs_next_normalizes_traditional_particle_for_planning(runtime_fac
     _write_song(runtime.song_lyrics_dir, body="我看著你")
 
     knowledge = StubKnowledgeClient(
-        studied={"我", "看", "你"},
+        active={"我", "看", "你"},
         deck_order=["我", "看", "你", "着"],
     )
 

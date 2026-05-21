@@ -92,7 +92,8 @@ Current provider split:
 
 ### Activate cards from songs
 
-Live activation uses AnkiConnect while Anki is open. Always dry-run first.
+Live activation uses AnkiConnect while Anki is open. Always dry-run first; real
+activation commands write targeted undo snapshots under `data/build/anki_backups/`.
 
 ```bash
 uv run anki-chinese songs analyze
@@ -121,7 +122,7 @@ uv run anki-chinese songs verify --online
 
 - Do not change `MODEL_ID` or `DECK_ID` after first import; Anki will treat the next import as a different model/deck.
 - `.apkg` rebuilds update note content. They are not the source of truth for live suspended state after AnkiConnect changes.
-- `activate`, `songs activate`, and `songs resuspend` mutate the open Anki collection. Use `--dry-run` first and keep an Anki backup or targeted undo path.
+- `activate`, `songs activate`, and `songs resuspend` mutate the open Anki collection. Use `--dry-run` first; real activation/resuspension commands write targeted undo snapshots under `data/build/anki_backups/`.
 - Keep `.env`, API keys, Google service-account files, generated audio, and generated deck outputs out of commits.
 
 ## Documentation

@@ -37,6 +37,11 @@ manual chars or song planner
 
 Activation is general infrastructure. The song planner is one source of character batches, but the `activate chars` command can activate any explicit character list.
 
+Song planning uses live Anki active state: a character counts as active when any
+card for its `Chinese RSH` note is unsuspended. Real activation and resuspension
+commands write targeted undo snapshots under `data/build/anki_backups/` before
+mutating live cards or tags.
+
 ## Main packages
 
 | Path | Purpose |

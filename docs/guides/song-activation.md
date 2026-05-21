@@ -67,10 +67,10 @@ Live activation mutates the open Anki collection.
 1. Make sure Anki has a recent backup or you have another undo path.
 2. Run the command with `--dry-run`.
 3. Check requested characters, missing characters, already-active characters, card counts, and note counts.
-4. Rerun without `--dry-run` only when the preview is correct.
+4. Rerun without `--dry-run` only when the preview is correct; the CLI writes a targeted undo snapshot before the real mutation.
 5. If planning another song immediately afterward, query live Anki again instead of relying on an old `.apkg` export.
 
-Dry-runs are previews, not backups.
+Dry-runs are previews, not backups. Real activation and resuspension commands write undo snapshots under `data/build/anki_backups/`.
 
 ## Study target and lyric variants
 
@@ -121,7 +121,7 @@ uv run anki-chinese songs analyze
 
 This queries live Anki for:
 
-- active characters
+- active characters, where any unsuspended card for a note counts as active
 - all deck characters
 - deck order
 
@@ -175,6 +175,7 @@ The command:
 - skips already-active characters
 - skips non-RSH characters by default
 - finds live Anki notes by the `Hanzi` field
+- writes an undo snapshot under `data/build/anki_backups/` before real mutations
 - unsuspends all cards for matching notes
 - tags activated notes with `activated::song::<song title>` unless `--tag` is passed
 

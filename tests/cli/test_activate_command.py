@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from anki_chinese.activation import LiveNoteCards
 from anki_chinese.cli.activate import run_activate_chars
 from anki_chinese.notes import CharacterNote
@@ -28,18 +30,31 @@ def test_run_activate_chars_dry_run_reports_cards(runtime_factory) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="水", meaning="water")])
     client = StubAnkiClient()
 
-    preview = run_activate_chars(runtime, ["水"], dry_run=True, client=client)
+    result = run_activate_chars(runtime, ["水"], dry_run=True, client=client)
 
-    assert preview.suspended_card_ids == (10, 11)
+    assert result.preview.suspended_card_ids == (10, 11)
+    assert result.snapshot_path is None
     assert client.unsuspended == []
     assert "Would activate 2 cards" in runtime.console.file.getvalue()
 
 
-def test_run_activate_chars_unsuspends_cards(runtime_factory) -> None:
+def test_run_activate_chars_unsuspends_cards(runtime_factory, tmp_path) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="水", meaning="water")])
     client = StubAnkiClient()
 
-    run_activate_chars(runtime, ["水"], dry_run=False, client=client)
+    result = run_activate_chars(
+        runtime,
+        ["水"],
+        dry_run=False,
+        client=client,
+        snapshot_dir=tmp_path,
+    )
 
     assert client.unsuspended == [10, 11]
-    assert "Activated 2 cards" in runtime.console.file.getvalue()
+    assert result.snapshot_path is not None
+    snapshot = json.loads(result.snapshot_path.read_text(encoding="utf-8"))
+    assert snapshot["operation"] == "activate-chars"
+    assert snapshot["pre_change_suspended_card_ids"] == [10, 11]
+    output = runtime.console.file.getvalue()
+    assert "Activated 2 cards" in output
+    assert "Undo snapshot:" in output

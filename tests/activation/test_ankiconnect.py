@@ -99,6 +99,55 @@ def test_find_notes_by_tag_and_resuspend_actions(monkeypatch: pytest.MonkeyPatch
     assert requests[3]["params"] == {"notes": [1], "tags": "activated::song::测试歌"}
 
 
+def test_find_active_characters_uses_any_unsuspended_card(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[dict[str, Any]] = []
+
+    def fake_urlopen(request, timeout: int = 10):  # noqa: ANN001, ARG001
+        payload = json.loads(request.data.decode("utf-8"))
+        requests.append(payload)
+        if payload["action"] == "findNotes":
+            return FakeResponse({"result": [1, 2, 3], "error": None})
+        if payload["action"] == "notesInfo":
+            return FakeResponse(
+                {
+                    "result": [
+                        {
+                            "noteId": 1,
+                            "fields": {"Hanzi": {"value": "水"}},
+                            "cards": [10, 11],
+                        },
+                        {
+                            "noteId": 2,
+                            "fields": {"Hanzi": {"value": "火"}},
+                            "cards": [20, 21],
+                        },
+                        {
+                            "noteId": 3,
+                            "fields": {"Hanzi": {"value": "山"}},
+                            "cards": [30, 31],
+                        },
+                    ],
+                    "error": None,
+                }
+            )
+        if payload["action"] == "areSuspended":
+            assert payload["params"] == {"cards": [10, 11, 20, 21, 30, 31]}
+            return FakeResponse(
+                {"result": [True, False, True, True, False, False], "error": None}
+            )
+        raise AssertionError(payload["action"])
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    client = AnkiConnectClient(url="http://anki.test", model_name="Chinese RSH")
+
+    result = client.find_active_characters()
+
+    assert result == {"水", "山"}
+    assert requests[0]["params"]["query"] == 'note:"Chinese RSH"'
+
+
 def test_ankiconnect_error_is_raised_for_api_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_urlopen(request, timeout: int = 10):  # noqa: ANN001, ARG001
         return FakeResponse({"result": None, "error": "bad query"})

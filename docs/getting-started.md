@@ -96,7 +96,7 @@ uv run anki-chinese songs next --limit 20
 uv run anki-chinese songs activate --limit 20 --dry-run
 ```
 
-Only rerun without `--dry-run` after you have checked the preview and have a backup or undo path. See [song activation](guides/song-activation.md).
+Only rerun without `--dry-run` after you have checked the preview. Real activation commands write targeted undo snapshots under `data/build/anki_backups/`; see [song activation](guides/song-activation.md).
 
 ## Common checks
 
