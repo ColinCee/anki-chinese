@@ -1,4 +1,6 @@
 from anki_chinese.notes.pronunciation import (
+    audit_sentence_pinyin,
+    expected_sentence_pinyin,
     find_phonetic_confuser_details,
     find_phonetic_confusers,
     normalize_pinyin,
@@ -8,6 +10,28 @@ from anki_chinese.notes.pronunciation import (
 
 def test_normalize_pinyin_trims_and_lowercases() -> None:
     assert normalize_pinyin("  YIN   HANG  ") == "yin hang"
+
+
+def test_expected_sentence_pinyin_uses_contextual_readings() -> None:
+    assert expected_sentence_pinyin("你为何还不去睡觉？") == "nǐ wèi hé hái bù qù shuì jiào"
+
+
+def test_audit_sentence_pinyin_flags_reversed_compound_reading() -> None:
+    issue = audit_sentence_pinyin("你为何还不去睡觉？", "nǐ héwèi hái bù qù shuìjiào?")
+
+    assert issue is not None
+    assert issue.reason == "reading mismatch at 为"
+    assert issue.expected_pinyin == "nǐ wèi hé hái bù qù shuì jiào"
+
+
+def test_audit_sentence_pinyin_allows_compound_spacing() -> None:
+    assert audit_sentence_pinyin("你为何还不去睡觉？", "nǐ wèihé hái bù qù shuìjiào?") is None
+
+
+def test_audit_sentence_pinyin_allows_erhua_and_polyphonic_defaults() -> None:
+    assert audit_sentence_pinyin("我的舌头有一点儿疼", "wǒ de shé tou yǒu yì diǎnr téng") is None
+    assert audit_sentence_pinyin("请帮我削一下这个苹果", "qǐng bāng wǒ xiāo yī xià zhè ge píng guǒ") is None
+    assert audit_sentence_pinyin("气球慢慢地升上去了", "qìqiú mànmàn de shēng shàngqù le") is None
 
 
 def test_reading_matches_returns_false_when_syllable_count_does_not_match_word() -> None:

@@ -3,7 +3,14 @@
 from .apkg_reader import load_deck_hanzi_from_apkg, load_learned_hanzi_from_apkg, parse_apkg
 from .enrich import enrich_notes
 from .model import CharacterNote, apply_overrides, load_overrides
-from .pronunciation import PhoneticConfuser, find_phonetic_confuser_details, find_phonetic_confusers
+from .pronunciation import (
+    PhoneticConfuser,
+    SentencePinyinIssue,
+    audit_sentence_pinyin,
+    expected_sentence_pinyin,
+    find_phonetic_confuser_details,
+    find_phonetic_confusers,
+)
 from .report import (
     coverage_rows,
     filter_from_rsh,
@@ -18,12 +25,15 @@ __all__ = [
     "CharacterNote",
     "JsonNoteStore",
     "PhoneticConfuser",
+    "SentencePinyinIssue",
     "apply_overrides",
+    "audit_sentence_pinyin",
     "coverage_rows",
     "enrich_notes",
     "filter_from_rsh",
     "find_phonetic_confuser_details",
     "find_phonetic_confusers",
+    "expected_sentence_pinyin",
     "flagged_notes",
     "heisig_index",
     "load_learned_hanzi_from_apkg",

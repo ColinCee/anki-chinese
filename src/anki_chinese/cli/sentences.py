@@ -12,6 +12,8 @@ from rich.table import Table
 from ..notes import (
     CharacterNote,
     PhoneticConfuser,
+    SentencePinyinIssue,
+    audit_sentence_pinyin,
     filter_from_rsh,
     find_phonetic_confuser_details,
     prioritize_learned,
@@ -76,6 +78,32 @@ def _sentence_audit_table(
     return table
 
 
+def _sentence_pinyin_audit_table(
+    issues: list[tuple[CharacterNote, SentencePinyinIssue]],
+    *,
+    limit: int = 0,
+) -> Table:
+    table = Table(title="Sentence pinyin mismatches")
+    table.add_column("RSH", justify="right")
+    table.add_column("Char", style="bold cyan")
+    table.add_column("Reason", style="yellow")
+    table.add_column("Sentence")
+    table.add_column("Stored pinyin")
+    table.add_column("Expected pinyin", style="green")
+
+    shown = issues[:limit] if limit > 0 else issues
+    for note, issue in shown:
+        table.add_row(
+            note.heisig_num,
+            note.hanzi,
+            issue.reason,
+            note.sentence,
+            issue.stored_pinyin,
+            issue.expected_pinyin,
+        )
+    return table
+
+
 def _find_sentence_confuser_issues(
     notes: list[CharacterNote],
     *,
@@ -100,6 +128,24 @@ def _find_sentence_confuser_issues(
         if confusers:
             issues.append((note, confusers))
 
+    return issues[:limit] if limit > 0 else issues
+
+
+def _find_sentence_pinyin_issues(
+    notes: list[CharacterNote],
+    *,
+    char: str = "",
+    limit: int = 0,
+) -> list[tuple[CharacterNote, SentencePinyinIssue]]:
+    issues: list[tuple[CharacterNote, SentencePinyinIssue]] = []
+    for note in notes:
+        if char and note.hanzi != char:
+            continue
+        if not note.sentence:
+            continue
+        issue = audit_sentence_pinyin(note.sentence, note.sentence_pinyin)
+        if issue is not None:
+            issues.append((note, issue))
     return issues[:limit] if limit > 0 else issues
 
 
@@ -129,6 +175,31 @@ def run_sentence_audit(
         f" ({summary})"
     )
     runtime.console.print(_sentence_audit_table(issues, limit=limit))
+    if limit > 0 and len(issues) > limit:
+        runtime.console.print(f"[dim]... and {len(issues) - limit} more[/dim]")
+    return issues
+
+
+def run_sentence_pinyin_audit(
+    runtime: AppRuntime,
+    *,
+    char: str = "",
+    limit: int = 0,
+) -> list[tuple[CharacterNote, SentencePinyinIssue]]:
+    """Report sentences whose stored pinyin does not match local pypinyin."""
+    notes = runtime.note_store.load()
+    issues = _find_sentence_pinyin_issues(notes, char=char)
+
+    if not issues:
+        runtime.console.print("[green]✓[/green] No sentence pinyin mismatches found")
+        return issues
+
+    reason_counts = Counter(issue.reason for _, issue in issues)
+    summary = ", ".join(f"{reason}: {count}" for reason, count in reason_counts.items())
+    runtime.console.print(
+        f"[yellow]⚠[/yellow] {len(issues)} sentence pinyin mismatches ({summary})"
+    )
+    runtime.console.print(_sentence_pinyin_audit_table(issues, limit=limit))
     if limit > 0 and len(issues) > limit:
         runtime.console.print(f"[dim]... and {len(issues) - limit} more[/dim]")
     return issues
@@ -408,6 +479,14 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
         """Audit existing example sentences for audio-confusing characters."""
         run_sentence_audit(runtime, include_same_final=include_same_final, limit=limit)
 
+    @sentences_app.command("audit-pinyin")
+    def audit_pinyin_command(
+        char: str = typer.Option("", "--char", "-c", help="Audit one character only."),
+        limit: int = typer.Option(0, "--limit", "-n", help="Max rows to display."),
+    ) -> None:
+        """Audit existing example sentence pinyin against local pypinyin."""
+        run_sentence_pinyin_audit(runtime, char=char, limit=limit)
+
     @sentences_app.command("repair-confusers")
     def repair_confusers_command(
         apply: bool = typer.Option(
@@ -435,3 +514,11 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
     ) -> None:
         """Audit existing example sentences for audio-confusing characters."""
         run_sentence_audit(runtime, include_same_final=include_same_final, limit=limit)
+
+    @app.command("sentences-pinyin-audit")
+    def sentences_pinyin_audit(
+        char: str = typer.Option("", "--char", "-c", help="Audit one character only."),
+        limit: int = typer.Option(0, "--limit", "-n", help="Max rows to display."),
+    ) -> None:
+        """Top-level alias for `sentences audit-pinyin`."""
+        run_sentence_pinyin_audit(runtime, char=char, limit=limit)

@@ -21,12 +21,15 @@ Run `uv run anki-chinese --help` and `uv run anki-chinese <command> --help` for 
 | `uv run anki-chinese sentences --char 早` | Generate for one character. |
 | `uv run anki-chinese sentences --pick 3` | Generate candidates interactively and choose one. |
 | `uv run anki-chinese sentences audit` | Report sentences with audio-confusing phonetic neighbors. |
+| `uv run anki-chinese sentences audit-pinyin` | Report sentence pinyin that disagrees with local pypinyin readings. |
 | `uv run anki-chinese sentences repair-confusers` | Dry-run repair plan for sentences with phonetic confusers. |
 | `uv run anki-chinese sentences repair-confusers --apply` | Regenerate and save replacements. |
 | `uv run anki-chinese sentences-audit` | Backward-compatible top-level alias for `sentences audit`. |
+| `uv run anki-chinese sentences-pinyin-audit` | Top-level alias for `sentences audit-pinyin`. |
 | `uv run anki-chinese keywords` | Use Gemini to repair contextual meanings for notes that already have sentences. |
 
-Sentence and keyword commands require `GEMINI_API_KEY`.
+Sentence generation, repair, and keyword commands require `GEMINI_API_KEY`;
+sentence audit commands run locally.
 
 ## Audio commands
 

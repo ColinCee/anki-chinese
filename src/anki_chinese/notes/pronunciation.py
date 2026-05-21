@@ -12,6 +12,8 @@ from pypinyin.contrib.tone_convert import to_normal
 
 ConfuserSeverity = Literal["exact", "same-base", "near-retroflex", "same-final"]
 
+_PINYIN_SYLLABLES: set[str] | None = None
+
 _RETROFLEX_PAIRS = {
     ("zh", "z"),
     ("z", "zh"),
@@ -28,6 +30,13 @@ class PhoneticConfuser:
     pinyin: str
     severity: ConfuserSeverity
     position: int
+
+
+@dataclass(frozen=True)
+class SentencePinyinIssue:
+    expected_pinyin: str
+    stored_pinyin: str
+    reason: str
 
 
 # Pinyin initials sorted longest-first for greedy matching
@@ -60,6 +69,131 @@ _INITIALS = (
 
 def normalize_pinyin(text: str) -> str:
     return " ".join(text.strip().lower().split())
+
+
+def _compact_pinyin(text: str) -> str:
+    normalized = to_normal(text.lower().replace("u:", "v"))
+    return re.sub(r"[\s，。！？；：、,.?!;:·'’`-]+", "", normalized)
+
+
+def _pinyin_syllables() -> set[str]:
+    global _PINYIN_SYLLABLES
+    if _PINYIN_SYLLABLES is None:
+        from pypinyin.constants import PINYIN_DICT
+
+        syllables = set()
+        for readings in PINYIN_DICT.values():
+            for reading in readings.split(","):
+                syllables.add(to_normal(reading).lower().replace("u:", "v"))
+        _PINYIN_SYLLABLES = syllables
+    return _PINYIN_SYLLABLES
+
+
+def _split_compound_pinyin_token(token: str) -> list[str] | None:
+    normalized = _compact_pinyin(token).replace("ü", "v")
+    if not normalized:
+        return []
+
+    if normalized.endswith("r") and normalized != "er":
+        stem = normalized[:-1]
+        stem_syllables = _split_compound_pinyin_token(stem)
+        if stem_syllables:
+            return [*stem_syllables, "er"]
+
+    syllables = _pinyin_syllables()
+    best: list[str] | None = None
+
+    def search(index: int, parts: list[str]) -> None:
+        nonlocal best
+        if best is not None and len(parts) >= len(best):
+            return
+        if index == len(normalized):
+            best = parts.copy()
+            return
+        for end in range(len(normalized), index, -1):
+            piece = normalized[index:end]
+            if piece in syllables:
+                search(end, [*parts, piece])
+
+    search(0, [])
+    return best
+
+
+def _split_stored_sentence_pinyin(sentence_pinyin: str) -> list[str] | None:
+    tokens = [
+        token
+        for token in re.split(r"[\s，。！？；：、,.?!;:·'’`-]+", sentence_pinyin)
+        if token
+    ]
+    syllables: list[str] = []
+    for token in tokens:
+        token_syllables = _split_compound_pinyin_token(token)
+        if token_syllables is None:
+            return None
+        syllables.extend(token_syllables)
+    return syllables
+
+
+def _cjk_chars(text: str) -> list[str]:
+    return [ch for ch in text if "\u4e00" <= ch <= "\u9fff"]
+
+
+def _allowed_pinyin_bases(char: str) -> set[str]:
+    from pypinyin import Style, pinyin
+
+    readings = pinyin(char, style=Style.NORMAL, heteronym=True, errors="ignore")
+    if not readings:
+        return set()
+    return {reading.lower().replace("u:", "v") for reading in readings[0]}
+
+
+def expected_sentence_pinyin(sentence: str) -> str:
+    """Return pypinyin's per-character reading for CJK text in *sentence*."""
+    from pypinyin import Style, lazy_pinyin
+
+    cjk_text = "".join(_cjk_chars(sentence))
+    if not cjk_text:
+        return ""
+    return " ".join(lazy_pinyin(cjk_text, style=Style.TONE, errors="ignore"))
+
+
+def audit_sentence_pinyin(sentence: str, sentence_pinyin: str) -> SentencePinyinIssue | None:
+    """Flag stored sentence pinyin readings that do not fit the sentence text."""
+    expected = expected_sentence_pinyin(sentence)
+    cjk_chars = _cjk_chars(sentence)
+    if not expected:
+        return None
+    stored = sentence_pinyin.strip()
+    if not stored:
+        return SentencePinyinIssue(
+            expected_pinyin=expected,
+            stored_pinyin=sentence_pinyin,
+            reason="missing pinyin",
+        )
+    if _compact_pinyin(stored) == _compact_pinyin(expected):
+        return None
+    stored_syllables = _split_stored_sentence_pinyin(stored)
+    if stored_syllables is None:
+        return SentencePinyinIssue(
+            expected_pinyin=expected,
+            stored_pinyin=sentence_pinyin,
+            reason="unparseable pinyin",
+        )
+    if len(stored_syllables) != len(cjk_chars):
+        return SentencePinyinIssue(
+            expected_pinyin=expected,
+            stored_pinyin=sentence_pinyin,
+            reason="syllable count mismatch",
+        )
+    for char, syllable in zip(cjk_chars, stored_syllables, strict=True):
+        allowed = _allowed_pinyin_bases(char)
+        if allowed and syllable not in allowed:
+            return SentencePinyinIssue(
+                expected_pinyin=expected,
+                stored_pinyin=sentence_pinyin,
+                reason=f"reading mismatch at {char}",
+            )
+    return None
 
 
 def _normalize_syllable(syllable: str) -> str:

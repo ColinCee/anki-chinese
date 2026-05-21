@@ -9,6 +9,7 @@ from anki_chinese.cli.sentences import (
     apply_sentence,
     run_repair_confusers,
     run_sentence_audit,
+    run_sentence_pinyin_audit,
     run_sentences,
 )
 from anki_chinese.notes import CharacterNote
@@ -243,6 +244,80 @@ class TestSentenceAudit:
         assert run_sentence_audit(runtime) == []
         output = runtime.console.file.getvalue()  # type: ignore[union-attr]
         assert "No sentence phonetic ambiguity" in output
+
+
+class TestSentencePinyinAudit:
+    def test_reports_sentence_pinyin_mismatch_without_mutating_notes(self, runtime_factory):
+        notes = [
+            CharacterNote(
+                hanzi="何",
+                meaning="what; why",
+                pinyin="hé",
+                sentence="你为何还不去睡觉？",
+                sentence_pinyin="nǐ héwèi hái bù qù shuìjiào?",
+                sentence_audio="[sound:old.mp3]",
+                heisig_num="835",
+            ),
+            CharacterNote(
+                hanzi="水",
+                meaning="water",
+                pinyin="shuǐ",
+                sentence="我喝水。",
+                sentence_pinyin="wǒ hē shuǐ.",
+            ),
+        ]
+        runtime = runtime_factory(saved_notes=notes)
+
+        issues = run_sentence_pinyin_audit(runtime)
+
+        assert len(issues) == 1
+        note, issue = issues[0]
+        assert note.hanzi == "何"
+        assert issue.reason == "reading mismatch at 为"
+        assert issue.expected_pinyin == "nǐ wèi hé hái bù qù shuì jiào"
+        saved = runtime.note_store.load()
+        assert saved[0].sentence_pinyin == "nǐ héwèi hái bù qù shuìjiào?"
+        assert saved[0].sentence_audio == "[sound:old.mp3]"
+        output = runtime.console.file.getvalue()  # type: ignore[union-attr]
+        assert "sentence pinyin mismatches" in output
+        assert "wèi hé" in output
+
+    def test_reports_clean_sentence_pinyin_deck(self, runtime_factory):
+        runtime = runtime_factory(
+            saved_notes=[
+                CharacterNote(
+                    hanzi="何",
+                    meaning="what; why",
+                    pinyin="hé",
+                    sentence="你为何还不去睡觉？",
+                    sentence_pinyin="nǐ wèihé hái bù qù shuìjiào?",
+                )
+            ]
+        )
+
+        assert run_sentence_pinyin_audit(runtime) == []
+        output = runtime.console.file.getvalue()  # type: ignore[union-attr]
+        assert "No sentence pinyin mismatches" in output
+
+    def test_nested_pinyin_audit_command_is_available(self, runtime_factory, runner):
+        runtime = runtime_factory(
+            saved_notes=[
+                CharacterNote(
+                    hanzi="何",
+                    meaning="what; why",
+                    pinyin="hé",
+                    sentence="你为何还不去睡觉？",
+                    sentence_pinyin="nǐ héwèi hái bù qù shuìjiào?",
+                )
+            ]
+        )
+        app = create_app(runtime)
+
+        result = runner.invoke(app, ["sentences", "audit-pinyin"])
+
+        assert result.exit_code == 0
+        output = runtime.console.file.getvalue()  # type: ignore[union-attr]
+        assert "sentence pinyin mismatches" in output
 
 
 class TestRepairConfusers:
