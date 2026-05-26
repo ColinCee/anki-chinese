@@ -15,6 +15,7 @@ class SongProgressRow:
     known: int
     known_percent: int
     new_deck_chars: tuple[str, ...]
+    activation_deck_chars: tuple[str, ...]
     unique_chars: int
     non_deck_chars: tuple[str, ...]
     cumulative_deck_chars: int
@@ -101,15 +102,18 @@ def analyze_song_corpus(
     )
 
     cumulative = set(known_chars)
+    cumulative_active = set(active_chars)
     rows: list[SongProgressRow] = []
     total_days = 0
     for song in sequence:
         chars = song.study_characters
         new = (chars - cumulative) & deck_chars
+        activation_new = (chars - cumulative_active) & deck_chars
         non_deck = chars - deck_chars
         known_count = len(chars & cumulative)
         known_percent = round(known_count / len(chars) * 100) if chars else 0
         cumulative |= new
+        cumulative_active |= activation_new
         days = len(new) // pace + (1 if len(new) % pace else 0)
         total_days += days
         rows.append(
@@ -119,6 +123,7 @@ def analyze_song_corpus(
                 known=known_count,
                 known_percent=known_percent,
                 new_deck_chars=tuple(sorted(new)),
+                activation_deck_chars=tuple(sorted(activation_new)),
                 unique_chars=sum(1 for char in chars if freq[char] == 1),
                 non_deck_chars=tuple(sorted(non_deck)),
                 cumulative_deck_chars=len(cumulative),

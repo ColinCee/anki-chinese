@@ -62,20 +62,24 @@ def test_parse_lyric_file_reads_frontmatter_and_characters(tmp_path: Path) -> No
 
 def test_audited_lyric_files_no_longer_use_traditional_particle_form() -> None:
     root = Path(__file__).resolve().parents[2]
-    audited_files = [
-        "01-小潘潘-学猫叫.md",
-        "03-光良-童话.md",
-        "08-周兴哲-怎么了.md",
-        "09-邓紫棋-泡沫.md",
-        "10-周兴哲-你好不好.md",
-        "21-田馥甄-小幸运.md",
-        "22-王晰-不舍.md",
-        "26-买辣椒也用券-起风了.md",
-        "29-陈奕迅-孤勇者.md",
+    lyrics_dir = root / "data" / "songs" / "lyrics"
+    songs_by_title = {
+        parse_lyric_file(path).title: path for path in lyrics_dir.glob("*.md")
+    }
+    audited_titles = [
+        "学猫叫",
+        "童话",
+        "怎么了",
+        "泡沫",
+        "你，好不好",
+        "小幸运",
+        "不舍",
+        "起风了",
+        "孤勇者",
     ]
 
-    for filename in audited_files:
-        text = (root / "data" / "songs" / "lyrics" / filename).read_text(encoding="utf-8")
+    for title in audited_titles:
+        text = songs_by_title[title].read_text(encoding="utf-8")
         assert "著" not in text
 
 

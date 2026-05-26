@@ -123,7 +123,7 @@ def test_run_songs_analyze_counts_active_unreviewed_chars_as_new(runtime_factory
     runtime = runtime_factory(parsed_notes=[])
     _write_song(runtime.song_lyrics_dir, body="一二三")
     knowledge = StubKnowledgeClient(
-        active={"一", "二", "三"},
+        active={"一", "二"},
         studied={"一"},
         deck_order=["一", "二", "三"],
     )
@@ -136,7 +136,9 @@ def test_run_songs_analyze_counts_active_unreviewed_chars_as_new(runtime_factory
     )
 
     output = runtime.console.file.getvalue()
-    assert "3 active · 1 studied · 3 total characters" in output
+    assert "2 active · 1 studied · 3 total characters" in output
+    assert "Learn" in output
+    assert "Activate" in output
     assert "2 unstudied in-deck chars" in output
     assert "二" in output
     assert "三" in output

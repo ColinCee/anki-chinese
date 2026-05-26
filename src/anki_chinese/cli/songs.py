@@ -124,7 +124,8 @@ def run_songs_analyze(
     table.add_column("Song", style="cyan", no_wrap=True)
     table.add_column("Chars", justify="right")
     table.add_column("Known", justify="right")
-    table.add_column("New", justify="right", style="yellow")
+    table.add_column("Learn", justify="right", style="yellow")
+    table.add_column("Activate", justify="right", style="green")
     table.add_column("Unique", justify="right", style="magenta")
     table.add_column("Non-RSH", justify="right", style="dim")
     table.add_column("Cumul.", justify="right")
@@ -136,6 +137,7 @@ def run_songs_analyze(
             str(row.chars),
             f"{row.known} ({row.known_percent}%)",
             str(len(row.new_deck_chars)),
+            str(len(row.activation_deck_chars)),
             str(row.unique_chars),
             str(len(row.non_deck_chars)) if row.non_deck_chars else "",
             str(row.cumulative_deck_chars),
@@ -148,6 +150,7 @@ def run_songs_analyze(
         "",
         "",
         str(sum(len(row.new_deck_chars) for row in analysis.sequence)),
+        str(sum(len(row.activation_deck_chars) for row in analysis.sequence)),
         "",
         "",
         str(analysis.sequence[-1].cumulative_deck_chars if analysis.sequence else 0),
@@ -158,10 +161,12 @@ def run_songs_analyze(
 
     if show_chars:
         for row in analysis.sequence:
-            if row.new_deck_chars:
-                runtime.console.print(
-                    f"\n[cyan]{row.song.title}[/]: {' '.join(row.new_deck_chars)}"
-                )
+            if row.new_deck_chars or row.activation_deck_chars:
+                runtime.console.print(f"\n[cyan]{row.song.title}[/]")
+                if row.new_deck_chars:
+                    runtime.console.print(f"  Learn: {' '.join(row.new_deck_chars)}")
+                if row.activation_deck_chars:
+                    runtime.console.print(f"  Activate: {' '.join(row.activation_deck_chars)}")
 
     runtime.console.print(
         f"\n[bold]Summary[/bold] · {len(songs)} songs · "

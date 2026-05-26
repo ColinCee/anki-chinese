@@ -61,10 +61,11 @@ The app default is Google for single-character audio and MiniMax for sentence au
 
 Song analysis and activation query live Anki through AnkiConnect. A character
 counts as active when any card for its live note is unsuspended. In
-`songs analyze`, the `New` column means in-deck characters that have not been
-studied/reviewed yet; activated but unseen cards still count as new. The
-analysis table's `Known` column starts from studied characters, not merely
-active ones.
+`songs analyze`, `Known` and `Learn` are study-progress columns based on
+studied/reviewed characters, so activated but unseen cards still count as
+characters to learn. `Activate` is the live activation delta: how many inactive
+in-deck characters would be unsuspended for that song after earlier songs in the
+displayed sequence.
 
 | Command | Purpose |
 | --- | --- |

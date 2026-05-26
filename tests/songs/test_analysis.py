@@ -49,8 +49,30 @@ def test_analyze_song_corpus_counts_active_unstudied_as_new() -> None:
     row = analysis.sequence[0]
     assert row.known == 1
     assert set(row.new_deck_chars) == {"二", "三"}
+    assert row.activation_deck_chars == ()
     assert analysis.new_deck_chars == {"二", "三"}
     assert analysis.total_days == 1
+
+
+def test_analyze_song_corpus_tracks_progressive_activation_delta() -> None:
+    songs = [
+        _song("first", "First", {"一", "二", "三"}),
+        _song("second", "Second", {"二", "三", "四"}),
+    ]
+
+    analysis = analyze_song_corpus(
+        songs,
+        active_chars={"一", "四"},
+        learned_chars={"一"},
+        deck_chars={"一", "二", "三", "四"},
+        requested_sequence=["first", "second"],
+    )
+
+    first, second = analysis.sequence
+    assert set(first.new_deck_chars) == {"二", "三"}
+    assert set(first.activation_deck_chars) == {"二", "三"}
+    assert set(second.new_deck_chars) == {"四"}
+    assert second.activation_deck_chars == ()
 
 
 def test_plan_song_activation_skips_active_and_non_deck_chars_with_limit() -> None:

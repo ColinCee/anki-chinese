@@ -127,9 +127,10 @@ This queries live Anki for:
 - deck order
 
 Then it computes a greedy song sequence and estimates remaining unstudied
-in-deck characters. Cards that have been unsuspended but not reviewed yet still
-count as `New` in `songs analyze`; the `Known` column starts from studied
-characters, not merely active ones.
+in-deck characters. `Known` and `Learn` start from studied characters, not
+merely active ones, so cards that have been unsuspended but not reviewed yet
+still count as characters to learn. `Activate` shows the live activation delta
+for each row after earlier songs in the displayed sequence.
 
 Show character lists:
 
