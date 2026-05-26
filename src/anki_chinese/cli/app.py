@@ -14,6 +14,7 @@ from ..audio import TTSProvider, build_tts_provider
 from ..config import (
     ENRICHED_PATH,
     GENERATED_AUDIO_DIR,
+    HSK_VOCAB_PATH,
     SAMPLE_AUDIO_DIR,
     SONG_LYRICS_DIR,
     SOURCE_DECK_PATH,
@@ -33,6 +34,7 @@ from ..notes import (
 class AppRuntime:
     source_deck_path: Path
     song_lyrics_dir: Path
+    hsk_vocab_path: Path
     note_store: JsonNoteStore
     generated_audio_dir: Path
     sample_audio_dir: Path
@@ -56,6 +58,7 @@ def build_runtime() -> AppRuntime:
     return AppRuntime(
         source_deck_path=SOURCE_DECK_PATH,
         song_lyrics_dir=SONG_LYRICS_DIR,
+        hsk_vocab_path=HSK_VOCAB_PATH,
         note_store=JsonNoteStore(ENRICHED_PATH),
         generated_audio_dir=GENERATED_AUDIO_DIR,
         sample_audio_dir=SAMPLE_AUDIO_DIR,
@@ -85,6 +88,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     build_command = import_module(".build", __package__)
     init_command = import_module(".init", __package__)
     keywords_command = import_module(".keywords", __package__)
+    radicals_command = import_module(".radicals", __package__)
     sentences_command = import_module(".sentences", __package__)
     songs_command = import_module(".songs", __package__)
     status_command = import_module(".status", __package__)
@@ -95,6 +99,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     sentences_command.register(app, runtime)
     songs_command.register(app, runtime)
     keywords_command.register(app, runtime)
+    radicals_command.register(app, runtime)
     audio_command.register(app, runtime)
     build_command.register(app, runtime)
     status_command.register(app, runtime)

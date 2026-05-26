@@ -167,6 +167,7 @@ def runtime_factory(tmp_path: Path):
         return AppRuntime(
             source_deck_path=source_deck_path,
             song_lyrics_dir=tmp_path / "data" / "songs" / "lyrics",
+            hsk_vocab_path=tmp_path / "data" / "reference" / "hsk_complete.min.json",
             note_store=note_store,
             generated_audio_dir=tmp_path / "data" / "build" / "audio" / "generated",
             sample_audio_dir=tmp_path / "data" / "build" / "audio" / "samples",

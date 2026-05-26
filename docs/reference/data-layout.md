@@ -33,7 +33,7 @@ Generated files under `data/build/` are ignored. `data/state/enriched.json` is g
 | `data/source/All Decks.apkg` | Default source deck export parsed by `init`. |
 | `data/manual/overrides.json` | Per-character field overrides. |
 | `data/manual/example_words.json` | Manual data used by enrichment. |
-| `data/reference/hsk_complete.min.json` | HSK vocabulary corpus for lookup/enrichment. |
+| `data/reference/hsk_complete.min.json` | HSK vocabulary corpus for lookup/enrichment and primary-radical grouping. |
 | `data/reference/cedict_1_0_ts_utf-8_mdbg.txt` | CC-CEDICT reference data. |
 | `data/state/enriched.json` | Enriched note state used by `status`, `sentences`, `audio`, and `build`. |
 | `data/build/decks/chinese_rsh.apkg` | Final generated deck package. |
