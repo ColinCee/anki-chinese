@@ -51,12 +51,14 @@ def _load_song_inputs(
     *,
     lyrics_dir: Path,
     client: KnowledgeClient | None = None,
-) -> tuple[list[LyricSong], set[str], set[str], list[str]]:
+    include_studied: bool = False,
+) -> tuple[list[LyricSong], set[str], set[str], set[str], list[str]]:
     """Load songs and live knowledge state from AnkiConnect."""
     songs = load_songs(lyrics_dir)
     ac: KnowledgeClient = client or _make_client()
     try:
         active_chars = ac.find_active_characters()
+        studied_chars = ac.find_studied_characters() if include_studied else active_chars
         deck_order, deck_chars = ac.find_all_deck_info()
     except AnkiConnectError as error:
         runtime.console.print(f"[red]✗[/red] {error}")
@@ -64,7 +66,7 @@ def _load_song_inputs(
             "[dim]Ensure Anki is open with AnkiConnect installed.[/dim]"
         )
         raise typer.Exit(2) from None
-    return songs, active_chars, deck_chars, deck_order
+    return songs, active_chars, studied_chars, deck_chars, deck_order
 
 
 def _print_song_plan(runtime: AppRuntime, plan: SongActivationPlan) -> None:
@@ -93,10 +95,13 @@ def run_songs_analyze(
     lyrics_dir: Path,
     pace: int = 5,
     show_chars: bool = False,
+    knowledge_client: KnowledgeClient | None = None,
 ) -> None:
-    songs, active_chars, deck_chars, _deck_order = _load_song_inputs(
+    songs, active_chars, studied_chars, deck_chars, _deck_order = _load_song_inputs(
         runtime,
         lyrics_dir=lyrics_dir,
+        client=knowledge_client,
+        include_studied=True,
     )
     if not songs:
         runtime.console.print(f"[red]✗[/red] No lyric files found in {lyrics_dir}")
@@ -105,18 +110,20 @@ def run_songs_analyze(
     analysis = analyze_song_corpus(
         songs,
         active_chars=active_chars,
+        learned_chars=studied_chars,
         deck_chars=deck_chars,
         pace=pace,
     )
     runtime.console.print(
-        f"[bold]Deck:[/] {len(active_chars)} active · {len(deck_chars)} total characters\n"
+        f"[bold]Deck:[/] {len(active_chars)} active · "
+        f"{len(studied_chars)} studied · {len(deck_chars)} total characters\n"
     )
 
     table = Table(title="Progressive Sequence (greedy fewest-first)", title_style="bold")
     table.add_column("#", justify="right", style="dim")
     table.add_column("Song", style="cyan", no_wrap=True)
     table.add_column("Chars", justify="right")
-    table.add_column("Active", justify="right")
+    table.add_column("Known", justify="right")
     table.add_column("New", justify="right", style="yellow")
     table.add_column("Unique", justify="right", style="magenta")
     table.add_column("Non-RSH", justify="right", style="dim")
@@ -127,7 +134,7 @@ def run_songs_analyze(
             str(index),
             row.song.label,
             str(row.chars),
-            f"{row.active} ({row.active_percent}%)",
+            f"{row.known} ({row.known_percent}%)",
             str(len(row.new_deck_chars)),
             str(row.unique_chars),
             str(len(row.non_deck_chars)) if row.non_deck_chars else "",
@@ -158,7 +165,7 @@ def run_songs_analyze(
 
     runtime.console.print(
         f"\n[bold]Summary[/bold] · {len(songs)} songs · "
-        f"{len(analysis.new_deck_chars)} new in-deck chars · "
+        f"{len(analysis.new_deck_chars)} unstudied in-deck chars · "
         f"{len(analysis.non_deck_chars)} Non-RSH · ~{analysis.total_days} days"
     )
 
@@ -171,7 +178,7 @@ def _song_plan_from_query(
     limit: int,
     knowledge_client: KnowledgeClient | None = None,
 ) -> SongActivationPlan:
-    songs, active_chars, deck_chars, deck_order = _load_song_inputs(
+    songs, active_chars, _studied_chars, deck_chars, deck_order = _load_song_inputs(
         runtime,
         lyrics_dir=lyrics_dir,
         client=knowledge_client,
@@ -213,7 +220,7 @@ def _song_plan_from_next_sequence(
     limit: int,
     knowledge_client: KnowledgeClient | None = None,
 ) -> SongActivationPlan:
-    songs, active_chars, deck_chars, deck_order = _load_song_inputs(
+    songs, active_chars, _studied_chars, deck_chars, deck_order = _load_song_inputs(
         runtime,
         lyrics_dir=lyrics_dir,
         client=knowledge_client,
@@ -236,12 +243,12 @@ def _song_plan_from_next_sequence(
         skipped_complete += 1
 
     if selected_song is None:
-        runtime.console.print("[green]✓[/green] No songs have remaining in-deck chars")
+        runtime.console.print("[green]✓[/green] No songs have inactive in-deck chars")
         raise typer.Exit(0)
 
     if skipped_complete:
         runtime.console.print(
-            f"[dim]Skipped {skipped_complete} songs with 0 new in-deck chars.[/dim]"
+            f"[dim]Skipped {skipped_complete} songs with 0 inactive in-deck chars.[/dim]"
         )
     runtime.console.print(f"[dim]Auto-selected next song:[/dim] {selected_song.label}")
     return plan_song_activation(
@@ -720,8 +727,12 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             "--lyrics-dir",
             help="Directory of lyric markdown files.",
         ),
-        pace: int = typer.Option(5, "--pace", min=1, help="New characters per day."),
-        show_chars: bool = typer.Option(False, "--chars", help="Show new character lists."),
+        pace: int = typer.Option(5, "--pace", min=1, help="Unstudied characters per day."),
+        show_chars: bool = typer.Option(
+            False,
+            "--chars",
+            help="Show unstudied character lists.",
+        ),
     ) -> None:
         """Analyze song lyrics against the live Anki collection."""
         run_songs_analyze(
@@ -737,7 +748,7 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             "",
             help=(
                 "Song title, file stem, or unique substring. "
-                "Omit to select the first analyzed song with new in-deck chars."
+                "Omit to select the first song with inactive in-deck chars."
             ),
         ),
         limit: int = typer.Option(20, "--limit", "-n", min=0, help="Max chars to show."),
@@ -756,7 +767,7 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             "",
             help=(
                 "Song title, file stem, or unique substring. "
-                "Omit to select the first analyzed song with new in-deck chars."
+                "Omit to select the first song with inactive in-deck chars."
             ),
         ),
         limit: int = typer.Option(20, "--limit", "-n", min=1, help="Max chars to activate."),

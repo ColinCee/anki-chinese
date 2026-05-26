@@ -111,6 +111,10 @@ class ActiveStateClient(Protocol):
         """Return characters with at least one unsuspended live card."""
         ...
 
+    def find_studied_characters(self) -> set[str]:
+        """Return characters with at least one reviewed live card."""
+        ...
+
     def find_all_deck_info(self) -> tuple[list[str], set[str]]:
         """Return deck order and all character notes in the live model."""
         ...

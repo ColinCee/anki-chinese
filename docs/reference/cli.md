@@ -49,13 +49,17 @@ The app default is Google for single-character audio and MiniMax for sentence au
 ## Song commands
 
 Song analysis and activation query live Anki through AnkiConnect. A character
-counts as active when any card for its live note is unsuspended.
+counts as active when any card for its live note is unsuspended. In
+`songs analyze`, the `New` column means in-deck characters that have not been
+studied/reviewed yet; activated but unseen cards still count as new. The
+analysis table's `Known` column starts from studied characters, not merely
+active ones.
 
 | Command | Purpose |
 | --- | --- |
-| `uv run anki-chinese songs analyze` | Analyze curated lyrics against live active characters and deck characters. |
+| `uv run anki-chinese songs analyze` | Analyze curated lyrics against live active, studied, and deck characters. |
 | `uv run anki-chinese songs analyze --chars` | Include new-character lists in the output. |
-| `uv run anki-chinese songs next` | Auto-select the first analyzed song with remaining in-deck characters. |
+| `uv run anki-chinese songs next` | Auto-select the first song with inactive in-deck characters. |
 | `uv run anki-chinese songs next 学猫叫 --limit 20` | Preview next characters for a specific song. |
 | `uv run anki-chinese songs activate --limit 20 --dry-run` | Preview live unsuspension for the auto-selected next song. |
 | `uv run anki-chinese songs activate 学猫叫 --limit 20` | Write an undo snapshot, then unsuspend the selected song batch. |

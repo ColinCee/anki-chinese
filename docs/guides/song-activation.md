@@ -122,10 +122,14 @@ uv run anki-chinese songs analyze
 This queries live Anki for:
 
 - active characters, where any unsuspended card for a note counts as active
+- studied characters, where any unsuspended non-new card for a note counts as studied
 - all deck characters
 - deck order
 
-Then it computes a greedy song sequence and estimates remaining in-deck characters.
+Then it computes a greedy song sequence and estimates remaining unstudied
+in-deck characters. Cards that have been unsuspended but not reviewed yet still
+count as `New` in `songs analyze`; the `Known` column starts from studied
+characters, not merely active ones.
 
 Show character lists:
 
@@ -135,7 +139,7 @@ uv run anki-chinese songs analyze --chars
 
 ## Preview next characters
 
-Auto-select the next song with remaining in-deck characters:
+Auto-select the next song with inactive in-deck characters:
 
 ```bash
 uv run anki-chinese songs next --limit 20
@@ -183,8 +187,8 @@ The command:
 
 If a song activation was a mistake, reverse it by the activation tag instead of
 recomputing "new" characters. After activation, those cards are already active in
-live Anki, so the planner can no longer distinguish them from intentionally
-active cards.
+live Anki, so activation planning can no longer distinguish them from
+intentionally active cards.
 
 Dry-run first:
 

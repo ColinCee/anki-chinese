@@ -35,6 +35,24 @@ def test_analyze_song_corpus_orders_by_fewest_new_deck_chars() -> None:
     assert analysis.new_deck_chars == {"二", "三", "四", "七", "八", "九"}
 
 
+def test_analyze_song_corpus_counts_active_unstudied_as_new() -> None:
+    songs = [_song("song", "Song", {"一", "二", "三"})]
+
+    analysis = analyze_song_corpus(
+        songs,
+        active_chars={"一", "二", "三"},
+        learned_chars={"一"},
+        deck_chars={"一", "二", "三"},
+        pace=2,
+    )
+
+    row = analysis.sequence[0]
+    assert row.known == 1
+    assert set(row.new_deck_chars) == {"二", "三"}
+    assert analysis.new_deck_chars == {"二", "三"}
+    assert analysis.total_days == 1
+
+
 def test_plan_song_activation_skips_active_and_non_deck_chars_with_limit() -> None:
     song = _song("cat", "学猫叫", {"一", "二", "三", "喵"})
 

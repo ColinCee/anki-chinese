@@ -12,8 +12,8 @@ from .lyrics import LyricSong
 class SongProgressRow:
     song: LyricSong
     chars: int
-    active: int
-    active_percent: int
+    known: int
+    known_percent: int
     new_deck_chars: tuple[str, ...]
     unique_chars: int
     non_deck_chars: tuple[str, ...]
@@ -25,6 +25,7 @@ class SongProgressRow:
 class SongAnalysis:
     sequence: list[SongProgressRow]
     active_chars: set[str]
+    learned_chars: set[str]
     deck_chars: set[str]
     song_chars: set[str]
     new_deck_chars: set[str]
@@ -54,7 +55,7 @@ def _song_frequency(songs: list[LyricSong]) -> Counter[str]:
 def _sequence_songs(
     songs: list[LyricSong],
     *,
-    active_chars: set[str],
+    learned_chars: set[str],
     deck_chars: set[str],
     requested_sequence: list[str] | None = None,
 ) -> list[LyricSong]:
@@ -69,7 +70,7 @@ def _sequence_songs(
 
     remaining = list(songs)
     sequence: list[LyricSong] = []
-    cumulative = set(active_chars)
+    cumulative = set(learned_chars)
     while remaining:
         remaining.sort(key=lambda song: len((song.study_characters - cumulative) & deck_chars))
         best = remaining.pop(0)
@@ -83,29 +84,31 @@ def analyze_song_corpus(
     *,
     active_chars: set[str],
     deck_chars: set[str],
+    learned_chars: set[str] | None = None,
     pace: int = 5,
     requested_sequence: list[str] | None = None,
 ) -> SongAnalysis:
     if pace < 1:
         raise ValueError("pace must be at least 1")
 
+    known_chars = active_chars if learned_chars is None else learned_chars
     freq = _song_frequency(songs)
     sequence = _sequence_songs(
         songs,
-        active_chars=active_chars,
+        learned_chars=known_chars,
         deck_chars=deck_chars,
         requested_sequence=requested_sequence,
     )
 
-    cumulative = set(active_chars)
+    cumulative = set(known_chars)
     rows: list[SongProgressRow] = []
     total_days = 0
     for song in sequence:
         chars = song.study_characters
         new = (chars - cumulative) & deck_chars
         non_deck = chars - deck_chars
-        active_count = len(chars & cumulative)
-        active_percent = round(active_count / len(chars) * 100) if chars else 0
+        known_count = len(chars & cumulative)
+        known_percent = round(known_count / len(chars) * 100) if chars else 0
         cumulative |= new
         days = len(new) // pace + (1 if len(new) % pace else 0)
         total_days += days
@@ -113,8 +116,8 @@ def analyze_song_corpus(
             SongProgressRow(
                 song=song,
                 chars=len(chars),
-                active=active_count,
-                active_percent=active_percent,
+                known=known_count,
+                known_percent=known_percent,
                 new_deck_chars=tuple(sorted(new)),
                 unique_chars=sum(1 for char in chars if freq[char] == 1),
                 non_deck_chars=tuple(sorted(non_deck)),
@@ -131,9 +134,10 @@ def analyze_song_corpus(
     return SongAnalysis(
         sequence=rows,
         active_chars=active_chars,
+        learned_chars=known_chars,
         deck_chars=deck_chars,
         song_chars=song_chars,
-        new_deck_chars=(song_chars - active_chars) & deck_chars,
+        new_deck_chars=(song_chars - known_chars) & deck_chars,
         non_deck_chars=song_chars - deck_chars,
         shared_chars=sum(1 for count in freq.values() if count >= 2),
         average_songs_per_char=average_songs_per_char,

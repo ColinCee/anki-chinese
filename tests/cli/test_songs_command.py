@@ -5,18 +5,32 @@ import textwrap
 from pathlib import Path
 
 from anki_chinese.activation import LiveNoteCards
-from anki_chinese.cli.songs import run_songs_activate, run_songs_next, run_songs_resuspend
+from anki_chinese.cli.songs import (
+    run_songs_activate,
+    run_songs_analyze,
+    run_songs_next,
+    run_songs_resuspend,
+)
 
 
 class StubKnowledgeClient:
     """Stub for KnowledgeClient that returns pre-set knowledge state."""
 
-    def __init__(self, active: set[str], deck_order: list[str]) -> None:
+    def __init__(
+        self,
+        active: set[str],
+        deck_order: list[str],
+        studied: set[str] | None = None,
+    ) -> None:
         self._active = active
+        self._studied = active if studied is None else studied
         self._deck_order = deck_order
 
     def find_active_characters(self) -> set[str]:
         return self._active
+
+    def find_studied_characters(self) -> set[str]:
+        return self._studied
 
     def find_all_deck_info(self) -> tuple[list[str], set[str]]:
         return self._deck_order, set(self._deck_order)
@@ -103,6 +117,29 @@ def test_run_songs_next_plans_from_live_state(runtime_factory) -> None:
     assert set(plan.chars) == {"二", "三"}
     assert plan.non_deck_chars == ("喵",)
     assert "Next chars" in runtime.console.file.getvalue()
+
+
+def test_run_songs_analyze_counts_active_unreviewed_chars_as_new(runtime_factory) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    _write_song(runtime.song_lyrics_dir, body="一二三")
+    knowledge = StubKnowledgeClient(
+        active={"一", "二", "三"},
+        studied={"一"},
+        deck_order=["一", "二", "三"],
+    )
+
+    run_songs_analyze(
+        runtime,
+        lyrics_dir=runtime.song_lyrics_dir,
+        show_chars=True,
+        knowledge_client=knowledge,
+    )
+
+    output = runtime.console.file.getvalue()
+    assert "3 active · 1 studied · 3 total characters" in output
+    assert "2 unstudied in-deck chars" in output
+    assert "二" in output
+    assert "三" in output
 
 
 def test_run_songs_activate_uses_song_plan_and_activation_service(
@@ -217,7 +254,7 @@ def test_run_songs_next_without_song_selects_first_analyzed_song_with_new_chars(
     output = runtime.console.file.getvalue()
     assert plan.song.title == "下一首"
     assert plan.chars == ("二",)
-    assert "Skipped 2 songs with 0 new in-deck chars" in output
+    assert "Skipped 2 songs with 0 inactive in-deck chars" in output
     assert "Auto-selected next song" in output
 
 
