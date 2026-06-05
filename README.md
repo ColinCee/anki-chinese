@@ -13,7 +13,7 @@ Anki is excellent at scheduling reviews, but maintaining a high-quality Chinese 
 - generate short, common Mandarin example sentences with Gemini
 - generate single-character and sentence audio with provider-specific TTS
 - rebuild a clean `.apkg` with stable IDs so imports update notes instead of duplicating them
-- use AnkiConnect to unsuspend/tag existing live cards from song lyric plans
+- use AnkiConnect to unsuspend/tag specific live cards, manually or from song lyric plans
 
 ## Quick start
 
@@ -66,6 +66,15 @@ uv run anki-chinese build --full --skip-audio
 uv run anki-chinese build --full --audio-limit 50
 ```
 
+### Inspect saved deck state
+
+```bash
+uv run anki-chinese status
+uv run anki-chinese review
+uv run anki-chinese radicals
+uv run anki-chinese radicals --scope learned
+```
+
 ### Generate and audit sentences
 
 ```bash
@@ -89,6 +98,18 @@ Current provider split:
 
 - **Google Cloud Text-to-Speech** for single-character Mandarin/Cantonese audio
 - **MiniMax** for sentence audio
+
+### Unsuspend specific characters
+
+Manual activation mutates the open Anki collection through AnkiConnect. Keep Anki desktop open, dry-run first, then rerun without `--dry-run` after checking the requested, missing, already-active, card-count, and note-count output. Real activation writes a targeted undo snapshot under `data/build/anki_backups/`.
+
+```bash
+uv run anki-chinese activate chars 内 合 哟 着 --dry-run
+uv run anki-chinese activate chars 内 合 哟 着
+uv run anki-chinese activate chars 内合哟着 --tag batch::manual
+```
+
+See [Song activation](docs/guides/song-activation.md#manual-activation) for AnkiConnect setup and recovery notes.
 
 ### Activate cards from songs
 
