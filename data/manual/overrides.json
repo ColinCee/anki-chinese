@@ -3,5 +3,22 @@
     "meaning": "traditional form of 着; aspect particle (-ing); marks ongoing action or state",
     "sentence_pinyin": "tā zhèng kàn zhe nà běn shū ne",
     "sentence_english": "He is looking at that book."
+  },
+  "为": {
+    "meaning": "why; for; because of; as in 为什么",
+    "sentence": "你为什么学习中文？",
+    "sentence_pinyin": "nǐ wèi shén me xué xí zhōng wén",
+    "sentence_english": "Why are you studying Chinese?"
+  },
+  "染": {
+    "meaning": "to infect; to spread; to dye or stain; as in 传染",
+    "sentence": "他感冒了，会传染给别人。",
+    "sentence_pinyin": "tā gǎn mào le, huì chuán rǎn gěi bié rén",
+    "sentence_english": "He has a cold and can spread it to other people."
+  },
+  "挽": {
+    "sentence": "她挽着妈妈的胳膊。",
+    "sentence_pinyin": "tā wǎn zhe mā ma de gē bo",
+    "sentence_english": "She is holding her mother's arm."
   }
 }

@@ -39,10 +39,16 @@ def _restore_cached_fields(
         if previous is None:
             continue
         for field in _PRESERVE_FIELDS:
+            current_value = getattr(note, field)
             previous_value = getattr(previous, field)
-            if getattr(note, field) or not previous_value:
-                continue
             if field.endswith("_audio") and not is_valid_audio_tag(previous_value):
+                continue
+            if field.endswith("_audio"):
+                if current_value and is_valid_audio_tag(current_value):
+                    continue
+                if not current_value and not previous_value:
+                    continue
+            elif current_value or not previous_value:
                 continue
             setattr(note, field, previous_value)
             restored += 1

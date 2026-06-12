@@ -31,6 +31,43 @@ def test_restore_cached_fields_reuses_valid_audio_and_story() -> None:
     assert note.story == "walk"
 
 
+def test_restore_cached_fields_overwrites_invalid_current_audio() -> None:
+    current = [
+        CharacterNote(
+            hanzi="行",
+            meaning="go",
+            pinyin="xíng",
+            jyutping="haang4",
+            mandarin_audio="[sound:cmn_行_bad.mp3]",
+            cantonese_audio="[sound:yue_行_bad.mp3]",
+        )
+    ]
+    previous = [
+        CharacterNote(
+            hanzi="行",
+            meaning="go",
+            pinyin="xíng",
+            jyutping="haang4",
+            mandarin_audio="[sound:cmn_行_xíng.mp3]",
+            cantonese_audio="[sound:yue_行_haang4.mp3]",
+        )
+    ]
+
+    _, restored = _restore_cached_fields(
+        current,
+        previous,
+        is_valid_audio_tag=lambda tag: tag in {
+            "[sound:cmn_行_xíng.mp3]",
+            "[sound:yue_行_haang4.mp3]",
+        },
+    )
+
+    note = current[0]
+    assert restored == 2
+    assert note.mandarin_audio == "[sound:cmn_行_xíng.mp3]"
+    assert note.cantonese_audio == "[sound:yue_行_haang4.mp3]"
+
+
 def test_clear_stale_audio_removes_files_and_clears_tags(tmp_path: Path) -> None:
     audio_dir = tmp_path / "generated"
     audio_dir.mkdir()
