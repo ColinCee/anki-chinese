@@ -166,11 +166,13 @@ def runtime_factory(tmp_path: Path):
 
         return AppRuntime(
             source_deck_path=source_deck_path,
+            overrides_path=tmp_path / "data" / "manual" / "overrides.json",
             song_lyrics_dir=tmp_path / "data" / "songs" / "lyrics",
             hsk_vocab_path=tmp_path / "data" / "reference" / "hsk_complete.min.json",
             note_store=note_store,
             generated_audio_dir=tmp_path / "data" / "build" / "audio" / "generated",
             sample_audio_dir=tmp_path / "data" / "build" / "audio" / "samples",
+            deck_output_path=output_path,
             parse_deck_export=parse_deck_export,
             load_learned_hanzi=load_learned_hanzi,
             load_deck_hanzi=load_deck_hanzi,

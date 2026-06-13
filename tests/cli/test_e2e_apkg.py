@@ -21,8 +21,10 @@ def e2e_runtime(tmp_path: Path):
     from anki_chinese.notes import JsonNoteStore
 
     runtime.note_store = JsonNoteStore(tmp_path / "enriched.json")
+    runtime.overrides_path = tmp_path / "overrides.json"
     runtime.generated_audio_dir = tmp_path / "audio" / "generated"
     runtime.sample_audio_dir = tmp_path / "audio" / "samples"
+    runtime.deck_output_path = tmp_path / "decks" / "chinese_rsh.apkg"
     return runtime
 
 

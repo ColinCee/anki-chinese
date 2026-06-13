@@ -12,9 +12,11 @@ from rich.console import Console
 
 from ..audio import TTSProvider, build_tts_provider
 from ..config import (
+    DECK_OUTPUT_DIR,
     ENRICHED_PATH,
     GENERATED_AUDIO_DIR,
     HSK_VOCAB_PATH,
+    OVERRIDES_PATH,
     SAMPLE_AUDIO_DIR,
     SONG_LYRICS_DIR,
     SOURCE_DECK_PATH,
@@ -33,11 +35,13 @@ from ..notes import (
 @dataclass
 class AppRuntime:
     source_deck_path: Path
+    overrides_path: Path
     song_lyrics_dir: Path
     hsk_vocab_path: Path
     note_store: JsonNoteStore
     generated_audio_dir: Path
     sample_audio_dir: Path
+    deck_output_path: Path
     parse_deck_export: Callable[[Path], list[CharacterNote]]
     load_learned_hanzi: Callable[[Path], set[str]]
     load_deck_hanzi: Callable[[Path], set[str]]
@@ -57,11 +61,13 @@ def _build_sentence_tts_provider(generated_audio_dir: Path) -> TTSProvider:
 def build_runtime() -> AppRuntime:
     return AppRuntime(
         source_deck_path=SOURCE_DECK_PATH,
+        overrides_path=OVERRIDES_PATH,
         song_lyrics_dir=SONG_LYRICS_DIR,
         hsk_vocab_path=HSK_VOCAB_PATH,
         note_store=JsonNoteStore(ENRICHED_PATH),
         generated_audio_dir=GENERATED_AUDIO_DIR,
         sample_audio_dir=SAMPLE_AUDIO_DIR,
+        deck_output_path=DECK_OUTPUT_DIR / "chinese_rsh.apkg",
         parse_deck_export=parse_apkg,
         load_learned_hanzi=load_learned_hanzi_from_apkg,
         load_deck_hanzi=load_deck_hanzi_from_apkg,
@@ -92,6 +98,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     sentences_command = import_module(".sentences", __package__)
     songs_command = import_module(".songs", __package__)
     status_command = import_module(".status", __package__)
+    sync_command = import_module(".sync", __package__)
     test_tts_command = import_module(".test_tts", __package__)
 
     activate_command.register(app, runtime)
@@ -103,6 +110,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     audio_command.register(app, runtime)
     build_command.register(app, runtime)
     status_command.register(app, runtime)
+    sync_command.register(app, runtime)
     test_tts_command.register(app, runtime)
     return app
 
