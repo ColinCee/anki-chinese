@@ -66,6 +66,13 @@ activation changes.
 
 The app default is Google for single-character audio and MiniMax for sentence audio. `test-tts` defaults to MiniMax unless `--provider` is passed.
 
+Audio freshness is state-aware. `audio` records local provenance for valid
+generated files in `data/state/audio_manifest.json`; `sync`, `status`, and
+`build` use that same state to detect missing files, stale sentence/reading
+references, orphaned files, or audio generated with old provider/model/voice
+settings. A separate per-note diagnostic command is not required for the normal
+workflow unless troubleshooting needs a more detailed machine-readable view.
+
 ## Song commands
 
 Song analysis and activation query live Anki through AnkiConnect. A character

@@ -26,6 +26,23 @@ data/source/All Decks.apkg
 
 The generated package can be imported into Anki repeatedly. Stable deck/model IDs and stable note GUIDs let Anki update existing notes instead of duplicating them.
 
+## State-aware rebuild planning
+
+The rebuild lane keeps local workflow metadata so commands can decide what needs
+to run instead of relying only on timestamps or note fields.
+
+| State | Path | Purpose |
+| --- | --- | --- |
+| Enriched notes | `data/state/enriched.json` | Rebuildable note content and generated field references. This file is tracked so the repo has a useful baseline. |
+| Pipeline fingerprints | `data/state/pipeline.json` | Local-only record of successful `init`, content-generation, `audio`, and `build` stages. `sync` uses it to explain whether recorded stages still match current inputs/outputs. |
+| Audio provenance | `data/state/audio_manifest.json` | Local-only record of which provider/model/voice/settings produced each valid generated audio file. `sync`, `status`, and `build` use the same audio-state logic to detect missing, stale, or orphaned audio. |
+
+Audio provenance is not a separate source of truth and does not require a
+separate diagnostic command for normal use. Its purpose is to make existing
+workflow commands state-aware: if a MiniMax model, voice, Google voice, sentence,
+reading, or referenced file changes, `sync` can plan audio regeneration and
+`build` can warn before packaging stale media.
+
 ## Live activation flow
 
 ```text
@@ -65,6 +82,9 @@ Current default behavior:
 
 - Google Cloud Text-to-Speech is the default provider for single-character Mandarin and Cantonese audio.
 - MiniMax is used for sentence audio by the application runtime.
+- Providers expose a generation profile for each audio kind so state-aware
+  planning can distinguish current files from files generated with old provider
+  settings.
 
 ## Study target policy
 

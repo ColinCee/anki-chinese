@@ -37,6 +37,10 @@ uv run anki-chinese review
 
 Use `review` when `status` reports notes flagged for manual correction. Manual corrections usually go in `data/manual/overrides.json`; rerun `init` after editing overrides.
 
+`status` also reports audio health from the same state model used by `sync`.
+This is the intended place to see whether generated audio is missing, stale, or
+orphaned without adding a separate diagnostic step to the normal workflow.
+
 ## 4. Optional generated content
 
 Sentences and meanings:
@@ -54,6 +58,10 @@ uv run anki-chinese audio
 ```
 
 For large runs, use `--limit`, `--start-rsh`, and provider smoke tests first.
+Generated audio provenance is recorded locally in
+`data/state/audio_manifest.json`. If provider settings change, for example a new
+MiniMax model or voice, `sync` and `audio` can detect that existing files need
+regeneration even when their filenames still match.
 
 ## 5. Build
 
@@ -66,6 +74,10 @@ Output:
 ```text
 data/build/decks/chinese_rsh.apkg
 ```
+
+`build` does not mutate audio by itself. If expected audio is missing or stale it
+warns before packaging; run `uv run anki-chinese sync` or
+`uv run anki-chinese audio` to refresh audio first.
 
 ## Full pipeline shortcut
 
