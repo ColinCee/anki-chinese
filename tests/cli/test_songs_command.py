@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import textwrap
 from pathlib import Path
+from unittest.mock import patch
 
 from anki_chinese.activation import LiveNoteCards
+from anki_chinese.cli import create_app
 from anki_chinese.cli.songs import (
     run_songs_activate,
     run_songs_analyze,
@@ -210,6 +212,56 @@ def test_run_songs_activate_dry_run_does_not_snapshot_or_mutate(
     assert client.tags == []
     assert not list(tmp_path.glob("activation-*.json"))
     assert "Would activate 4 cards across 2 notes" in runtime.console.file.getvalue()
+
+
+def test_songs_activate_cli_previews_without_confirm(runtime_factory, runner) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    app = create_app(runtime)
+
+    with patch("anki_chinese.cli.songs.run_songs_activate") as activate:
+        result = runner.invoke(app, ["songs", "activate", "测试歌"])
+
+    assert result.exit_code == 0
+    activate.assert_called_once()
+    assert activate.call_args.kwargs["dry_run"] is True
+    assert "--confirm" in runtime.console.file.getvalue()
+
+
+def test_songs_activate_cli_confirm_mutates(runtime_factory, runner) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    app = create_app(runtime)
+
+    with patch("anki_chinese.cli.songs.run_songs_activate") as activate:
+        result = runner.invoke(app, ["songs", "activate", "测试歌", "--confirm"])
+
+    assert result.exit_code == 0
+    activate.assert_called_once()
+    assert activate.call_args.kwargs["dry_run"] is False
+
+
+def test_songs_resuspend_cli_previews_without_confirm(runtime_factory, runner) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    app = create_app(runtime)
+
+    with patch("anki_chinese.cli.songs.run_songs_resuspend") as resuspend:
+        result = runner.invoke(app, ["songs", "resuspend", "测试歌"])
+
+    assert result.exit_code == 0
+    resuspend.assert_called_once()
+    assert resuspend.call_args.kwargs["dry_run"] is True
+    assert "--confirm" in runtime.console.file.getvalue()
+
+
+def test_songs_resuspend_cli_confirm_mutates(runtime_factory, runner) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    app = create_app(runtime)
+
+    with patch("anki_chinese.cli.songs.run_songs_resuspend") as resuspend:
+        result = runner.invoke(app, ["songs", "resuspend", "测试歌", "--confirm"])
+
+    assert result.exit_code == 0
+    resuspend.assert_called_once()
+    assert resuspend.call_args.kwargs["dry_run"] is False
 
 
 def test_run_songs_next_without_song_selects_first_analyzed_song_with_new_chars(

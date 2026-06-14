@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+from unittest.mock import patch
 
 from anki_chinese.activation import LiveNoteCards
+from anki_chinese.cli import create_app
 from anki_chinese.cli.activate import run_activate_chars
 from anki_chinese.notes import CharacterNote
 
@@ -58,3 +60,28 @@ def test_run_activate_chars_unsuspends_cards(runtime_factory, tmp_path) -> None:
     output = runtime.console.file.getvalue()
     assert "Activated 2 cards" in output
     assert "Undo snapshot:" in output
+
+
+def test_activate_chars_cli_previews_without_confirm(runtime_factory, runner) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="水", meaning="water")])
+    app = create_app(runtime)
+
+    with patch("anki_chinese.cli.activate.run_activate_chars") as run_activate:
+        result = runner.invoke(app, ["activate", "chars", "水"])
+
+    assert result.exit_code == 0
+    run_activate.assert_called_once()
+    assert run_activate.call_args.kwargs["dry_run"] is True
+    assert "--confirm" in runtime.console.file.getvalue()
+
+
+def test_activate_chars_cli_confirm_mutates(runtime_factory, runner) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="水", meaning="water")])
+    app = create_app(runtime)
+
+    with patch("anki_chinese.cli.activate.run_activate_chars") as run_activate:
+        result = runner.invoke(app, ["activate", "chars", "水", "--confirm"])
+
+    assert result.exit_code == 0
+    run_activate.assert_called_once()
+    assert run_activate.call_args.kwargs["dry_run"] is False

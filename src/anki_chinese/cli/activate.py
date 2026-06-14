@@ -18,6 +18,7 @@ from ..activation import (
 )
 from ..config import ANKI_BACKUP_DIR
 from .app import AppRuntime
+from .interaction import preview_unless_confirmed
 
 
 def _default_client() -> AnkiConnectClient:
@@ -123,8 +124,19 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             "--tag",
             help="Optional tag to add to notes that are activated.",
         ),
+        confirm: bool = typer.Option(
+            False,
+            "--confirm",
+            help="Mutate live Anki after writing an undo snapshot. Without this, only previews.",
+        ),
     ) -> None:
         """Unsuspend specific characters by Hanzi."""
-        run_activate_chars(runtime, chars, dry_run=dry_run, tag=tag)
+        effective_dry_run = preview_unless_confirmed(
+            runtime.console,
+            dry_run=dry_run,
+            confirm=confirm,
+            action="Activating cards",
+        )
+        run_activate_chars(runtime, chars, dry_run=effective_dry_run, tag=tag)
 
     app.add_typer(activate_app, name="activate")

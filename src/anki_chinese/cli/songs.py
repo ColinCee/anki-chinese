@@ -36,6 +36,7 @@ from ..songs import (
 )
 from .activate import run_activate_chars
 from .app import AppRuntime
+from .interaction import preview_unless_confirmed
 
 
 class KnowledgeClient(ActiveStateClient, Protocol):
@@ -787,6 +788,11 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             help="Show matching notes/cards without changing Anki.",
         ),
         tag: str = typer.Option("", "--tag", help="Override the tag added to activated notes."),
+        confirm: bool = typer.Option(
+            False,
+            "--confirm",
+            help="Mutate live Anki after writing an undo snapshot. Without this, only previews.",
+        ),
         lyrics_dir: Path = typer.Option(
             runtime.song_lyrics_dir,
             "--lyrics-dir",
@@ -794,13 +800,19 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
         ),
     ) -> None:
         """Unsuspend song cards after writing an undo snapshot."""
+        effective_dry_run = preview_unless_confirmed(
+            runtime.console,
+            dry_run=dry_run,
+            confirm=confirm,
+            action="Activating song cards",
+        )
         run_songs_activate(
             runtime,
             song,
             lyrics_dir=lyrics_dir,
             limit=limit,
             all_remaining=all_remaining,
-            dry_run=dry_run,
+            dry_run=effective_dry_run,
             tag=tag,
         )
 
@@ -821,6 +833,11 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             "--keep-tag",
             help="Suspend cards but leave the activation tag on notes.",
         ),
+        confirm: bool = typer.Option(
+            False,
+            "--confirm",
+            help="Mutate live Anki after writing an undo snapshot. Without this, only previews.",
+        ),
         lyrics_dir: Path = typer.Option(
             runtime.song_lyrics_dir,
             "--lyrics-dir",
@@ -833,11 +850,17 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
         ),
     ) -> None:
         """Resuspend cards from a mistaken song activation."""
+        effective_dry_run = preview_unless_confirmed(
+            runtime.console,
+            dry_run=dry_run,
+            confirm=confirm,
+            action="Resuspending song cards",
+        )
         run_songs_resuspend(
             runtime,
             song,
             lyrics_dir=lyrics_dir,
-            dry_run=dry_run,
+            dry_run=effective_dry_run,
             tag=tag,
             keep_tag=keep_tag,
             snapshot_dir=snapshot_dir,

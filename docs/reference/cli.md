@@ -74,23 +74,23 @@ displayed sequence.
 | `uv run anki-chinese songs next` | Auto-select the first song with inactive in-deck characters. |
 | `uv run anki-chinese songs next 学猫叫 --limit 20` | Preview next characters for a specific song. |
 | `uv run anki-chinese songs activate --limit 20 --dry-run` | Preview live unsuspension for the auto-selected next song. |
-| `uv run anki-chinese songs activate 学猫叫 --limit 20` | Write an undo snapshot, then unsuspend the selected song batch. |
+| `uv run anki-chinese songs activate 学猫叫 --limit 20 --confirm` | Write an undo snapshot, then unsuspend the selected song batch. |
 | `uv run anki-chinese songs activate 学猫叫 --all --dry-run` | Preview all remaining in-deck characters for a song. |
 | `uv run anki-chinese songs resuspend 学猫叫 --dry-run` | Preview resuspending cards from a mistaken song activation tag. |
-| `uv run anki-chinese songs resuspend 学猫叫` | Resuspend tagged song cards and write an undo snapshot. |
+| `uv run anki-chinese songs resuspend 学猫叫 --confirm` | Resuspend tagged song cards and write an undo snapshot. |
 | `uv run anki-chinese songs fetch "天后"` | Search lyrics.net.cn and save a selected lyric file. |
 | `uv run anki-chinese songs fetch --url https://lyrics.net.cn/lyrics/58445` | Fetch a known lyrics.net.cn URL. |
 | `uv run anki-chinese songs verify` | Verify frontmatter, numbering, duplicates, and local lyric integrity. |
 | `uv run anki-chinese songs verify --online` | Also compare local lyrics to lyrics.net.cn. |
 
-Run dry-runs before any real activation/resuspension. Real activation and resuspension commands write targeted undo snapshots under `data/build/anki_backups/`.
+Run dry-runs before any real activation/resuspension. Live mutations require `--confirm`; without it, activation and resuspension commands preview only. Confirmed activation and resuspension commands write targeted undo snapshots under `data/build/anki_backups/`.
 
 ## Live activation commands
 
 | Command | Purpose |
 | --- | --- |
 | `uv run anki-chinese activate chars 内 合 哟 着 --dry-run` | Preview matching live Anki notes/cards for explicit characters. |
-| `uv run anki-chinese activate chars 内 合 哟 着` | Write an undo snapshot, then unsuspend matching cards. |
-| `uv run anki-chinese activate chars 内 合 哟 着 --tag batch::example` | Add a custom tag to activated notes. |
+| `uv run anki-chinese activate chars 内 合 哟 着 --confirm` | Write an undo snapshot, then unsuspend matching cards. |
+| `uv run anki-chinese activate chars 内 合 哟 着 --tag batch::example --confirm` | Add a custom tag to activated notes. |
 
 Activation requires Anki desktop to be open with AnkiConnect installed.

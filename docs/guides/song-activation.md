@@ -67,10 +67,10 @@ Live activation mutates the open Anki collection.
 1. Make sure Anki has a recent backup or you have another undo path.
 2. Run the command with `--dry-run`.
 3. Check requested characters, missing characters, already-active characters, card counts, and note counts.
-4. Rerun without `--dry-run` only when the preview is correct; the CLI writes a targeted undo snapshot before the real mutation.
+4. Rerun with `--confirm` only when the preview is correct; the CLI writes a targeted undo snapshot before the real mutation.
 5. If planning another song immediately afterward, query live Anki again instead of relying on an old `.apkg` export.
 
-Dry-runs are previews, not backups. Real activation and resuspension commands write undo snapshots under `data/build/anki_backups/`.
+Dry-runs are previews, not backups. Without `--confirm`, live activation and resuspension commands preview only. Confirmed activation and resuspension commands write undo snapshots under `data/build/anki_backups/`.
 
 ## Study target and lyric variants
 
@@ -164,15 +164,15 @@ uv run anki-chinese songs activate --limit 20 --dry-run
 Activate after checking the preview:
 
 ```bash
-uv run anki-chinese songs activate 学猫叫 --limit 20
-uv run anki-chinese songs activate --limit 20
+uv run anki-chinese songs activate 学猫叫 --limit 20 --confirm
+uv run anki-chinese songs activate --limit 20 --confirm
 ```
 
 Activate all remaining in-deck characters for a song:
 
 ```bash
 uv run anki-chinese songs activate 学猫叫 --all --dry-run
-uv run anki-chinese songs activate 学猫叫 --all
+uv run anki-chinese songs activate 学猫叫 --all --confirm
 ```
 
 The command:
@@ -200,7 +200,7 @@ uv run anki-chinese songs resuspend 学猫叫 --dry-run
 Resuspend after checking the preview:
 
 ```bash
-uv run anki-chinese songs resuspend 学猫叫
+uv run anki-chinese songs resuspend 学猫叫 --confirm
 ```
 
 The command resolves the song the same way as `songs activate` and defaults to
@@ -213,8 +213,8 @@ leave the tag in place, or `--tag` to reverse a custom activation tag.
 
 ```bash
 uv run anki-chinese activate chars 内 合 哟 着 --dry-run
-uv run anki-chinese activate chars 内 合 哟 着
-uv run anki-chinese activate chars 内 合 哟 着 --tag batch::song-1
+uv run anki-chinese activate chars 内 合 哟 着 --confirm
+uv run anki-chinese activate chars 内 合 哟 着 --tag batch::song-1 --confirm
 ```
 
 ## Troubleshooting

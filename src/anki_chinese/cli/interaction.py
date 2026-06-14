@@ -34,3 +34,21 @@ def require_interactive_terminal(
     if force or is_interactive_terminal():
         return
     refuse_non_interactive(console, action=action, hint=hint)
+
+
+def preview_unless_confirmed(
+    console: Console,
+    *,
+    dry_run: bool,
+    confirm: bool,
+    action: str,
+) -> bool:
+    """Return the effective dry-run value for live mutations."""
+
+    if dry_run or confirm:
+        return dry_run
+    console.print(
+        f"[yellow]Preview only.[/yellow] {action} requires [bold]--confirm[/bold] "
+        "to mutate live Anki."
+    )
+    return True
