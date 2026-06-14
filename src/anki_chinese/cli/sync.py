@@ -58,6 +58,7 @@ def run_sync(
         generated_audio_dir=runtime.generated_audio_dir,
         is_valid_audio_tag=runtime.tts_provider.is_valid_audio_tag,
         skip_audio=skip_audio,
+        pipeline_state_path=runtime.pipeline_state_path,
     )
 
     if not dry_run:

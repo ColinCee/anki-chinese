@@ -22,6 +22,7 @@ class DashboardRuntime(Protocol):
     note_store: JsonNoteStore
     generated_audio_dir: Path
     deck_output_path: Path
+    pipeline_state_path: Path
     tts_provider: TTSProvider
     console: Console
 
@@ -51,6 +52,7 @@ def _current_sync_plan(runtime: DashboardRuntime) -> SyncPlan:
         deck_output_path=runtime.deck_output_path,
         generated_audio_dir=runtime.generated_audio_dir,
         is_valid_audio_tag=runtime.tts_provider.is_valid_audio_tag,
+        pipeline_state_path=runtime.pipeline_state_path,
     )
 
 

@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from anki_chinese.notes import CharacterNote, save_notes
+from anki_chinese.workflows.pipeline_state import record_stage
 from anki_chinese.workflows.sync import plan_sync
 
 
@@ -18,6 +19,7 @@ def _plan(
     *,
     valid_tags: set[str] | None = None,
     skip_audio: bool = False,
+    pipeline_state_path: Path | None = None,
 ):
     return plan_sync(
         source_deck_path=tmp_path / "data" / "source" / "deck.apkg",
@@ -27,6 +29,7 @@ def _plan(
         generated_audio_dir=tmp_path / "data" / "build" / "audio" / "generated",
         is_valid_audio_tag=lambda tag: tag in (valid_tags or set()),
         skip_audio=skip_audio,
+        pipeline_state_path=pipeline_state_path,
     )
 
 
@@ -140,3 +143,49 @@ def test_plan_can_skip_audio_and_build_when_deck_is_missing(tmp_path: Path) -> N
         "audio": "skipped",
         "build": "needed",
     }
+
+
+def test_plan_reports_current_pipeline_fingerprints(tmp_path: Path) -> None:
+    source = tmp_path / "data" / "source" / "deck.apkg"
+    overrides = tmp_path / "data" / "manual" / "overrides.json"
+    enriched = tmp_path / "data" / "state" / "enriched.json"
+    state_path = tmp_path / "data" / "state" / "pipeline.json"
+    _touch(source, 100)
+    _touch(overrides, 100)
+    save_notes([CharacterNote(hanzi="一", meaning="one")], enriched)
+    os.utime(enriched, (110, 110))
+    record_stage(
+        state_path,
+        "init",
+        inputs={"source_deck": source, "overrides": overrides},
+        outputs={"enriched": enriched},
+    )
+
+    plan = _plan(tmp_path, pipeline_state_path=state_path)
+
+    init_stage = plan.stages[0]
+    assert init_stage.last_completed_at is not None
+    assert init_stage.fingerprints_current is True
+    assert init_stage.to_dict()["fingerprints_current"] is True
+
+
+def test_plan_reports_stale_pipeline_fingerprints(tmp_path: Path) -> None:
+    source = tmp_path / "data" / "source" / "deck.apkg"
+    overrides = tmp_path / "data" / "manual" / "overrides.json"
+    enriched = tmp_path / "data" / "state" / "enriched.json"
+    state_path = tmp_path / "data" / "state" / "pipeline.json"
+    _touch(source, 100)
+    _touch(overrides, 100)
+    save_notes([CharacterNote(hanzi="一", meaning="one")], enriched)
+    os.utime(enriched, (110, 110))
+    record_stage(
+        state_path,
+        "init",
+        inputs={"source_deck": source, "overrides": overrides},
+        outputs={"enriched": enriched},
+    )
+    _touch(overrides, 120)
+
+    plan = _plan(tmp_path, pipeline_state_path=state_path)
+
+    assert plan.stages[0].fingerprints_current is False

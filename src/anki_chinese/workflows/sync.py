@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Literal
 
 from ..audio import audio_tasks_for_note
 from ..notes import CharacterNote, load_notes
+from .pipeline_state import PipelineState, fingerprint_path, load_pipeline_state
 
 SyncStageId = Literal["init", "audio", "build"]
 SyncStageStatus = Literal["needed", "up_to_date", "blocked", "skipped"]
@@ -24,6 +25,8 @@ class SyncStagePlan:
     reason: str
     command: str
     details: dict[str, int | str] | None = None
+    last_completed_at: str | None = None
+    fingerprints_current: bool | None = None
 
     def to_dict(self) -> dict[str, object]:
         data: dict[str, object] = {
@@ -35,6 +38,10 @@ class SyncStagePlan:
         }
         if self.details:
             data["details"] = self.details
+        if self.last_completed_at is not None:
+            data["last_completed_at"] = self.last_completed_at
+        if self.fingerprints_current is not None:
+            data["fingerprints_current"] = self.fingerprints_current
         return data
 
 
@@ -111,6 +118,28 @@ def _load_notes_if_available(enriched_path: Path) -> list[CharacterNote]:
     return load_notes(enriched_path)
 
 
+def _fingerprints_match(recorded, current_paths: dict[str, Path]) -> bool:
+    return all(recorded.get(name) == fingerprint_path(path) for name, path in current_paths.items())
+
+
+def _with_pipeline_state(
+    stage: SyncStagePlan,
+    state: PipelineState,
+    *,
+    inputs: dict[str, Path],
+    outputs: dict[str, Path],
+) -> SyncStagePlan:
+    stage_state = state.stages.get(stage.id)
+    if stage_state is None:
+        return stage
+    return replace(
+        stage,
+        last_completed_at=stage_state.completed_at,
+        fingerprints_current=_fingerprints_match(stage_state.inputs, inputs)
+        and _fingerprints_match(stage_state.outputs, outputs),
+    )
+
+
 def plan_sync(
     *,
     source_deck_path: Path,
@@ -120,10 +149,14 @@ def plan_sync(
     generated_audio_dir: Path,
     is_valid_audio_tag: Callable[[str], bool],
     skip_audio: bool = False,
+    pipeline_state_path: Path | None = None,
 ) -> SyncPlan:
     """Return a dry-run plan for bringing generated deck artifacts up to date."""
 
     stages: list[SyncStagePlan] = []
+    pipeline_state = (
+        load_pipeline_state(pipeline_state_path) if pipeline_state_path is not None else PipelineState.empty()
+    )
 
     if not source_deck_path.exists():
         init_needed = False
@@ -144,22 +177,38 @@ def plan_sync(
 
     if init_blocked:
         stages.append(
-            SyncStagePlan(
-                id="init",
-                label="Parse + enrich",
-                status="blocked",
-                reason=init_reason,
-                command="anki-chinese init",
+            _with_pipeline_state(
+                SyncStagePlan(
+                    id="init",
+                    label="Parse + enrich",
+                    status="blocked",
+                    reason=init_reason,
+                    command="anki-chinese init",
+                ),
+                pipeline_state,
+                inputs={
+                    "source_deck": source_deck_path,
+                    "overrides": overrides_path,
+                },
+                outputs={"enriched": enriched_path},
             )
         )
     else:
         stages.append(
-            SyncStagePlan(
-                id="init",
-                label="Parse + enrich",
-                status="needed" if init_needed else "up_to_date",
-                reason=init_reason,
-                command="anki-chinese init",
+            _with_pipeline_state(
+                SyncStagePlan(
+                    id="init",
+                    label="Parse + enrich",
+                    status="needed" if init_needed else "up_to_date",
+                    reason=init_reason,
+                    command="anki-chinese init",
+                ),
+                pipeline_state,
+                inputs={
+                    "source_deck": source_deck_path,
+                    "overrides": overrides_path,
+                },
+                outputs={"enriched": enriched_path},
             )
         )
 
@@ -186,13 +235,18 @@ def plan_sync(
         )
 
     stages.append(
-        SyncStagePlan(
-            id="audio",
-            label="Generate audio",
-            status=audio_status,
-            reason=audio_reason,
-            command="anki-chinese audio",
-            details=audio_details,
+        _with_pipeline_state(
+            SyncStagePlan(
+                id="audio",
+                label="Generate audio",
+                status=audio_status,
+                reason=audio_reason,
+                command="anki-chinese audio",
+                details=audio_details,
+            ),
+            pipeline_state,
+            inputs={"enriched": enriched_path},
+            outputs={"generated_audio": generated_audio_dir},
         )
     )
 
@@ -218,12 +272,20 @@ def plan_sync(
         build_reason = "Deck package is newer than enriched state and generated audio."
 
     stages.append(
-        SyncStagePlan(
-            id="build",
-            label="Build deck",
-            status=build_status,
-            reason=build_reason,
-            command="anki-chinese build",
+        _with_pipeline_state(
+            SyncStagePlan(
+                id="build",
+                label="Build deck",
+                status=build_status,
+                reason=build_reason,
+                command="anki-chinese build",
+            ),
+            pipeline_state,
+            inputs={
+                "enriched": enriched_path,
+                "generated_audio": generated_audio_dir,
+            },
+            outputs={"deck": deck_output_path},
         )
     )
 
