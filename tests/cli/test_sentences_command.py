@@ -510,6 +510,7 @@ class TestPickMode:
             MockGen.return_value.generate_candidates.return_value = candidates
             with (
                 patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}),
+                patch("anki_chinese.cli.sentences.require_interactive_terminal"),
                 patch("typer.prompt", return_value="2"),
             ):
                 run_sentences(runtime, char="水", pick=2)
@@ -537,6 +538,7 @@ class TestPickMode:
             MockGen.return_value.generate_candidates.return_value = candidates
             with (
                 patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}),
+                patch("anki_chinese.cli.sentences.require_interactive_terminal"),
                 patch("typer.prompt", return_value="s"),
             ):
                 run_sentences(runtime, char="水", pick=1)
@@ -550,8 +552,23 @@ class TestPickMode:
 
         with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
             MockGen.return_value.generate_candidates.return_value = []
-            with patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}):
+            with (
+                patch.dict("os.environ", {"GEMINI_API_KEY": "fake"}),
+                patch("anki_chinese.cli.sentences.require_interactive_terminal"),
+            ):
                 run_sentences(runtime, char="水", pick=3)
 
         output = runtime.console.file.getvalue()  # type: ignore[union-attr]
         assert "No valid candidates" in output
+
+    def test_pick_refuses_non_interactive_cli(self, runtime_factory, runner):
+        runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="水", meaning="water")])
+        app = create_app(runtime)
+
+        with patch("anki_chinese.sentences.SentenceGenerator") as MockGen:
+            result = runner.invoke(app, ["sentences", "--char", "水", "--pick", "2"])
+
+        assert result.exit_code == 1
+        MockGen.assert_not_called()
+        output = runtime.console.file.getvalue()  # type: ignore[union-attr]
+        assert "Sentence pick mode requires an interactive terminal" in output

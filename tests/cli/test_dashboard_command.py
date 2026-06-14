@@ -29,7 +29,7 @@ def test_dashboard_command_refuses_non_interactive_context(runtime_factory, runn
 
     assert result.exit_code == 1
     output = _console_output(runtime)
-    assert "requires a terminal" in output
+    assert "requires an interactive terminal" in output
     assert "sync --dry-run" in output
     assert "--json" in output
 

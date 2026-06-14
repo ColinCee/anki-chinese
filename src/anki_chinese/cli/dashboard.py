@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import sys
-
 import typer
 
 from ..tui.dashboard import run_dashboard
 from .app import AppRuntime
+from .interaction import require_interactive_terminal
 
 
 def register(app: typer.Typer, runtime: AppRuntime) -> None:
@@ -21,11 +20,11 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
     ) -> None:
         """Open the interactive terminal dashboard."""
 
-        if not force and not (sys.stdin.isatty() and sys.stdout.isatty()):
-            runtime.console.print(
-                "[red]✗[/red] The dashboard is interactive and requires a terminal. "
-                "Use [bold]sync --dry-run --json[/bold] for agent/script workflows."
-            )
-            raise typer.Exit(1)
+        require_interactive_terminal(
+            runtime.console,
+            action="The dashboard",
+            hint="Use [bold]sync --dry-run --json[/bold] for agent/script workflows.",
+            force=force,
+        )
 
         run_dashboard(runtime)

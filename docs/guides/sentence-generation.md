@@ -39,7 +39,8 @@ uv run anki-chinese sentences --force
 uv run anki-chinese sentences --char 早 --pick 3
 ```
 
-This generates candidates and lets you choose, skip, or regenerate.
+This generates candidates and lets you choose, skip, or regenerate. It requires an
+interactive terminal; scripts and agents should run `sentences` without `--pick`.
 
 ## Repair contextual meanings
 

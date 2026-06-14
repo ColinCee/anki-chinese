@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from importlib import import_module
@@ -32,6 +31,7 @@ from ..notes import (
     parse_apkg,
 )
 from ..tui.dashboard import run_dashboard
+from .interaction import is_interactive_terminal
 
 
 @dataclass
@@ -96,7 +96,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
         """Open the dashboard in a terminal, or show help in non-interactive contexts."""
         if ctx.invoked_subcommand is not None:
             return
-        if sys.stdin.isatty() and sys.stdout.isatty():
+        if is_interactive_terminal():
             run_dashboard(runtime)
             return
         typer.echo(ctx.get_help())

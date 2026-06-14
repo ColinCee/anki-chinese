@@ -22,7 +22,7 @@ Run `uv run anki-chinese --help` and `uv run anki-chinese <command> --help` for 
 | --- | --- |
 | `uv run anki-chinese sentences` | Generate missing example sentences with Gemini. |
 | `uv run anki-chinese sentences --char 早` | Generate for one character. |
-| `uv run anki-chinese sentences --pick 3` | Generate candidates interactively and choose one. |
+| `uv run anki-chinese sentences --pick 3` | Generate candidates interactively and choose one; requires a terminal. |
 | `uv run anki-chinese sentences audit` | Report sentences with audio-confusing phonetic neighbors. |
 | `uv run anki-chinese sentences audit-pinyin` | Report sentence pinyin that disagrees with local pypinyin readings. |
 | `uv run anki-chinese sentences repair-confusers` | Dry-run repair plan for sentences with phonetic confusers. |

@@ -20,6 +20,7 @@ from ..notes import (
 )
 from ..sentences import SentenceResult
 from .app import AppRuntime
+from .interaction import require_interactive_terminal
 
 
 def apply_sentence(note: CharacterNote, result: SentenceResult) -> None:
@@ -355,6 +356,13 @@ def run_sentences(
     pick: int = 0,
 ) -> list[CharacterNote]:
     """Generate example sentences for notes that don't have them yet."""
+    if pick:
+        require_interactive_terminal(
+            runtime.console,
+            action="Sentence pick mode",
+            hint="Run [bold]sentences[/bold] without [bold]--pick[/bold] for non-interactive generation.",
+        )
+
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
         runtime.console.print(
