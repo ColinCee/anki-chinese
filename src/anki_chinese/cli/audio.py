@@ -16,6 +16,7 @@ from ..audio import (
     expected_sentence_audio_tag,
 )
 from ..notes import CharacterNote, filter_from_rsh, heisig_index
+from ..workflows.pipeline_state import record_stage
 from .app import AppRuntime
 from .ui import create_audio_progress, format_audio_task_labels, report_audio_summary
 
@@ -129,6 +130,12 @@ def run_audio(
 
     if not pending:
         runtime.console.print(f"[green]✓[/green] Audio already up to date for {len(targets)} notes")
+        record_stage(
+            runtime.pipeline_state_path,
+            "audio",
+            inputs={"enriched": runtime.note_store.path},
+            outputs={"generated_audio": runtime.generated_audio_dir},
+        )
         return notes
 
     if learned:
@@ -204,6 +211,13 @@ def run_audio(
             runtime.console.print(f"  • {failure}")
         if len(failures) > 15:
             runtime.console.print(f"  … and {len(failures) - 15} more")
+    else:
+        record_stage(
+            runtime.pipeline_state_path,
+            "audio",
+            inputs={"enriched": runtime.note_store.path},
+            outputs={"generated_audio": runtime.generated_audio_dir},
+        )
 
     return notes
 

@@ -3,6 +3,7 @@ import typer
 
 from anki_chinese.cli.audio import run_audio, run_audio_clean
 from anki_chinese.notes import CharacterNote
+from anki_chinese.workflows.pipeline_state import load_pipeline_state
 
 
 def test_run_audio_filters_by_character(runtime_factory, stub_tts_provider) -> None:
@@ -18,6 +19,20 @@ def test_run_audio_filters_by_character(runtime_factory, stub_tts_provider) -> N
     assert saved[0].mandarin_audio == ""
     assert saved[1].mandarin_audio == "[sound:cmn_二_èr.mp3]"
     assert stub_tts_provider.calls == [("mandarin", "二", "èr", False)]
+
+
+def test_run_audio_records_pipeline_state(runtime_factory, stub_tts_provider) -> None:
+    runtime = runtime_factory(
+        saved_notes=[CharacterNote(hanzi="一", meaning="one", pinyin="yī")],
+        tts_provider=stub_tts_provider,
+    )
+
+    run_audio(runtime)
+
+    state = load_pipeline_state(runtime.pipeline_state_path)
+    audio_state = state.stages["audio"]
+    assert audio_state.inputs["enriched"].kind == "file"
+    assert audio_state.outputs["generated_audio"].kind in {"directory", "missing"}
 
 
 def test_run_audio_applies_start_rsh_and_limit(runtime_factory, stub_tts_provider) -> None:

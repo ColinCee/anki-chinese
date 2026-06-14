@@ -6,6 +6,7 @@ from pathlib import Path
 
 import typer
 
+from ..workflows.pipeline_state import record_stage
 from .app import AppRuntime
 from .audio import run_audio
 from .init import run_init
@@ -39,11 +40,29 @@ def run_build(
 
         runtime.console.print("\n[bold]Step 3/3 · Build[/bold]")
         output_path = runtime.build_deck(notes)
+        record_stage(
+            runtime.pipeline_state_path,
+            "build",
+            inputs={
+                "enriched": runtime.note_store.path,
+                "generated_audio": runtime.generated_audio_dir,
+            },
+            outputs={"deck": output_path},
+        )
         runtime.console.print(f"  [green]✓[/green] {output_path} ({len(notes)} notes)\n")
         return output_path
 
     notes = runtime.note_store.load()
     output_path = runtime.build_deck(notes)
+    record_stage(
+        runtime.pipeline_state_path,
+        "build",
+        inputs={
+            "enriched": runtime.note_store.path,
+            "generated_audio": runtime.generated_audio_dir,
+        },
+        outputs={"deck": output_path},
+    )
     runtime.console.print(f"[green]✓[/green] Built {output_path} ({len(notes)} notes)")
     return output_path
 

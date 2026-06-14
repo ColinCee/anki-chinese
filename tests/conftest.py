@@ -173,6 +173,7 @@ def runtime_factory(tmp_path: Path):
             generated_audio_dir=tmp_path / "data" / "build" / "audio" / "generated",
             sample_audio_dir=tmp_path / "data" / "build" / "audio" / "samples",
             deck_output_path=output_path,
+            pipeline_state_path=tmp_path / "data" / "state" / "pipeline.json",
             parse_deck_export=parse_deck_export,
             load_learned_hanzi=load_learned_hanzi,
             load_deck_hanzi=load_deck_hanzi,

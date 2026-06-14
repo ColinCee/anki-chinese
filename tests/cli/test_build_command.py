@@ -1,6 +1,7 @@
 from importlib import import_module
 
 from anki_chinese.notes import CharacterNote
+from anki_chinese.workflows.pipeline_state import load_pipeline_state
 
 build_module = import_module("anki_chinese.cli.build")
 
@@ -80,3 +81,14 @@ def test_run_build_full_skips_audio_when_requested(monkeypatch, runtime_factory)
 
     assert result == runtime.note_store.path.parent.parent / "build" / "decks" / "deck.apkg"
     assert calls["build"] == init_notes
+
+
+def test_run_build_records_pipeline_state(runtime_factory) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
+
+    build_module.run_build(runtime)
+
+    state = load_pipeline_state(runtime.pipeline_state_path)
+    build_state = state.stages["build"]
+    assert build_state.inputs["enriched"].kind == "file"
+    assert build_state.outputs["deck"].kind == "file"

@@ -17,6 +17,7 @@ from ..config import (
     GENERATED_AUDIO_DIR,
     HSK_VOCAB_PATH,
     OVERRIDES_PATH,
+    PIPELINE_STATE_PATH,
     SAMPLE_AUDIO_DIR,
     SONG_LYRICS_DIR,
     SOURCE_DECK_PATH,
@@ -44,6 +45,7 @@ class AppRuntime:
     generated_audio_dir: Path
     sample_audio_dir: Path
     deck_output_path: Path
+    pipeline_state_path: Path
     parse_deck_export: Callable[[Path], list[CharacterNote]]
     load_learned_hanzi: Callable[[Path], set[str]]
     load_deck_hanzi: Callable[[Path], set[str]]
@@ -70,6 +72,7 @@ def build_runtime() -> AppRuntime:
         generated_audio_dir=GENERATED_AUDIO_DIR,
         sample_audio_dir=SAMPLE_AUDIO_DIR,
         deck_output_path=DECK_OUTPUT_DIR / "chinese_rsh.apkg",
+        pipeline_state_path=PIPELINE_STATE_PATH,
         parse_deck_export=parse_apkg,
         load_learned_hanzi=load_learned_hanzi_from_apkg,
         load_deck_hanzi=load_deck_hanzi_from_apkg,

@@ -1,7 +1,8 @@
 from pathlib import Path
 
-from anki_chinese.cli.init import _clear_stale_audio, _restore_cached_fields
+from anki_chinese.cli.init import _clear_stale_audio, _restore_cached_fields, run_init
 from anki_chinese.notes import CharacterNote
+from anki_chinese.workflows.pipeline_state import load_pipeline_state
 
 
 def test_restore_cached_fields_reuses_valid_audio_and_story() -> None:
@@ -93,6 +94,17 @@ def test_clear_stale_audio_removes_files_and_clears_tags(tmp_path: Path) -> None
     assert note.mandarin_audio == ""
     assert note.cantonese_audio == ""
     assert not any(path.exists() for path in audio_dir.iterdir())
+
+
+def test_run_init_records_pipeline_state(runtime_factory) -> None:
+    runtime = runtime_factory()
+
+    run_init(runtime, runtime.source_deck_path)
+
+    state = load_pipeline_state(runtime.pipeline_state_path)
+    init_state = state.stages["init"]
+    assert init_state.inputs["source_deck"].kind == "file"
+    assert init_state.outputs["enriched"].kind == "file"
 
 
 # -- Sentence-specific init tests ---------------------------------------------

@@ -12,6 +12,7 @@ from ..audio import (
     expected_sentence_audio_tag,
 )
 from ..notes import CharacterNote
+from ..workflows.pipeline_state import record_stage
 from .app import AppRuntime
 from .ui import report_init_summary, report_review_items
 
@@ -137,6 +138,15 @@ def run_init(
     report_review_items(runtime.console, notes)
 
     runtime.note_store.save(notes)
+    record_stage(
+        runtime.pipeline_state_path,
+        "init",
+        inputs={
+            "source_deck": input_file,
+            "overrides": runtime.overrides_path,
+        },
+        outputs={"enriched": runtime.note_store.path},
+    )
     runtime.console.print(f"[green]✓[/green] Saved → {runtime.note_store.path}")
     return notes
 

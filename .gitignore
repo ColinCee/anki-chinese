@@ -17,4 +17,4 @@ data/build/
 
 # Derived state
 data/state/enriched.json
-
+data/state/pipeline.json
