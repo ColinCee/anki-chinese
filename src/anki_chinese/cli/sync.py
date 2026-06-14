@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from io import StringIO
+
 import typer
+from rich.console import Console
 from rich.table import Table
 
 from ..workflows.sync import SyncPlan, plan_sync
 from .app import AppRuntime
 
 
-def _render_sync_plan(runtime: AppRuntime, plan: SyncPlan) -> None:
+def _render_sync_plan(runtime: AppRuntime, plan: SyncPlan, *, dry_run_footer: bool = True) -> None:
     table = Table(title="Sync dry run")
     table.add_column("Stage", style="cyan")
     table.add_column("Status")
@@ -38,7 +42,94 @@ def _render_sync_plan(runtime: AppRuntime, plan: SyncPlan) -> None:
             runtime.console.print(f"  {command}")
     else:
         runtime.console.print("\n[green]✓[/green] No sync steps required")
-    runtime.console.print("[dim]Dry run only. No files changed.[/dim]")
+    if dry_run_footer:
+        runtime.console.print("[dim]Dry run only. No files changed.[/dim]")
+
+
+@dataclass(frozen=True)
+class SyncExecutionResult:
+    executed_commands: list[str]
+    final_plan: SyncPlan
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "executed_commands": self.executed_commands,
+            "plan": self.final_plan.to_dict(),
+        }
+
+
+def _execute_sync_for_json(runtime: AppRuntime, *, skip_audio: bool) -> dict[str, object]:
+    original_console = runtime.console
+    log_buffer = StringIO()
+    runtime.console = Console(file=log_buffer, force_terminal=False, color_system=None)
+    try:
+        result = _execute_sync_plan(runtime, skip_audio=skip_audio)
+    finally:
+        runtime.console = original_console
+    data = result.to_dict()
+    data["log"] = log_buffer.getvalue()
+    return data
+
+
+def _build_sync_plan(
+    runtime: AppRuntime,
+    *,
+    skip_audio: bool,
+) -> SyncPlan:
+    return plan_sync(
+        source_deck_path=runtime.source_deck_path,
+        overrides_path=runtime.overrides_path,
+        enriched_path=runtime.note_store.path,
+        deck_output_path=runtime.deck_output_path,
+        generated_audio_dir=runtime.generated_audio_dir,
+        is_valid_audio_tag=runtime.tts_provider.is_valid_audio_tag,
+        skip_audio=skip_audio,
+        pipeline_state_path=runtime.pipeline_state_path,
+    )
+
+
+def _execute_stage(runtime: AppRuntime, stage_id: str) -> str:
+    if stage_id == "init":
+        from .init import run_init
+
+        run_init(runtime, runtime.source_deck_path)
+        return "anki-chinese init"
+    if stage_id == "audio":
+        from .audio import run_audio
+
+        run_audio(runtime)
+        return "anki-chinese audio"
+    if stage_id == "build":
+        from .build import run_build
+
+        run_build(runtime)
+        return "anki-chinese build"
+    raise AssertionError(f"Unknown sync stage: {stage_id}")
+
+
+def _execute_sync_plan(
+    runtime: AppRuntime,
+    *,
+    skip_audio: bool,
+) -> SyncExecutionResult:
+    executed_commands: list[str] = []
+    executed_stage_ids: set[str] = set()
+
+    while True:
+        plan = _build_sync_plan(runtime, skip_audio=skip_audio)
+        needed_stage = next((stage for stage in plan.stages if stage.status == "needed"), None)
+        if needed_stage is None:
+            return SyncExecutionResult(executed_commands=executed_commands, final_plan=plan)
+        if needed_stage.id in executed_stage_ids:
+            runtime.console.print(
+                f"[red]✗[/red] {needed_stage.command} is still needed after running. "
+                "Stopping to avoid repeating a failed stage."
+            )
+            raise typer.Exit(1)
+
+        runtime.console.print(f"\n[bold]Running:[/bold] {needed_stage.command}")
+        executed_stage_ids.add(needed_stage.id)
+        executed_commands.append(_execute_stage(runtime, needed_stage.id))
 
 
 def run_sync(
@@ -50,25 +141,20 @@ def run_sync(
 ) -> SyncPlan:
     """Plan sync steps for generated deck artifacts."""
 
-    plan = plan_sync(
-        source_deck_path=runtime.source_deck_path,
-        overrides_path=runtime.overrides_path,
-        enriched_path=runtime.note_store.path,
-        deck_output_path=runtime.deck_output_path,
-        generated_audio_dir=runtime.generated_audio_dir,
-        is_valid_audio_tag=runtime.tts_provider.is_valid_audio_tag,
-        skip_audio=skip_audio,
-        pipeline_state_path=runtime.pipeline_state_path,
-    )
+    plan = _build_sync_plan(runtime, skip_audio=skip_audio)
 
     if not dry_run:
-        message = "Sync execution is not implemented yet; re-run with --dry-run to preview only."
         if json_output:
-            runtime.console.print_json(data={"error": message, "plan": plan.to_dict()})
+            runtime.console.print_json(data=_execute_sync_for_json(runtime, skip_audio=skip_audio))
         else:
-            _render_sync_plan(runtime, plan)
-            runtime.console.print(f"[yellow]{message}[/yellow]")
-        raise typer.Exit(1)
+            result = _execute_sync_plan(runtime, skip_audio=skip_audio)
+            if result.final_plan.is_up_to_date:
+                runtime.console.print("[green]✓[/green] Sync complete")
+            else:
+                runtime.console.print("[yellow]⚠[/yellow] Sync stopped before all stages were current")
+                _render_sync_plan(runtime, result.final_plan, dry_run_footer=False)
+            return result.final_plan
+        return _build_sync_plan(runtime, skip_audio=skip_audio)
 
     if json_output:
         runtime.console.print_json(data=plan.to_dict())
