@@ -36,7 +36,7 @@ class MenuItem:
 
 _MENU_ITEMS = [
     MenuItem("1", "Sync & rebuild", "Show the current init/audio/build plan"),
-    MenuItem("2", "Review / edit cards", "Coming soon; use status/review today"),
+    MenuItem("2", "Review / edit cards", "Coming soon; use card/status/review today"),
     MenuItem("3", "Generate sentences/audio", "Coming soon; use sentences/audio today"),
     MenuItem("4", "Song study planner", "Coming soon; use songs today"),
     MenuItem("5", "Activate / unsuspend in Anki", "Coming soon; use activate/songs activate today"),

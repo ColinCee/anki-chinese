@@ -16,6 +16,15 @@ Run `uv run anki-chinese --help` and `uv run anki-chinese <command> --help` for 
 | `uv run anki-chinese build --full` | Run `init -> audio -> build` in one command. |
 | `uv run anki-chinese build --full --skip-audio` | Run `init -> build` without audio generation. |
 
+## Card override commands
+
+| Command | Purpose |
+| --- | --- |
+| `uv run anki-chinese card show 水` | Show saved note state and any manual override for one character. |
+| `uv run anki-chinese card show 水 --json` | Print the note and override as machine-readable JSON. |
+| `uv run anki-chinese card set 水 --meaning "water; liquid"` | Write a manual meaning override. |
+| `uv run anki-chinese card set 水 --sentence "我喝水。" --sentence-pinyin "wǒ hē shuǐ." --sentence-english "I drink water."` | Write manual sentence overrides and clear stale sentence audio. |
+
 ## Sentence and meaning commands
 
 | Command | Purpose |

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from anki_chinese.notes import CharacterNote, apply_overrides, load_overrides
+from anki_chinese.notes import CharacterNote, apply_overrides, load_overrides, save_overrides
 
 
 def test_character_note_round_trips_through_dict_and_ignores_unknown_fields(full_note) -> None:
@@ -25,6 +25,14 @@ def test_load_overrides_returns_empty_mapping_for_missing_file(tmp_path: Path) -
 def test_load_overrides_reads_json_mapping(tmp_path: Path) -> None:
     path = tmp_path / "overrides.json"
     path.write_text('{"行": {"pinyin": "xíng"}}', encoding="utf-8")
+
+    assert load_overrides(path) == {"行": {"pinyin": "xíng"}}
+
+
+def test_save_overrides_writes_json_mapping(tmp_path: Path) -> None:
+    path = tmp_path / "manual" / "overrides.json"
+
+    save_overrides({"行": {"pinyin": "xíng"}}, path)
 
     assert load_overrides(path) == {"行": {"pinyin": "xíng"}}
 

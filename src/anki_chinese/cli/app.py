@@ -107,6 +107,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     audio_command = import_module(".audio", __package__)
     activate_command = import_module(".activate", __package__)
     build_command = import_module(".build", __package__)
+    card_command = import_module(".card", __package__)
     dashboard_command = import_module(".dashboard", __package__)
     init_command = import_module(".init", __package__)
     keywords_command = import_module(".keywords", __package__)
@@ -118,6 +119,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     test_tts_command = import_module(".test_tts", __package__)
 
     activate_command.register(app, runtime)
+    card_command.register(app, runtime)
     dashboard_command.register(app, runtime)
     init_command.register(app, runtime)
     sentences_command.register(app, runtime)

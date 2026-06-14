@@ -2,7 +2,7 @@
 
 from .apkg_reader import load_deck_hanzi_from_apkg, load_learned_hanzi_from_apkg, parse_apkg
 from .enrich import enrich_notes
-from .model import CharacterNote, apply_overrides, load_overrides
+from .model import CharacterNote, apply_overrides, load_overrides, save_overrides
 from .pronunciation import (
     PhoneticConfuser,
     SentencePinyinIssue,
@@ -43,5 +43,6 @@ __all__ = [
     "parse_apkg",
     "prioritize_learned",
     "save_notes",
+    "save_overrides",
     "validation_issues",
 ]
