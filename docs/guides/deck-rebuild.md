@@ -5,7 +5,7 @@ Use this workflow when you want to rebuild note content, generated sentences, au
 ## Rebuild lane
 
 ```text
-Anki export -> init -> optional sentences/keywords/audio -> build -> Anki import
+Anki export -> sync/init -> optional sentences/keywords/audio -> sync/build -> Anki import
 ```
 
 Live review state such as suspension, due dates, intervals, and review history lives in Anki. Rebuilds should preserve that state when imported with stable IDs, but they are not a substitute for live activation commands.
@@ -27,6 +27,16 @@ uv run anki-chinese init
 ```
 
 `init` parses the source export, enriches notes with readings and lookup data, restores cached generated fields from the previous `data/state/enriched.json` when valid, clears stale audio references, and saves the state file.
+
+For normal rebuilds, prefer the state-aware planner:
+
+```bash
+uv run anki-chinese sync --dry-run
+uv run anki-chinese sync
+```
+
+`sync` decides whether `init`, `audio`, and `build` are needed, executes needed
+stages in dependency order, and replans after each completed stage.
 
 ## 3. Inspect status
 
@@ -80,6 +90,9 @@ warns before packaging; run `uv run anki-chinese sync` or
 `uv run anki-chinese audio` to refresh audio first.
 
 ## Full pipeline shortcut
+
+Prefer `sync` for normal state-aware rebuilds. `build --full` is a primitive
+shortcut when you explicitly want to run every rebuild step:
 
 ```bash
 uv run anki-chinese build --full

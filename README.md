@@ -40,6 +40,13 @@ uv run anki-chinese status
 uv run anki-chinese build
 ```
 
+For the state-aware rebuild planner:
+
+```bash
+uv run anki-chinese sync --dry-run
+uv run anki-chinese sync --skip-audio
+```
+
 Import the generated package into Anki:
 
 ```text
@@ -53,13 +60,20 @@ See [Getting started](docs/getting-started.md) for export/import details and opt
 ### Rebuild deck content
 
 ```bash
-uv run anki-chinese init
-uv run anki-chinese sentences       # optional, requires GEMINI_API_KEY
-uv run anki-chinese audio           # optional, requires TTS credentials
-uv run anki-chinese build
+uv run anki-chinese sync --dry-run
+uv run anki-chinese sync
 ```
 
-For one-command rebuilds:
+Optional generated content can still be run directly, then `sync` can refresh
+anything downstream:
+
+```bash
+uv run anki-chinese sentences       # requires GEMINI_API_KEY
+uv run anki-chinese audio           # requires TTS credentials
+uv run anki-chinese sync
+```
+
+For primitive one-command rebuilds:
 
 ```bash
 uv run anki-chinese build --full --skip-audio
@@ -99,14 +113,18 @@ Current provider split:
 - **Google Cloud Text-to-Speech** for single-character Mandarin/Cantonese audio
 - **MiniMax** for sentence audio
 
+Audio generation records local provenance so `sync`, `status`, and `build` can
+detect files generated with stale text, readings, provider models, voices, or
+settings.
+
 ### Unsuspend specific characters
 
-Manual activation mutates the open Anki collection through AnkiConnect. Keep Anki desktop open, dry-run first, then rerun without `--dry-run` after checking the requested, missing, already-active, card-count, and note-count output. Real activation writes a targeted undo snapshot under `data/build/anki_backups/`.
+Manual activation mutates the open Anki collection through AnkiConnect. Keep Anki desktop open, dry-run first, then rerun with `--confirm` after checking the requested, missing, already-active, card-count, and note-count output. Confirmed activation writes a targeted undo snapshot under `data/build/anki_backups/`.
 
 ```bash
 uv run anki-chinese activate chars 内 合 哟 着 --dry-run
-uv run anki-chinese activate chars 内 合 哟 着
-uv run anki-chinese activate chars 内合哟着 --tag batch::manual
+uv run anki-chinese activate chars 内 合 哟 着 --confirm
+uv run anki-chinese activate chars 内 合 哟 着 --tag batch::manual --confirm
 ```
 
 See [Song activation](docs/guides/song-activation.md#manual-activation) for AnkiConnect setup and recovery notes.
@@ -120,7 +138,7 @@ activation commands write targeted undo snapshots under `data/build/anki_backups
 uv run anki-chinese songs analyze
 uv run anki-chinese songs next --limit 20
 uv run anki-chinese songs activate --limit 20 --dry-run
-uv run anki-chinese songs activate --limit 20
+uv run anki-chinese songs activate --limit 20 --confirm
 ```
 
 If a song activation was a mistake, dry-run the tag-based recovery command
@@ -128,7 +146,7 @@ before resuspending:
 
 ```bash
 uv run anki-chinese songs resuspend 学猫叫 --dry-run
-uv run anki-chinese songs resuspend 学猫叫
+uv run anki-chinese songs resuspend 学猫叫 --confirm
 ```
 
 Lyrics live in `data/songs/lyrics/` and can be fetched from lyrics.net.cn:

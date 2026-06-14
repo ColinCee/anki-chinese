@@ -141,7 +141,7 @@ def run_sync(
     json_output: bool = False,
     skip_audio: bool = False,
 ) -> SyncPlan:
-    """Plan sync steps for generated deck artifacts."""
+    """Plan or execute sync steps for generated deck artifacts."""
 
     plan = _build_sync_plan(runtime, skip_audio=skip_audio)
 
@@ -177,7 +177,7 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
         json_output: bool = typer.Option(
             False,
             "--json",
-            help="Print the sync plan as machine-readable JSON.",
+            help="Print the sync plan/result as machine-readable JSON.",
         ),
         skip_audio: bool = typer.Option(
             False,
@@ -185,6 +185,6 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             help="Do not include audio generation in the sync plan.",
         ),
     ) -> None:
-        """Plan the steps needed to bring generated deck artifacts up to date."""
+        """Bring generated deck artifacts up to date, or preview with --dry-run."""
 
         run_sync(runtime, dry_run=dry_run, json_output=json_output, skip_audio=skip_audio)

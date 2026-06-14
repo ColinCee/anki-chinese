@@ -49,6 +49,13 @@ uv run anki-chinese status
 uv run anki-chinese build
 ```
 
+You can also let the workflow planner decide what is stale:
+
+```bash
+uv run anki-chinese sync --dry-run
+uv run anki-chinese sync --skip-audio
+```
+
 The generated package is:
 
 ```text
@@ -85,6 +92,10 @@ uv run anki-chinese test-tts --char 早 --provider google
 uv run anki-chinese audio --limit 20
 uv run anki-chinese build
 ```
+
+After audio generation, future `sync` and `status` runs use local audio
+provenance to detect stale files if text, readings, provider models, voices, or
+settings change.
 
 ## Optional: activate live Anki cards from songs
 

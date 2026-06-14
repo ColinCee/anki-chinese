@@ -29,10 +29,12 @@ uv run python -m anki_chinese.cli --help
 | Path | Purpose |
 | --- | --- |
 | `src/anki_chinese/cli/` | Typer commands and Rich UI helpers. |
+| `src/anki_chinese/tui/` | Rich terminal dashboard. |
+| `src/anki_chinese/workflows/` | Shared workflow planning/state, including sync and pipeline fingerprints. |
 | `src/anki_chinese/notes/` | Character note model, `.apkg` parsing, enrichment, storage, reporting. |
 | `src/anki_chinese/deck.py` | `genanki` package creation. |
 | `src/anki_chinese/cards/` | Packaged Anki card templates and CSS. |
-| `src/anki_chinese/audio/` | TTS provider protocol, Google/MiniMax implementations, retry/rate limiting. |
+| `src/anki_chinese/audio/` | TTS provider protocol, Google/MiniMax implementations, retry/rate limiting, and generated-audio state. |
 | `src/anki_chinese/sentences/` | Gemini sentence generation and contextual meaning repair. |
 | `src/anki_chinese/songs/` | Lyric parsing, study normalization, analysis, activation planning. |
 | `src/anki_chinese/activation/` | AnkiConnect client and live activation service. |

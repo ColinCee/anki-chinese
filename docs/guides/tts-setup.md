@@ -112,6 +112,11 @@ After audio generation:
 uv run anki-chinese build
 ```
 
+Generated files are checked against local provenance in
+`data/state/audio_manifest.json`. If you change `MINIMAX_TTS_MODEL`, voice IDs,
+Google voices, or sentence text/readings, `sync`, `status`, and `audio` can
+detect that existing files are stale even when filenames still exist.
+
 ## Cost and limits
 
 Provider pricing, free tiers, and model availability change over time. Treat [TTS provider research](../research/tts-providers.md) as point-in-time background and verify pricing against the provider before a large run.
