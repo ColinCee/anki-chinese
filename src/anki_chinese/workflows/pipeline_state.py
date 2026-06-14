@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal, cast
 
-PipelineStageId = Literal["init", "audio", "build"]
+PipelineStageId = Literal["init", "sentences", "keywords", "repair_confusers", "audio", "build"]
 FingerprintKind = Literal["file", "directory", "missing"]
 
 
@@ -20,7 +20,7 @@ def _fingerprint_kind(value: object) -> FingerprintKind:
 
 
 def _stage_id(value: object) -> PipelineStageId | None:
-    if value in {"init", "audio", "build"}:
+    if value in {"init", "sentences", "keywords", "repair_confusers", "audio", "build"}:
         return cast(PipelineStageId, value)
     return None
 

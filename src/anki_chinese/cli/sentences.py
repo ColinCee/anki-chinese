@@ -19,6 +19,7 @@ from ..notes import (
     prioritize_learned,
 )
 from ..sentences import SentenceResult
+from ..workflows.pipeline_state import record_stage
 from .app import AppRuntime
 from .interaction import require_interactive_terminal
 
@@ -297,6 +298,13 @@ def run_repair_confusers(
             progress.advance(task_id)
 
     runtime.note_store.save(notes)
+    if repaired:
+        record_stage(
+            runtime.pipeline_state_path,
+            "repair_confusers",
+            inputs={"enriched": runtime.note_store.path},
+            outputs={"enriched": runtime.note_store.path},
+        )
     runtime.console.print(f"[green]✓[/green] Repaired {repaired}/{len(issues)} sentences")
     if failed:
         runtime.console.print(f"[yellow]⚠ {len(failed)} repairs failed[/yellow]")
@@ -305,7 +313,7 @@ def run_repair_confusers(
     return notes
 
 
-def _pick_sentence(runtime: AppRuntime, generator, note: CharacterNote, count: int) -> None:
+def _pick_sentence(runtime: AppRuntime, generator, note: CharacterNote, count: int) -> bool:
     """Generate candidates in a loop until the user picks or skips."""
     runtime.console.print(
         f"\n[blue]Generating {count} candidates for[/blue] [bold]{note.hanzi}[/bold] "
@@ -318,7 +326,7 @@ def _pick_sentence(runtime: AppRuntime, generator, note: CharacterNote, count: i
         candidates = generator.generate_candidates(note.hanzi, count=count, pinyin=note.pinyin)
         if not candidates:
             runtime.console.print("[red]✗[/red] No valid candidates generated")
-            return
+            return False
 
         runtime.console.print(_candidates_table(candidates))
         choice = typer.prompt(
@@ -328,7 +336,7 @@ def _pick_sentence(runtime: AppRuntime, generator, note: CharacterNote, count: i
 
         if choice.lower() == "s":
             runtime.console.print("[dim]Skipped[/dim]")
-            return
+            return False
         if choice.lower() == "r":
             continue
 
@@ -336,14 +344,14 @@ def _pick_sentence(runtime: AppRuntime, generator, note: CharacterNote, count: i
             idx = int(choice) - 1
             if not 0 <= idx < len(candidates):
                 runtime.console.print("[red]Invalid choice[/red]")
-                return
+                return False
         except ValueError:
             runtime.console.print("[red]Invalid choice[/red]")
-            return
+            return False
 
         apply_sentence(note, candidates[idx])
         runtime.console.print(f"[green]✓[/green] Saved: {candidates[idx].sentence}")
-        return
+        return True
 
 
 def run_sentences(
@@ -404,9 +412,18 @@ def run_sentences(
 
     # Interactive pick mode
     if pick > 0:
+        picked = 0
         for note in targets:
-            _pick_sentence(runtime, generator, note, count=pick)
+            if _pick_sentence(runtime, generator, note, count=pick):
+                picked += 1
         runtime.note_store.save(notes)
+        if picked:
+            record_stage(
+                runtime.pipeline_state_path,
+                "sentences",
+                inputs={"enriched": runtime.note_store.path},
+                outputs={"enriched": runtime.note_store.path},
+            )
         return notes
 
     runtime.console.print(f"[blue]Generating sentences[/blue] for {len(targets)} notes ...")
@@ -442,6 +459,13 @@ def run_sentences(
             progress.advance(task_id)
 
     runtime.note_store.save(notes)
+    if generated:
+        record_stage(
+            runtime.pipeline_state_path,
+            "sentences",
+            inputs={"enriched": runtime.note_store.path},
+            outputs={"enriched": runtime.note_store.path},
+        )
     runtime.console.print(
         f"[green]✓[/green] Generated {generated} sentences"
         + (f", {retried} retried" if retried else "")

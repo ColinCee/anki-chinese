@@ -8,6 +8,7 @@ import typer
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn
 
 from ..notes import CharacterNote
+from ..workflows.pipeline_state import record_stage
 from .app import AppRuntime
 
 
@@ -67,6 +68,13 @@ def run_keywords(
             updated += 1
 
     runtime.note_store.save(notes)
+    if updated:
+        record_stage(
+            runtime.pipeline_state_path,
+            "keywords",
+            inputs={"enriched": runtime.note_store.path},
+            outputs={"enriched": runtime.note_store.path},
+        )
     runtime.console.print(f"[green]✓[/green] Updated {updated} meanings")
     return notes
 

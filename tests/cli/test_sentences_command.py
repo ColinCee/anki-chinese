@@ -14,6 +14,7 @@ from anki_chinese.cli.sentences import (
 )
 from anki_chinese.notes import CharacterNote
 from anki_chinese.sentences.generator import SentenceResult
+from anki_chinese.workflows.pipeline_state import load_pipeline_state
 
 
 def _make_result(hanzi: str, *, valid: bool = True, error: str = "") -> SentenceResult:
@@ -373,6 +374,8 @@ class TestRepairConfusers:
         saved = runtime.note_store.load()
         assert saved[0].sentence == "他表现很卓越"
         assert saved[0].sentence_audio == ""
+        state = load_pipeline_state(runtime.pipeline_state_path)
+        assert "repair_confusers" in state.stages
 
     def test_apply_skips_still_ambiguous_replacement(self, runtime_factory):
         notes = [
@@ -518,6 +521,8 @@ class TestPickMode:
         saved = runtime.note_store.load()
         assert saved[0].sentence == "水很冷。"
         assert saved[0].sentence_audio == ""  # cleared for regeneration
+        state = load_pipeline_state(runtime.pipeline_state_path)
+        assert "sentences" in state.stages
 
     def test_pick_skip_leaves_note_unchanged(self, runtime_factory):
         notes = [CharacterNote(hanzi="水", meaning="water", sentence="原来的。")]
@@ -545,6 +550,8 @@ class TestPickMode:
 
         saved = runtime.note_store.load()
         assert saved[0].sentence == "原来的。"
+        state = load_pipeline_state(runtime.pipeline_state_path)
+        assert "sentences" not in state.stages
 
     def test_pick_no_candidates_does_not_crash(self, runtime_factory):
         notes = [CharacterNote(hanzi="水", meaning="water")]
