@@ -7,6 +7,7 @@ from rich.table import Table
 
 from ..notes import coverage_rows, flagged_notes, validation_issues
 from .app import AppRuntime
+from .audio import load_current_audio_deck_state
 from .ui import review_table
 
 
@@ -38,6 +39,23 @@ def run_status(runtime: AppRuntime) -> None:
         runtime.console.print(
             f"  Sentences: [{sent_color}]{with_sentence}/{total}[/{sent_color}]  "
             f"Audio: [{audio_color}]{with_audio}/{total}[/{audio_color}]"
+        )
+
+    audio_state = load_current_audio_deck_state(runtime, notes)
+    audio_counts = audio_state.pending_counts_by_kind()
+    if audio_state.pending_requirements:
+        runtime.console.print(
+            "\n[yellow]⚠ Audio[/yellow] · "
+            f"{audio_state.pending_notes} notes need updates "
+            f"(Mandarin {audio_counts['mandarin']}, "
+            f"Cantonese {audio_counts['cantonese']}, "
+            f"Sentence {audio_counts['sentence']})"
+        )
+    else:
+        runtime.console.print("\n[green]✓ Audio up to date[/green]")
+    if audio_state.orphaned_files:
+        runtime.console.print(
+            f"[yellow]⚠ {len(audio_state.orphaned_files)} orphaned generated audio files[/yellow]"
         )
 
     issues = validation_issues(notes)

@@ -92,3 +92,15 @@ def test_run_build_records_pipeline_state(runtime_factory) -> None:
     build_state = state.stages["build"]
     assert build_state.inputs["enriched"].kind == "file"
     assert build_state.outputs["deck"].kind == "file"
+
+
+def test_run_build_warns_when_audio_needs_updates(runtime_factory) -> None:
+    runtime = runtime_factory(
+        saved_notes=[CharacterNote(hanzi="水", meaning="water", pinyin="shuǐ")]
+    )
+
+    build_module.run_build(runtime)
+
+    output = runtime.console.file.getvalue()  # type: ignore[union-attr]
+    assert "Building with audio that needs updates" in output
+    assert "1 notes" in output

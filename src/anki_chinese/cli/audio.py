@@ -79,6 +79,19 @@ def _save_current_audio_manifest(runtime: AppRuntime, notes: list[CharacterNote]
     )
 
 
+def load_current_audio_deck_state(
+    runtime: AppRuntime,
+    notes: list[CharacterNote],
+) -> AudioDeckState:
+    profiles = audio_generation_profiles(runtime.tts_provider, runtime.sentence_tts_provider)
+    return build_audio_deck_state(
+        notes,
+        profiles=profiles,
+        generated_audio_dir=runtime.generated_audio_dir,
+        manifest=load_audio_manifest(runtime.audio_manifest_path),
+    )
+
+
 def _generate_one_note(
     note: CharacterNote,
     tasks: list[str],
@@ -153,13 +166,7 @@ def run_audio(
             raise typer.Exit(1)
 
     learned = runtime.load_learned_hanzi(runtime.source_deck_path)
-    profiles = audio_generation_profiles(runtime.tts_provider, runtime.sentence_tts_provider)
-    audio_state = build_audio_deck_state(
-        targets,
-        profiles=profiles,
-        generated_audio_dir=runtime.generated_audio_dir,
-        manifest=load_audio_manifest(runtime.audio_manifest_path),
-    )
+    audio_state = load_current_audio_deck_state(runtime, targets)
     pending = _collect_pending_audio(
         targets,
         force=force,

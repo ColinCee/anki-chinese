@@ -17,6 +17,23 @@ def test_run_status_reports_validation_issues_and_review_count(runtime_factory) 
     assert "notes flagged for review" in output
 
 
+def test_run_status_reports_audio_health(runtime_factory) -> None:
+    runtime = runtime_factory(
+        saved_notes=[
+            CharacterNote(hanzi="水", meaning="water", pinyin="shuǐ"),
+        ]
+    )
+    runtime.generated_audio_dir.mkdir(parents=True, exist_ok=True)
+    (runtime.generated_audio_dir / "orphan.mp3").write_bytes(b"ID3")
+
+    run_status(runtime)
+
+    output = runtime.console.file.getvalue()
+    assert "Audio" in output
+    assert "1 notes need updates" in output
+    assert "1 orphaned generated audio files" in output
+
+
 def test_run_review_prints_fix_guidance_for_flagged_notes(runtime_factory) -> None:
     runtime = runtime_factory(
         saved_notes=[

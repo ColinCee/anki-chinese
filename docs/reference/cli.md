@@ -7,12 +7,12 @@ Run `uv run anki-chinese --help` and `uv run anki-chinese <command> --help` for 
 | Command | Purpose |
 | --- | --- |
 | `uv run anki-chinese init` | Parse `data/source/All Decks.apkg`, enrich notes, restore cached generated fields, and save `data/state/enriched.json`. |
-| `uv run anki-chinese status` | Show field coverage, learned-character sentence/audio coverage, and validation issues. |
+| `uv run anki-chinese status` | Show field coverage, learned-character sentence/audio coverage, audio health, and validation issues. |
 | `uv run anki-chinese review` | Inspect notes flagged for manual correction. |
 | `uv run anki-chinese radicals` | Show primary-radical exposure from saved notes, with nicknames and examples. |
 | `uv run anki-chinese radicals --min-seen 3` | Focus on radicals already seen often enough to study deliberately. |
 | `uv run anki-chinese radicals --scope learned` | Analyze only learned characters from the source deck export. |
-| `uv run anki-chinese build` | Build `data/build/decks/chinese_rsh.apkg` from `data/state/enriched.json`. |
+| `uv run anki-chinese build` | Build `data/build/decks/chinese_rsh.apkg` from `data/state/enriched.json`, warning first if expected audio is missing or stale. |
 | `uv run anki-chinese build --full` | Run `init -> audio -> build` in one command. |
 | `uv run anki-chinese build --full --skip-audio` | Run `init -> build` without audio generation. |
 

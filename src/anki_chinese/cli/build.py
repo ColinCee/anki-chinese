@@ -6,10 +6,26 @@ from pathlib import Path
 
 import typer
 
+from ..notes import CharacterNote
 from ..workflows.pipeline_state import record_stage
 from .app import AppRuntime
-from .audio import run_audio
+from .audio import load_current_audio_deck_state, run_audio
 from .init import run_init
+
+
+def _report_audio_build_health(runtime: AppRuntime, notes: list[CharacterNote]) -> None:
+    audio_state = load_current_audio_deck_state(runtime, notes)
+    if not audio_state.pending_requirements:
+        return
+    counts = audio_state.pending_counts_by_kind()
+    runtime.console.print(
+        "[yellow]⚠[/yellow] Building with audio that needs updates: "
+        f"{audio_state.pending_notes} notes "
+        f"(Mandarin {counts['mandarin']}, "
+        f"Cantonese {counts['cantonese']}, "
+        f"Sentence {counts['sentence']}). "
+        "Run 'anki-chinese audio' or 'anki-chinese sync' to refresh."
+    )
 
 
 def run_build(
@@ -39,6 +55,7 @@ def run_build(
             runtime.console.print("\n[bold]Step 2/3 · Audio[/bold] [dim](skipped)[/dim]")
 
         runtime.console.print("\n[bold]Step 3/3 · Build[/bold]")
+        _report_audio_build_health(runtime, notes)
         output_path = runtime.build_deck(notes)
         record_stage(
             runtime.pipeline_state_path,
@@ -53,6 +70,7 @@ def run_build(
         return output_path
 
     notes = runtime.note_store.load()
+    _report_audio_build_health(runtime, notes)
     output_path = runtime.build_deck(notes)
     record_stage(
         runtime.pipeline_state_path,
