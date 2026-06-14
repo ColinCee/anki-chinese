@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from importlib import import_module
@@ -30,6 +31,7 @@ from ..notes import (
     load_learned_hanzi_from_apkg,
     parse_apkg,
 )
+from ..tui.dashboard import run_dashboard
 
 
 @dataclass
@@ -86,12 +88,23 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     app = typer.Typer(
         name="anki-chinese",
         help="Generate Anki decks for Chinese (Mandarin + Cantonese) using Heisig RSH.",
-        no_args_is_help=True,
+        no_args_is_help=False,
     )
+
+    @app.callback(invoke_without_command=True)
+    def main(ctx: typer.Context) -> None:
+        """Open the dashboard in a terminal, or show help in non-interactive contexts."""
+        if ctx.invoked_subcommand is not None:
+            return
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            run_dashboard(runtime)
+            return
+        typer.echo(ctx.get_help())
 
     audio_command = import_module(".audio", __package__)
     activate_command = import_module(".activate", __package__)
     build_command = import_module(".build", __package__)
+    dashboard_command = import_module(".dashboard", __package__)
     init_command = import_module(".init", __package__)
     keywords_command = import_module(".keywords", __package__)
     radicals_command = import_module(".radicals", __package__)
@@ -102,6 +115,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     test_tts_command = import_module(".test_tts", __package__)
 
     activate_command.register(app, runtime)
+    dashboard_command.register(app, runtime)
     init_command.register(app, runtime)
     sentences_command.register(app, runtime)
     songs_command.register(app, runtime)
