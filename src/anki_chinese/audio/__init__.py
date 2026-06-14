@@ -12,12 +12,13 @@ from .files import (
     preview_mandarin_filename,
     remove_orphaned_audio,
 )
-from .provider import ProviderCapabilities, TTSProvider
+from .provider import AudioGenerationProfile, ProviderCapabilities, TTSProvider
 from .rate_limit import NoOpRateLimiter, RateLimiter, SlidingWindowRateLimiter
 from .retry import synthesize_with_retry
 
 __all__ = [
     "NoOpRateLimiter",
+    "AudioGenerationProfile",
     "PROVIDER_NAMES",
     "ProviderCapabilities",
     "RateLimiter",

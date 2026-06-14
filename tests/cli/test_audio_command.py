@@ -1,6 +1,13 @@
+from dataclasses import replace
+
 import pytest
 import typer
 
+from anki_chinese.audio.state import (
+    audio_generation_profiles,
+    backfill_audio_manifest,
+    save_audio_manifest,
+)
 from anki_chinese.cli.audio import run_audio, run_audio_clean
 from anki_chinese.notes import CharacterNote
 from anki_chinese.workflows.pipeline_state import load_pipeline_state
@@ -33,6 +40,40 @@ def test_run_audio_records_pipeline_state(runtime_factory, stub_tts_provider) ->
     audio_state = state.stages["audio"]
     assert audio_state.inputs["enriched"].kind == "file"
     assert audio_state.outputs["generated_audio"].kind in {"directory", "missing"}
+
+
+def test_run_audio_regenerates_when_manifest_profile_is_stale(
+    runtime_factory,
+    stub_tts_provider,
+) -> None:
+    tag = "[sound:cmn_一_yī.mp3]"
+    note = CharacterNote(
+        hanzi="一",
+        meaning="one",
+        pinyin="yī",
+        mandarin_audio=tag,
+    )
+    runtime = runtime_factory(saved_notes=[note], tts_provider=stub_tts_provider)
+    runtime.generated_audio_dir.mkdir(parents=True, exist_ok=True)
+    (runtime.generated_audio_dir / "cmn_一_yī.mp3").write_bytes(b"ID3")
+    stub_tts_provider.valid_audio_tags.add(tag)
+    profiles = audio_generation_profiles(stub_tts_provider)
+    stale_profiles = {
+        **profiles,
+        "mandarin": replace(profiles["mandarin"], model="old-model"),
+    }
+    save_audio_manifest(
+        runtime.audio_manifest_path,
+        backfill_audio_manifest(
+            [note],
+            profiles=stale_profiles,
+            generated_audio_dir=runtime.generated_audio_dir,
+        ),
+    )
+
+    run_audio(runtime)
+
+    assert stub_tts_provider.calls == [("mandarin", "一", "yī", True)]
 
 
 def test_run_audio_applies_start_rsh_and_limit(runtime_factory, stub_tts_provider) -> None:

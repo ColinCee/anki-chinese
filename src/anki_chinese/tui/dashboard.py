@@ -23,7 +23,9 @@ class DashboardRuntime(Protocol):
     generated_audio_dir: Path
     deck_output_path: Path
     pipeline_state_path: Path
+    audio_manifest_path: Path
     tts_provider: TTSProvider
+    sentence_tts_provider: TTSProvider | None
     console: Console
 
 
@@ -51,7 +53,9 @@ def _current_sync_plan(runtime: DashboardRuntime) -> SyncPlan:
         enriched_path=runtime.note_store.path,
         deck_output_path=runtime.deck_output_path,
         generated_audio_dir=runtime.generated_audio_dir,
-        is_valid_audio_tag=runtime.tts_provider.is_valid_audio_tag,
+        tts_provider=runtime.tts_provider,
+        sentence_tts_provider=runtime.sentence_tts_provider,
+        audio_manifest_path=runtime.audio_manifest_path,
         pipeline_state_path=runtime.pipeline_state_path,
     )
 

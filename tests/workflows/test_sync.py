@@ -3,6 +3,11 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from anki_chinese.audio.state import (
+    audio_generation_profiles,
+    backfill_audio_manifest,
+    save_audio_manifest,
+)
 from anki_chinese.notes import CharacterNote, save_notes
 from anki_chinese.workflows.pipeline_state import record_stage
 from anki_chinese.workflows.sync import plan_sync
@@ -125,6 +130,68 @@ def test_plan_reports_up_to_date_when_artifacts_are_current(tmp_path: Path) -> N
 
     assert plan.is_up_to_date
     assert plan.required_commands == []
+
+
+def test_plan_requires_audio_when_manifest_needs_backfill(tmp_path: Path, stub_tts_provider) -> None:
+    source = tmp_path / "data" / "source" / "deck.apkg"
+    overrides = tmp_path / "data" / "manual" / "overrides.json"
+    enriched = tmp_path / "data" / "state" / "enriched.json"
+    deck = tmp_path / "data" / "build" / "decks" / "deck.apkg"
+    generated_audio = tmp_path / "data" / "build" / "audio" / "generated"
+    manifest_path = tmp_path / "data" / "state" / "audio_manifest.json"
+    _touch(source, 100)
+    _touch(overrides, 100)
+    note = CharacterNote(
+        hanzi="水",
+        meaning="water",
+        pinyin="shuǐ",
+        mandarin_audio="[sound:cmn_水_shuǐ.mp3]",
+    )
+    save_notes([note], enriched)
+    os.utime(enriched, (110, 110))
+    _touch(deck, 120)
+    _touch(generated_audio / "cmn_水_shuǐ.mp3", 90)
+
+    plan = plan_sync(
+        source_deck_path=source,
+        overrides_path=overrides,
+        enriched_path=enriched,
+        deck_output_path=deck,
+        generated_audio_dir=generated_audio,
+        tts_provider=stub_tts_provider,
+        audio_manifest_path=manifest_path,
+    )
+
+    assert _stage_statuses(plan)["audio"] == "needed"
+    assert plan.stages[1].reason == "Audio provenance manifest is missing or stale."
+    assert plan.stages[1].details == {
+        "pending_notes": 0,
+        "mandarin": 0,
+        "cantonese": 0,
+        "sentence": 0,
+        "manifest_entries": 1,
+        "manifest_current": 0,
+    }
+
+    save_audio_manifest(
+        manifest_path,
+        backfill_audio_manifest(
+            [note],
+            profiles=audio_generation_profiles(stub_tts_provider),
+            generated_audio_dir=generated_audio,
+        ),
+    )
+    current_plan = plan_sync(
+        source_deck_path=source,
+        overrides_path=overrides,
+        enriched_path=enriched,
+        deck_output_path=deck,
+        generated_audio_dir=generated_audio,
+        tts_provider=stub_tts_provider,
+        audio_manifest_path=manifest_path,
+    )
+
+    assert _stage_statuses(current_plan)["audio"] == "up_to_date"
 
 
 def test_plan_can_skip_audio_and_build_when_deck_is_missing(tmp_path: Path) -> None:

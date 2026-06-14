@@ -40,6 +40,22 @@ def test_provider_reports_capabilities(tmp_path: Path) -> None:
     assert caps.supports_phoneme_control
 
 
+def test_generation_profile_matches_google_defaults(tmp_path: Path) -> None:
+    provider = _make_provider(tmp_path)
+
+    mandarin = provider.generation_profile("mandarin")
+    cantonese = provider.generation_profile("cantonese")
+
+    assert mandarin.provider == "google"
+    assert mandarin.model == "texttospeech.googleapis.com/v1"
+    assert mandarin.voice == "cmn-CN-Chirp3-HD-Leda"
+    assert mandarin.language_code == "cmn-CN"
+    assert mandarin.settings["endpoint"] == gtts.DEFAULT_GOOGLE_TTS_ENDPOINT
+    assert mandarin.settings["audio_encoding"] == "MP3"
+    assert cantonese.voice == "yue-HK-Chirp3-HD-Leda"
+    assert cantonese.language_code == "yue-HK"
+
+
 def test_generate_mandarin_uses_custom_pronunciations(tmp_path: Path, monkeypatch) -> None:
     provider = _make_provider(tmp_path)
     captured: dict[str, object] = {}

@@ -14,8 +14,19 @@ class ProviderCapabilities:
     supports_phoneme_control: bool
 
 
+@dataclass(frozen=True)
+class AudioGenerationProfile:
+    provider: str
+    model: str
+    voice: str
+    language_code: str
+    settings: dict[str, str | int | float | bool]
+
+
 class TTSProvider(Protocol):
     def capabilities(self) -> ProviderCapabilities: ...
+
+    def generation_profile(self, kind: str) -> AudioGenerationProfile: ...
 
     def generate_mandarin(self, hanzi: str, pinyin: str, *, force: bool = False) -> str: ...
 

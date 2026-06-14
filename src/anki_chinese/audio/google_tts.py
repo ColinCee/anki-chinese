@@ -29,7 +29,7 @@ from .files import (
     preview_mandarin_filename,
 )
 from .pinyin import diacritical_to_numbered
-from .provider import ProviderCapabilities
+from .provider import AudioGenerationProfile, ProviderCapabilities
 from .rate_limit import RateLimiter, SlidingWindowRateLimiter
 from .retry import RetryPolicy, synthesize_with_retry
 
@@ -233,6 +233,21 @@ class GoogleTTSProvider:
             supports_mandarin=True,
             supports_cantonese=True,
             supports_phoneme_control=True,
+        )
+
+    def generation_profile(self, kind: str) -> AudioGenerationProfile:
+        voice = self.settings.cantonese_voice if kind == "cantonese" else self.settings.mandarin_voice
+        language_code = "yue-HK" if kind == "cantonese" else "cmn-CN"
+        return AudioGenerationProfile(
+            provider="google",
+            model="texttospeech.googleapis.com/v1",
+            voice=voice,
+            language_code=language_code,
+            settings={
+                "endpoint": self.settings.endpoint,
+                "audio_encoding": "MP3",
+                "supports_phoneme_control": kind == "mandarin",
+            },
         )
 
     def is_valid_audio_tag(self, tag: str) -> bool:

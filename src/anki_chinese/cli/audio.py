@@ -2,18 +2,24 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
 
 import typer
 
 from ..audio import (
     TTSRateLimitError,
-    audio_tasks_for_note,
     collect_orphaned_audio,
     expected_cantonese_audio_tag,
     expected_mandarin_audio_tag,
     expected_sentence_audio_tag,
+)
+from ..audio.state import (
+    AudioDeckState,
+    audio_generation_profiles,
+    backfill_audio_manifest,
+    build_audio_deck_state,
+    load_audio_manifest,
+    save_audio_manifest,
 )
 from ..notes import CharacterNote, filter_from_rsh, heisig_index
 from ..workflows.pipeline_state import record_stage
@@ -21,26 +27,36 @@ from .app import AppRuntime
 from .ui import create_audio_progress, format_audio_task_labels, report_audio_summary
 
 AudioCleanKind = str
+PendingAudio = tuple[CharacterNote, list[str], set[str]]
 
 
 def _collect_pending_audio(
     targets: list[CharacterNote],
     *,
     force: bool,
-    is_valid_tag: Callable[[str], bool],
+    deck_state: AudioDeckState,
     learned: set[str],
     limit: int,
-) -> list[tuple[CharacterNote, list[str]]]:
+) -> list[PendingAudio]:
     """Filter targets to notes needing audio, prioritize learned, apply limit."""
-    pending: list[tuple[CharacterNote, list[str]]] = []
-    for note in targets:
-        tasks = audio_tasks_for_note(
-            note,
-            force=force,
-            is_valid_audio_tag_fn=is_valid_tag,
-        )
+    target_by_hanzi = {note.hanzi: note for note in targets}
+    task_map: dict[str, list[str]] = {note.hanzi: [] for note in targets}
+    force_map: dict[str, set[str]] = {note.hanzi: set() for note in targets}
+    for requirement in deck_state.requirements:
+        if requirement.hanzi not in target_by_hanzi:
+            continue
+        if force:
+            if requirement.expected is not None:
+                task_map[requirement.hanzi].append(requirement.kind)
+        elif requirement.needs_generation:
+            task_map[requirement.hanzi].append(requirement.kind)
+            if requirement.force_generation:
+                force_map[requirement.hanzi].add(requirement.kind)
+
+    pending: list[PendingAudio] = []
+    for hanzi, tasks in task_map.items():
         if tasks:
-            pending.append((note, tasks))
+            pending.append((target_by_hanzi[hanzi], tasks, force_map[hanzi]))
 
     if learned:
         pending.sort(key=lambda pair: pair[0].hanzi not in learned)
@@ -51,46 +67,63 @@ def _collect_pending_audio(
     return pending
 
 
+def _save_current_audio_manifest(runtime: AppRuntime, notes: list[CharacterNote]) -> None:
+    profiles = audio_generation_profiles(runtime.tts_provider, runtime.sentence_tts_provider)
+    save_audio_manifest(
+        runtime.audio_manifest_path,
+        backfill_audio_manifest(
+            notes,
+            profiles=profiles,
+            generated_audio_dir=runtime.generated_audio_dir,
+        ),
+    )
+
+
 def _generate_one_note(
     note: CharacterNote,
     tasks: list[str],
     runtime: AppRuntime,
     *,
     force: bool,
+    force_tasks: set[str] | None = None,
 ) -> dict[str, int]:
     """Generate audio for a single note, returning per-type counts of new files."""
     generated: dict[str, int] = {}
+    force_tasks = force_tasks or set()
 
     if "mandarin" in tasks and note.pinyin:
         expected = expected_mandarin_audio_tag(note)
         was_cached = bool(expected and runtime.tts_provider.is_valid_audio_tag(expected))
+        effective_force = force or "mandarin" in force_tasks
         note.mandarin_audio = runtime.tts_provider.generate_mandarin(
             note.hanzi,
             note.pinyin,
-            force=force,
+            force=effective_force,
         )
-        generated["mandarin"] = 0 if was_cached and not force else 1
+        generated["mandarin"] = 0 if was_cached and not effective_force else 1
 
     if "cantonese" in tasks and note.jyutping:
         expected = expected_cantonese_audio_tag(note)
         was_cached = bool(expected and runtime.tts_provider.is_valid_audio_tag(expected))
+        effective_force = force or "cantonese" in force_tasks
         note.cantonese_audio = runtime.tts_provider.generate_cantonese(
             note.hanzi,
             note.jyutping,
-            force=force,
+            force=effective_force,
         )
-        generated["cantonese"] = 0 if was_cached and not force else 1
+        generated["cantonese"] = 0 if was_cached and not effective_force else 1
 
     if "sentence" in tasks and note.sentence:
         provider = runtime.sentence_tts_provider or runtime.tts_provider
         expected = expected_sentence_audio_tag(note)
         was_cached = bool(expected and provider.is_valid_audio_tag(expected))
+        effective_force = force or "sentence" in force_tasks
         note.sentence_audio = provider.generate_sentence_audio(
             note.hanzi,
             note.sentence,
-            force=force,
+            force=effective_force,
         )
-        generated["sentence"] = 0 if was_cached and not force else 1
+        generated["sentence"] = 0 if was_cached and not effective_force else 1
 
     return generated
 
@@ -120,16 +153,24 @@ def run_audio(
             raise typer.Exit(1)
 
     learned = runtime.load_learned_hanzi(runtime.source_deck_path)
+    profiles = audio_generation_profiles(runtime.tts_provider, runtime.sentence_tts_provider)
+    audio_state = build_audio_deck_state(
+        targets,
+        profiles=profiles,
+        generated_audio_dir=runtime.generated_audio_dir,
+        manifest=load_audio_manifest(runtime.audio_manifest_path),
+    )
     pending = _collect_pending_audio(
         targets,
         force=force,
-        is_valid_tag=runtime.tts_provider.is_valid_audio_tag,
+        deck_state=audio_state,
         learned=learned,
         limit=limit,
     )
 
     if not pending:
         runtime.console.print(f"[green]✓[/green] Audio already up to date for {len(targets)} notes")
+        _save_current_audio_manifest(runtime, notes)
         record_stage(
             runtime.pipeline_state_path,
             "audio",
@@ -139,7 +180,7 @@ def run_audio(
         return notes
 
     if learned:
-        learned_count = sum(1 for n, _ in pending if n.hanzi in learned)
+        learned_count = sum(1 for n, _, _ in pending if n.hanzi in learned)
         runtime.console.print(f"  [dim]{learned_count} learned characters prioritized[/dim]")
 
     skipped = len(targets) - len(pending)
@@ -155,13 +196,19 @@ def run_audio(
     progress = create_audio_progress(runtime.console)
     with progress:
         task_id = progress.add_task("Audio", total=len(pending), current="Preparing...")
-        for index, (note, tasks) in enumerate(pending, 1):
+        for index, (note, tasks, force_tasks) in enumerate(pending, 1):
             progress.update(
                 task_id,
                 current=f"{note.hanzi} ({note.meaning}) · {format_audio_task_labels(tasks)}",
             )
             try:
-                generated = _generate_one_note(note, tasks, runtime, force=force)
+                generated = _generate_one_note(
+                    note,
+                    tasks,
+                    runtime,
+                    force=force,
+                    force_tasks=force_tasks,
+                )
                 for kind, count in generated.items():
                     repaired[kind] += count
                     synced[kind] += 1 - count
@@ -172,6 +219,7 @@ def run_audio(
                 progress.stop()
                 failures.append(f"{note.hanzi} ({note.meaning}): {error}")
                 runtime.note_store.save(notes)
+                _save_current_audio_manifest(runtime, notes)
                 report_audio_summary(
                     runtime.console,
                     processed=index - 1,
@@ -194,6 +242,7 @@ def run_audio(
                     raise
 
     runtime.note_store.save(notes)
+    _save_current_audio_manifest(runtime, notes)
     report_audio_summary(
         runtime.console,
         processed=len(pending),

@@ -40,6 +40,30 @@ def test_minimax_provider_reports_capabilities() -> None:
     assert not provider.capabilities().supports_phoneme_control
 
 
+def test_generation_profile_matches_minimax_defaults() -> None:
+    provider = tts.MiniMaxTTSProvider()
+
+    mandarin = provider.generation_profile("mandarin")
+    cantonese = provider.generation_profile("cantonese")
+
+    assert mandarin.provider == "minimax"
+    assert mandarin.model == "speech-2.8-turbo"
+    assert mandarin.voice == "Chinese (Mandarin)_Cute_Spirit"
+    assert mandarin.language_code == "Chinese"
+    assert mandarin.settings == {
+        "api_host": "https://api.minimax.io",
+        "sample_rate": 32000,
+        "bitrate": 128000,
+        "format": "mp3",
+        "channel": 1,
+        "speed": 1.0,
+        "vol": 1.0,
+        "pitch": 0,
+    }
+    assert cantonese.voice == "Cantonese_GentleLady"
+    assert cantonese.language_code == "Chinese,Yue"
+
+
 def test_generate_mandarin_uses_existing_valid_file_without_request(tmp_path: Path) -> None:
     provider = tts.MiniMaxTTSProvider(generated_audio_dir=tmp_path)
     existing = tmp_path / "cmn_一_yī.mp3"

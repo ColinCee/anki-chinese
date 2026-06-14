@@ -8,6 +8,13 @@ from pathlib import Path
 from typing import Literal
 
 from ..audio import audio_tasks_for_note
+from ..audio.provider import TTSProvider
+from ..audio.state import (
+    audio_generation_profiles,
+    backfill_audio_manifest,
+    build_audio_deck_state,
+    load_audio_manifest,
+)
 from ..notes import CharacterNote, load_notes
 from .pipeline_state import PipelineState, fingerprint_path, load_pipeline_state
 
@@ -112,6 +119,41 @@ def _audio_details(
     }
 
 
+def _audio_details_from_state(
+    notes: list[CharacterNote],
+    *,
+    tts_provider: TTSProvider,
+    sentence_tts_provider: TTSProvider | None,
+    generated_audio_dir: Path,
+    audio_manifest_path: Path,
+) -> dict[str, int | str]:
+    profiles = audio_generation_profiles(tts_provider, sentence_tts_provider)
+    manifest = load_audio_manifest(audio_manifest_path)
+    audio_state = build_audio_deck_state(
+        notes,
+        profiles=profiles,
+        generated_audio_dir=generated_audio_dir,
+        manifest=manifest,
+    )
+    counts = audio_state.pending_counts_by_kind()
+    desired_manifest = backfill_audio_manifest(
+        notes,
+        profiles=profiles,
+        generated_audio_dir=generated_audio_dir,
+    )
+    manifest_current = not desired_manifest.generated or (
+        audio_manifest_path.exists() and manifest == desired_manifest
+    )
+    return {
+        "pending_notes": audio_state.pending_notes,
+        "mandarin": counts["mandarin"],
+        "cantonese": counts["cantonese"],
+        "sentence": counts["sentence"],
+        "manifest_entries": len(desired_manifest.generated),
+        "manifest_current": 1 if manifest_current else 0,
+    }
+
+
 def _load_notes_if_available(enriched_path: Path) -> list[CharacterNote]:
     if not enriched_path.exists():
         return []
@@ -147,7 +189,10 @@ def plan_sync(
     enriched_path: Path,
     deck_output_path: Path,
     generated_audio_dir: Path,
-    is_valid_audio_tag: Callable[[str], bool],
+    is_valid_audio_tag: Callable[[str], bool] | None = None,
+    tts_provider: TTSProvider | None = None,
+    sentence_tts_provider: TTSProvider | None = None,
+    audio_manifest_path: Path | None = None,
     skip_audio: bool = False,
     pipeline_state_path: Path | None = None,
 ) -> SyncPlan:
@@ -225,14 +270,26 @@ def plan_sync(
         audio_reason = "Audio planning waits for parse + enrich to complete."
         audio_details = None
     else:
-        audio_details = _audio_details(notes, is_valid_audio_tag=is_valid_audio_tag)
-        audio_needed = int(audio_details["pending_notes"]) > 0
+        if tts_provider is not None and audio_manifest_path is not None:
+            audio_details = _audio_details_from_state(
+                notes,
+                tts_provider=tts_provider,
+                sentence_tts_provider=sentence_tts_provider,
+                generated_audio_dir=generated_audio_dir,
+                audio_manifest_path=audio_manifest_path,
+            )
+        elif is_valid_audio_tag is not None:
+            audio_details = _audio_details(notes, is_valid_audio_tag=is_valid_audio_tag)
+        else:
+            raise ValueError("plan_sync requires either tts_provider/audio_manifest_path or is_valid_audio_tag")
+        audio_needed = int(audio_details["pending_notes"]) > 0 or int(audio_details.get("manifest_current", 1)) == 0
         audio_status = "needed" if audio_needed else "up_to_date"
-        audio_reason = (
-            f"{audio_details['pending_notes']} notes need audio updates."
-            if audio_needed
-            else "All expected audio tags are present and valid."
-        )
+        if int(audio_details["pending_notes"]) > 0:
+            audio_reason = f"{audio_details['pending_notes']} notes need audio updates."
+        elif int(audio_details.get("manifest_current", 1)) == 0:
+            audio_reason = "Audio provenance manifest is missing or stale."
+        else:
+            audio_reason = "All expected audio tags are present, valid, and provenance-current."
 
     stages.append(
         _with_pipeline_state(

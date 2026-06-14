@@ -27,7 +27,7 @@ from .files import (
     is_valid_audio_tag,
     preview_mandarin_filename,
 )
-from .provider import ProviderCapabilities
+from .provider import AudioGenerationProfile, ProviderCapabilities
 from .rate_limit import RateLimiter, SlidingWindowRateLimiter
 from .retry import RetryPolicy, synthesize_with_retry
 
@@ -223,6 +223,26 @@ class MiniMaxTTSProvider:
             supports_mandarin=True,
             supports_cantonese=True,
             supports_phoneme_control=False,
+        )
+
+    def generation_profile(self, kind: str) -> AudioGenerationProfile:
+        voice = self.settings.cantonese_voice_id if kind == "cantonese" else self.settings.mandarin_voice_id
+        language_boost = "Chinese,Yue" if kind == "cantonese" else "Chinese"
+        return AudioGenerationProfile(
+            provider="minimax",
+            model=self.settings.model,
+            voice=voice,
+            language_code=language_boost,
+            settings={
+                "api_host": self.settings.api_host,
+                "sample_rate": _DEFAULT_AUDIO_SAMPLE_RATE,
+                "bitrate": _DEFAULT_AUDIO_BITRATE,
+                "format": "mp3",
+                "channel": 1,
+                "speed": 1.0,
+                "vol": 1.0,
+                "pitch": 0,
+            },
         )
 
     def is_valid_audio_tag(self, tag: str) -> bool:
