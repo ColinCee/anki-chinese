@@ -18,9 +18,17 @@ from .service import (
     write_activation_undo_snapshot,
     write_resuspend_undo_snapshot,
 )
+from .snapshots import (
+    ActivationSnapshot,
+    SnapshotError,
+    list_activation_snapshots,
+    load_activation_snapshot,
+    resolve_activation_snapshot,
+)
 
 __all__ = [
     "ActiveStateClient",
+    "ActivationSnapshot",
     "ActivationPreview",
     "ActivationResult",
     "AnkiClient",
@@ -30,10 +38,14 @@ __all__ = [
     "ResuspendClient",
     "ResuspendPreview",
     "ResuspendResult",
+    "SnapshotError",
     "activate_characters",
+    "list_activation_snapshots",
+    "load_activation_snapshot",
     "normalize_character_args",
     "preview_activation",
     "preview_tag_resuspension",
+    "resolve_activation_snapshot",
     "resuspend_tagged_cards",
     "write_activation_undo_snapshot",
     "write_resuspend_undo_snapshot",

@@ -209,6 +209,21 @@ the tag `activated::song::<song title>`. It writes an undo snapshot under
 cards on the tagged notes, and removes the activation tag. Use `--keep-tag` to
 leave the tag in place, or `--tag` to reverse a custom activation tag.
 
+## Inspect undo snapshots
+
+Snapshot inspection reads local JSON files only; it does not connect to Anki or
+mutate live cards.
+
+```bash
+uv run anki-chinese activate snapshots list
+uv run anki-chinese activate snapshots show activation-YYYYMMDD-HHMMSS
+uv run anki-chinese activate snapshots list --json
+```
+
+Use this after activation/resuspension to confirm the recorded operation,
+characters, note/card counts, tag, and affected card IDs before deciding on any
+manual recovery step.
+
 ## Manual activation
 
 ```bash

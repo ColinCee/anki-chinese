@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 from anki_chinese.activation import LiveNoteCards
@@ -85,3 +86,67 @@ def test_activate_chars_cli_confirm_mutates(runtime_factory, runner) -> None:
     assert result.exit_code == 0
     run_activate.assert_called_once()
     assert run_activate.call_args.kwargs["dry_run"] is False
+
+
+def _write_activation_snapshot(snapshot_dir: Path) -> Path:
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    path = snapshot_dir / "activation-20260101-010000.json"
+    path.write_text(
+        json.dumps(
+            {
+                "created_at": "2026-01-01T01:00:00Z",
+                "operation": "activate-chars",
+                "requested_chars": ["水"],
+                "found_chars": ["水"],
+                "missing_chars": [],
+                "already_active_chars": [],
+                "note_ids": [1],
+                "card_ids": [10, 11],
+                "pre_change_suspended_card_ids": [10, 11],
+                "tag": "batch::test",
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_activate_snapshots_list_json(runtime_factory, runner, tmp_path: Path) -> None:
+    _write_activation_snapshot(tmp_path)
+    runtime = runtime_factory()
+    app = create_app(runtime)
+
+    result = runner.invoke(
+        app,
+        ["activate", "snapshots", "list", "--dir", str(tmp_path), "--json"],
+    )
+
+    assert result.exit_code == 0
+    data = json.loads(runtime.console.file.getvalue())  # type: ignore[union-attr]
+    assert data[0]["filename"] == "activation-20260101-010000.json"
+    assert data[0]["mutation_card_count"] == 2
+
+
+def test_activate_snapshots_show_human_output(runtime_factory, runner, tmp_path: Path) -> None:
+    _write_activation_snapshot(tmp_path)
+    runtime = runtime_factory()
+    app = create_app(runtime)
+
+    result = runner.invoke(
+        app,
+        [
+            "activate",
+            "snapshots",
+            "show",
+            "activation-20260101-010000",
+            "--dir",
+            str(tmp_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+    output = runtime.console.file.getvalue()
+    assert "Snapshot" in output
+    assert "activate-chars" in output
+    assert "batch::test" in output
+    assert "2" in output

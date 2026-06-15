@@ -8,8 +8,10 @@ import pytest
 from anki_chinese.activation import (
     LiveNoteCards,
     activate_characters,
+    list_activation_snapshots,
     normalize_character_args,
     preview_tag_resuspension,
+    resolve_activation_snapshot,
     resuspend_tagged_cards,
 )
 
@@ -193,3 +195,54 @@ def test_resuspend_tagged_cards_can_keep_tag(tmp_path: Path) -> None:
 
     assert client.resuspended == [10, 20, 21]
     assert client.removed_tags == []
+
+
+def test_list_activation_snapshots_summarizes_activation_and_resuspend(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "activation-20260101-010000.json").write_text(
+        json.dumps(
+            {
+                "created_at": "2026-01-01T01:00:00Z",
+                "operation": "activate-chars",
+                "requested_chars": ["水"],
+                "found_chars": ["水"],
+                "note_ids": [1],
+                "card_ids": [10, 11],
+                "pre_change_suspended_card_ids": [10, 11],
+                "tag": "batch::test",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "resuspend-20260101-020000.json").write_text(
+        json.dumps(
+            {
+                "created_at": "2026-01-01T02:00:00Z",
+                "operation": "resuspend-tagged-cards",
+                "found_chars": ["水"],
+                "note_ids": [1],
+                "card_ids": [10, 11],
+                "pre_change_suspended_card_ids": [11],
+                "card_ids_to_suspend": [10],
+                "tag": "activated::song::test",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    snapshots = list_activation_snapshots(tmp_path)
+
+    assert [snapshot.path.name for snapshot in snapshots] == [
+        "resuspend-20260101-020000.json",
+        "activation-20260101-010000.json",
+    ]
+    assert snapshots[0].mutation_card_count == 1
+    assert snapshots[1].mutation_card_count == 2
+
+
+def test_resolve_activation_snapshot_accepts_stem(tmp_path: Path) -> None:
+    path = tmp_path / "activation-20260101-010000.json"
+    path.write_text("{}", encoding="utf-8")
+
+    assert resolve_activation_snapshot(tmp_path, "activation-20260101-010000") == path

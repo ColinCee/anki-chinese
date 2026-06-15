@@ -112,5 +112,8 @@ Run dry-runs before any real activation/resuspension. Live mutations require `--
 | `uv run anki-chinese activate chars 内 合 哟 着 --dry-run` | Preview matching live Anki notes/cards for explicit characters. |
 | `uv run anki-chinese activate chars 内 合 哟 着 --confirm` | Write an undo snapshot, then unsuspend matching cards. |
 | `uv run anki-chinese activate chars 内 合 哟 着 --tag batch::example --confirm` | Add a custom tag to activated notes. |
+| `uv run anki-chinese activate snapshots list` | List local activation/resuspension undo snapshots without touching Anki. |
+| `uv run anki-chinese activate snapshots show activation-YYYYMMDD-HHMMSS` | Inspect one local undo snapshot. |
 
 Activation requires Anki desktop to be open with AnkiConnect installed.
+Snapshot inspection is local-file only and does not require Anki to be open.
