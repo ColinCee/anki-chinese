@@ -145,7 +145,7 @@ def run_init(
             "source_deck": input_file,
             "overrides": runtime.overrides_path,
         },
-        outputs={"enriched": runtime.note_store.path},
+        outputs={},
     )
     runtime.console.print(f"[green]✓[/green] Saved → {runtime.note_store.path}")
     return notes

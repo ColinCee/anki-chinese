@@ -14,10 +14,11 @@ pytestmark = pytest.mark.skipif(not REAL_APKG.exists(), reason="Real .apkg not p
 
 
 @pytest.fixture
-def e2e_runtime(tmp_path: Path):
+def e2e_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """Build a real runtime but redirect mutable state to tmp_path."""
     runtime = build_runtime()
     # Point mutable outputs at tmp so the test is side-effect free.
+    from anki_chinese import deck as deck_module
     from anki_chinese.notes import JsonNoteStore
 
     runtime.note_store = JsonNoteStore(tmp_path / "enriched.json")
@@ -25,6 +26,9 @@ def e2e_runtime(tmp_path: Path):
     runtime.generated_audio_dir = tmp_path / "audio" / "generated"
     runtime.sample_audio_dir = tmp_path / "audio" / "samples"
     runtime.deck_output_path = tmp_path / "decks" / "chinese_rsh.apkg"
+    runtime.pipeline_state_path = tmp_path / "state" / "pipeline.json"
+    runtime.audio_manifest_path = tmp_path / "state" / "audio_manifest.json"
+    monkeypatch.setattr(deck_module, "DECK_OUTPUT_DIR", runtime.deck_output_path.parent)
     return runtime
 
 

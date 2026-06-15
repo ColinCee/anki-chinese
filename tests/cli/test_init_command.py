@@ -104,7 +104,7 @@ def test_run_init_records_pipeline_state(runtime_factory) -> None:
     state = load_pipeline_state(runtime.pipeline_state_path)
     init_state = state.stages["init"]
     assert init_state.inputs["source_deck"].kind == "file"
-    assert init_state.outputs["enriched"].kind == "file"
+    assert init_state.outputs == {}
 
 
 # -- Sentence-specific init tests ---------------------------------------------

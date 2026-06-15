@@ -235,7 +235,7 @@ def plan_sync(
                     "source_deck": source_deck_path,
                     "overrides": overrides_path,
                 },
-                outputs={"enriched": enriched_path},
+                outputs={},
             )
         )
     else:
@@ -253,7 +253,7 @@ def plan_sync(
                     "source_deck": source_deck_path,
                     "overrides": overrides_path,
                 },
-                outputs={"enriched": enriched_path},
+                outputs={},
             )
         )
 
