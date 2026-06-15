@@ -15,11 +15,13 @@ from ..activation import (
     AnkiConnectClient,
     AnkiConnectError,
     SnapshotError,
+    SnapshotUndoResult,
     activate_characters,
     list_activation_snapshots,
     load_activation_snapshot,
     normalize_character_args,
     resolve_activation_snapshot,
+    undo_activation_snapshot,
 )
 from ..config import ANKI_BACKUP_DIR
 from .app import AppRuntime
@@ -194,6 +196,94 @@ def run_snapshot_show(
         runtime.console.print(f"  [yellow]Missing:[/yellow] {' '.join(str(char) for char in missing)}")
 
 
+def _undo_result_dict(result: SnapshotUndoResult) -> dict[str, object]:
+    preview = result.preview
+    return {
+        "dry_run": result.dry_run,
+        "snapshot_path": str(result.snapshot_path) if result.snapshot_path else None,
+        "source_snapshot": str(preview.snapshot_path),
+        "source_operation": preview.source_operation,
+        "tag": preview.tag,
+        "characters": list(preview.found_chars),
+        "note_ids": list(preview.note_ids),
+        "card_ids": list(preview.card_ids),
+        "cards_to_suspend": list(preview.cards_to_suspend),
+        "cards_to_unsuspend": list(preview.cards_to_unsuspend),
+        "remove_tag": preview.remove_tag,
+        "restore_tag": preview.restore_tag,
+        "will_change": preview.will_change,
+    }
+
+
+def run_activate_undo(
+    runtime: AppRuntime,
+    snapshot: str,
+    *,
+    dry_run: bool = False,
+    keep_tag: bool = False,
+    json_output: bool = False,
+    client: AnkiConnectClient | None = None,
+    snapshot_dir: Path = ANKI_BACKUP_DIR,
+) -> SnapshotUndoResult:
+    try:
+        snapshot_path = resolve_activation_snapshot(snapshot_dir, snapshot)
+        loaded_snapshot = load_activation_snapshot(snapshot_path)
+    except SnapshotError as error:
+        runtime.console.print(f"[red]✗[/red] {error}")
+        raise typer.Exit(1) from None
+
+    client = client or _default_client()
+    try:
+        result = undo_activation_snapshot(
+            client,
+            loaded_snapshot,
+            dry_run=dry_run,
+            keep_tag=keep_tag,
+            snapshot_dir=snapshot_dir,
+        )
+    except (AnkiConnectError, SnapshotError) as error:
+        runtime.console.print(f"[red]✗[/red] {error}")
+        raise typer.Exit(2) from None
+
+    if json_output:
+        runtime.console.print_json(data=_undo_result_dict(result))
+        return result
+
+    preview = result.preview
+    action = "Would restore" if dry_run else "Restored"
+    runtime.console.print(f"[bold]Snapshot:[/bold] {preview.snapshot_path.name}")
+    runtime.console.print(f"  [dim]Source operation:[/dim] {preview.source_operation}")
+    if preview.found_chars:
+        runtime.console.print(f"  [dim]Characters:[/dim] {_snapshot_chars_text(list(preview.found_chars))}")
+
+    if preview.cards_to_suspend:
+        runtime.console.print(
+            f"[green]✓[/green] {action} by suspending {len(preview.cards_to_suspend)} cards "
+            f"across {len(preview.note_ids)} notes"
+        )
+    if preview.cards_to_unsuspend:
+        runtime.console.print(
+            f"[green]✓[/green] {action} by unsuspending {len(preview.cards_to_unsuspend)} cards "
+            f"across {len(preview.note_ids)} notes"
+        )
+    if not preview.changed_card_count:
+        runtime.console.print("[green]✓[/green] No card suspension changes needed")
+
+    if preview.remove_tag:
+        tag_action = "Would remove tag" if dry_run else "Removed tag"
+        runtime.console.print(f"  [dim]{tag_action}:[/dim] {preview.tag}")
+    if preview.restore_tag:
+        tag_action = "Would restore tag" if dry_run else "Restored tag"
+        runtime.console.print(f"  [dim]{tag_action}:[/dim] {preview.tag}")
+    if keep_tag and preview.tag:
+        runtime.console.print(f"  [dim]Tag unchanged:[/dim] {preview.tag}")
+    if result.snapshot_path is not None:
+        runtime.console.print(f"  [dim]Safety snapshot:[/dim] {result.snapshot_path}")
+    elif dry_run and preview.will_change:
+        runtime.console.print("[dim]Preview only. Re-run with --confirm to mutate live Anki.[/dim]")
+    return result
+
+
 def register(app: typer.Typer, runtime: AppRuntime) -> None:
     activate_app = typer.Typer(
         name="activate",
@@ -228,6 +318,57 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             action="Activating cards",
         )
         run_activate_chars(runtime, chars, dry_run=effective_dry_run, tag=tag)
+
+    @activate_app.command("undo")
+    def undo_command(
+        snapshot: str = typer.Argument(
+            "latest",
+            help="Snapshot filename, stem, path, or 'latest'.",
+        ),
+        dry_run: bool = typer.Option(
+            False,
+            "--dry-run",
+            help="Preview undo effects without changing Anki.",
+        ),
+        confirm: bool = typer.Option(
+            False,
+            "--confirm",
+            help="Mutate live Anki after writing a safety snapshot. Without this, only previews.",
+        ),
+        keep_tag: bool = typer.Option(
+            False,
+            "--keep-tag",
+            help="Do not remove or restore snapshot tags during undo.",
+        ),
+        json_output: bool = typer.Option(
+            False,
+            "--json",
+            help="Print undo preview/result as machine-readable JSON.",
+        ),
+        snapshot_dir: Path = typer.Option(
+            ANKI_BACKUP_DIR,
+            "--dir",
+            help="Snapshot directory to inspect.",
+        ),
+    ) -> None:
+        """Undo a local activation/resuspension snapshot safely."""
+        if json_output:
+            effective_dry_run = dry_run or not confirm
+        else:
+            effective_dry_run = preview_unless_confirmed(
+                runtime.console,
+                dry_run=dry_run,
+                confirm=confirm,
+                action="Undoing activation snapshot",
+            )
+        run_activate_undo(
+            runtime,
+            snapshot,
+            dry_run=effective_dry_run,
+            keep_tag=keep_tag,
+            json_output=json_output,
+            snapshot_dir=snapshot_dir,
+        )
 
     snapshots_app = typer.Typer(
         name="snapshots",

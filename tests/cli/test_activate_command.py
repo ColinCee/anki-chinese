@@ -12,7 +12,10 @@ from anki_chinese.notes import CharacterNote
 
 class StubAnkiClient:
     def __init__(self) -> None:
+        self.suspended: set[int] = {10, 11}
         self.unsuspended: list[int] = []
+        self.resuspended: list[int] = []
+        self.removed_tags: list[tuple[list[int], str]] = []
 
     def find_notes_by_chars(self, chars: list[str]) -> dict[str, LiveNoteCards]:
         return {
@@ -20,13 +23,21 @@ class StubAnkiClient:
         }
 
     def suspended_card_ids(self, card_ids: list[int]) -> set[int]:
-        return set(card_ids)
+        return {card_id for card_id in card_ids if card_id in self.suspended}
 
     def unsuspend_cards(self, card_ids: list[int]) -> None:
         self.unsuspended.extend(card_ids)
+        self.suspended.difference_update(card_ids)
+
+    def suspend_cards(self, card_ids: list[int]) -> None:
+        self.resuspended.extend(card_ids)
+        self.suspended.update(card_ids)
 
     def add_tags(self, note_ids: list[int], tag: str) -> None:
         return None
+
+    def remove_tags(self, note_ids: list[int], tag: str) -> None:
+        self.removed_tags.append((note_ids, tag))
 
 
 def test_run_activate_chars_dry_run_reports_cards(runtime_factory) -> None:
@@ -150,3 +161,89 @@ def test_activate_snapshots_show_human_output(runtime_factory, runner, tmp_path:
     assert "activate-chars" in output
     assert "batch::test" in output
     assert "2" in output
+
+
+def test_activate_undo_cli_previews_without_confirm(
+    runtime_factory,
+    runner,
+    tmp_path: Path,
+) -> None:
+    _write_activation_snapshot(tmp_path)
+    runtime = runtime_factory()
+    app = create_app(runtime)
+    client = StubAnkiClient()
+    client.suspended = set()
+
+    with patch("anki_chinese.cli.activate.AnkiConnectClient", return_value=client):
+        result = runner.invoke(
+            app,
+            ["activate", "undo", "activation-20260101-010000", "--dir", str(tmp_path)],
+        )
+
+    assert result.exit_code == 0
+    assert client.resuspended == []
+    output = runtime.console.file.getvalue()
+    assert "Would restore by suspending 2 cards" in output
+    assert "--confirm" in output
+
+
+def test_activate_undo_cli_confirm_mutates(
+    runtime_factory,
+    runner,
+    tmp_path: Path,
+) -> None:
+    _write_activation_snapshot(tmp_path)
+    runtime = runtime_factory()
+    app = create_app(runtime)
+    client = StubAnkiClient()
+    client.suspended = set()
+
+    with patch("anki_chinese.cli.activate.AnkiConnectClient", return_value=client):
+        result = runner.invoke(
+            app,
+            [
+                "activate",
+                "undo",
+                "activation-20260101-010000",
+                "--dir",
+                str(tmp_path),
+                "--confirm",
+            ],
+        )
+
+    assert result.exit_code == 0
+    assert client.resuspended == [10, 11]
+    assert client.removed_tags == [([1], "batch::test")]
+    assert list(tmp_path.glob("restore-*.json"))
+    assert "Restored by suspending 2 cards" in runtime.console.file.getvalue()
+
+
+def test_activate_undo_cli_json_is_clean_preview(
+    runtime_factory,
+    runner,
+    tmp_path: Path,
+) -> None:
+    _write_activation_snapshot(tmp_path)
+    runtime = runtime_factory()
+    app = create_app(runtime)
+    client = StubAnkiClient()
+    client.suspended = set()
+
+    with patch("anki_chinese.cli.activate.AnkiConnectClient", return_value=client):
+        result = runner.invoke(
+            app,
+            [
+                "activate",
+                "undo",
+                "latest",
+                "--dir",
+                str(tmp_path),
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0
+    data = json.loads(runtime.console.file.getvalue())  # type: ignore[union-attr]
+    assert data["dry_run"] is True
+    assert data["cards_to_suspend"] == [10, 11]
+    assert client.resuspended == []

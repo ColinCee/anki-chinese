@@ -209,6 +209,22 @@ the tag `activated::song::<song title>`. It writes an undo snapshot under
 cards on the tagged notes, and removes the activation tag. Use `--keep-tag` to
 leave the tag in place, or `--tag` to reverse a custom activation tag.
 
+You can also undo from the saved snapshot directly. This is the higher-level
+restore path for both activation and resuspension snapshots:
+
+```bash
+uv run anki-chinese activate snapshots list
+uv run anki-chinese activate undo latest
+uv run anki-chinese activate undo latest --confirm
+```
+
+`activate undo` previews by default and queries current live suspended state, so
+it skips cards that are already in the target state. A confirmed undo writes a
+new `restore-*.json` safety snapshot before changing live Anki. By default it
+also reverses the snapshot tag change: activation undo removes the activation
+tag, and resuspension undo restores it when the original resuspend removed it.
+Use `--keep-tag` to leave tags unchanged.
+
 ## Inspect undo snapshots
 
 Snapshot inspection reads local JSON files only; it does not connect to Anki or

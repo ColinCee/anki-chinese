@@ -114,6 +114,11 @@ Run dry-runs before any real activation/resuspension. Live mutations require `--
 | `uv run anki-chinese activate chars 内 合 哟 着 --tag batch::example --confirm` | Add a custom tag to activated notes. |
 | `uv run anki-chinese activate snapshots list` | List local activation/resuspension undo snapshots without touching Anki. |
 | `uv run anki-chinese activate snapshots show activation-YYYYMMDD-HHMMSS` | Inspect one local undo snapshot. |
+| `uv run anki-chinese activate undo latest` | Preview undoing the latest local activation/resuspension snapshot against live Anki. |
+| `uv run anki-chinese activate undo activation-YYYYMMDD-HHMMSS --confirm` | Write a restore safety snapshot, then apply the targeted live-state undo. |
 
 Activation requires Anki desktop to be open with AnkiConnect installed.
 Snapshot inspection is local-file only and does not require Anki to be open.
+`activate undo` is live-state aware and preview-first; it requires AnkiConnect,
+only mutates with `--confirm`, and writes a `restore-*.json` safety snapshot
+before changing live cards or tags.

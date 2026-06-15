@@ -10,6 +10,7 @@ from typing import Protocol
 
 from ..config import MODEL_NAME
 from ..songs import is_cjk
+from .snapshots import ActivationSnapshot, SnapshotError
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,41 @@ class ResuspendResult:
     snapshot_path: Path | None
 
 
+@dataclass(frozen=True)
+class SnapshotUndoPreview:
+    snapshot_path: Path
+    source_operation: str
+    tag: str
+    found_chars: tuple[str, ...]
+    note_ids: tuple[int, ...]
+    card_ids: tuple[int, ...]
+    already_suspended_card_ids: tuple[int, ...]
+    cards_to_suspend: tuple[int, ...]
+    cards_to_unsuspend: tuple[int, ...]
+    remove_tag: bool
+    restore_tag: bool
+
+    @property
+    def will_change(self) -> bool:
+        return bool(
+            self.cards_to_suspend
+            or self.cards_to_unsuspend
+            or (self.remove_tag and self.note_ids)
+            or (self.restore_tag and self.note_ids)
+        )
+
+    @property
+    def changed_card_count(self) -> int:
+        return len(self.cards_to_suspend) + len(self.cards_to_unsuspend)
+
+
+@dataclass(frozen=True)
+class SnapshotUndoResult:
+    preview: SnapshotUndoPreview
+    snapshot_path: Path | None
+    dry_run: bool
+
+
 class AnkiClient(Protocol):
     def find_notes_by_chars(self, chars: list[str]) -> dict[str, LiveNoteCards]:
         """Return note/card IDs for exact Hanzi field matches."""
@@ -131,6 +167,28 @@ class ResuspendClient(Protocol):
 
     def suspend_cards(self, card_ids: list[int]) -> None:
         """Suspend the supplied live Anki card IDs."""
+        ...
+
+    def remove_tags(self, note_ids: list[int], tag: str) -> None:
+        """Remove a tag from the supplied live Anki note IDs."""
+        ...
+
+
+class SnapshotUndoClient(Protocol):
+    def suspended_card_ids(self, card_ids: list[int]) -> set[int]:
+        """Return the subset of card IDs that are currently suspended."""
+        ...
+
+    def suspend_cards(self, card_ids: list[int]) -> None:
+        """Suspend the supplied live Anki card IDs."""
+        ...
+
+    def unsuspend_cards(self, card_ids: list[int]) -> None:
+        """Unsuspend the supplied live Anki card IDs."""
+        ...
+
+    def add_tags(self, note_ids: list[int], tag: str) -> None:
+        """Add a tag to the supplied live Anki note IDs."""
         ...
 
     def remove_tags(self, note_ids: list[int], tag: str) -> None:
@@ -319,6 +377,116 @@ def write_resuspend_undo_snapshot(
         encoding="utf-8",
     )
     return path
+
+
+def preview_snapshot_undo(
+    client: SnapshotUndoClient,
+    snapshot: ActivationSnapshot,
+    *,
+    keep_tag: bool = False,
+) -> SnapshotUndoPreview:
+    source_operation = snapshot.operation
+    tag = snapshot.tag
+    note_ids = snapshot.note_ids
+    card_ids = snapshot.card_ids
+
+    if source_operation in {"activate-chars", "activate-song"}:
+        undo_card_ids = snapshot.pre_change_suspended_card_ids
+        current_suspended = tuple(sorted(client.suspended_card_ids(list(undo_card_ids)))) if undo_card_ids else ()
+        current_suspended_set = set(current_suspended)
+        cards_to_suspend = tuple(card_id for card_id in undo_card_ids if card_id not in current_suspended_set)
+        return SnapshotUndoPreview(
+            snapshot_path=snapshot.path,
+            source_operation=source_operation,
+            tag=tag,
+            found_chars=tuple(snapshot.found_chars),
+            note_ids=note_ids,
+            card_ids=card_ids,
+            already_suspended_card_ids=current_suspended,
+            cards_to_suspend=cards_to_suspend,
+            cards_to_unsuspend=(),
+            remove_tag=bool(tag and note_ids and not keep_tag),
+            restore_tag=False,
+        )
+
+    if source_operation == "resuspend-tagged-cards":
+        undo_card_ids = snapshot.card_ids_to_suspend
+        current_suspended = tuple(sorted(client.suspended_card_ids(list(undo_card_ids)))) if undo_card_ids else ()
+        cards_to_unsuspend = current_suspended
+        return SnapshotUndoPreview(
+            snapshot_path=snapshot.path,
+            source_operation=source_operation,
+            tag=tag,
+            found_chars=tuple(snapshot.found_chars),
+            note_ids=note_ids,
+            card_ids=card_ids,
+            already_suspended_card_ids=current_suspended,
+            cards_to_suspend=(),
+            cards_to_unsuspend=cards_to_unsuspend,
+            remove_tag=False,
+            restore_tag=bool(tag and note_ids and snapshot.remove_tag and not keep_tag),
+        )
+
+    raise SnapshotError(f"Unsupported snapshot operation for undo: {source_operation}")
+
+
+def write_snapshot_restore_snapshot(
+    preview: SnapshotUndoPreview,
+    snapshot_dir: Path,
+) -> Path:
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    created_at = datetime.now(UTC).replace(microsecond=0)
+    timestamp = created_at.strftime("%Y%m%d-%H%M%S")
+    path = snapshot_dir / f"restore-{timestamp}.json"
+    counter = 2
+    while path.exists():
+        path = snapshot_dir / f"restore-{timestamp}-{counter}.json"
+        counter += 1
+
+    data = {
+        "created_at": created_at.isoformat().replace("+00:00", "Z"),
+        "operation": "restore-activation-snapshot",
+        "source_snapshot": str(preview.snapshot_path),
+        "source_operation": preview.source_operation,
+        "tag": preview.tag,
+        "remove_tag": preview.remove_tag,
+        "restore_tag": preview.restore_tag,
+        "found_chars": list(preview.found_chars),
+        "note_ids": list(preview.note_ids),
+        "card_ids": list(preview.card_ids),
+        "pre_change_suspended_card_ids": list(preview.already_suspended_card_ids),
+        "card_ids_to_suspend": list(preview.cards_to_suspend),
+        "card_ids_to_unsuspend": list(preview.cards_to_unsuspend),
+    }
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def undo_activation_snapshot(
+    client: SnapshotUndoClient,
+    snapshot: ActivationSnapshot,
+    *,
+    dry_run: bool = False,
+    keep_tag: bool = False,
+    snapshot_dir: Path,
+) -> SnapshotUndoResult:
+    preview = preview_snapshot_undo(client, snapshot, keep_tag=keep_tag)
+    if dry_run or not preview.will_change:
+        return SnapshotUndoResult(preview=preview, snapshot_path=None, dry_run=dry_run)
+
+    snapshot_path = write_snapshot_restore_snapshot(preview, snapshot_dir)
+    if preview.cards_to_suspend:
+        client.suspend_cards(list(preview.cards_to_suspend))
+    if preview.cards_to_unsuspend:
+        client.unsuspend_cards(list(preview.cards_to_unsuspend))
+    if preview.remove_tag and preview.tag:
+        client.remove_tags(list(preview.note_ids), preview.tag)
+    if preview.restore_tag and preview.tag:
+        client.add_tags(list(preview.note_ids), preview.tag)
+    return SnapshotUndoResult(preview=preview, snapshot_path=snapshot_path, dry_run=False)
 
 
 def resuspend_tagged_cards(

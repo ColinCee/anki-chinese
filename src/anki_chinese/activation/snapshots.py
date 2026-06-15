@@ -50,17 +50,46 @@ class ActivationSnapshot:
         value = self.data.get(name)
         return value if isinstance(value, list) else []
 
+    def _int_list_field(self, name: str) -> tuple[int, ...]:
+        values: list[int] = []
+        for value in self._list_field(name):
+            try:
+                values.append(int(value))
+            except (TypeError, ValueError):
+                continue
+        return tuple(values)
+
     @property
     def note_count(self) -> int:
         return len(self._list_field("note_ids"))
+
+    @property
+    def note_ids(self) -> tuple[int, ...]:
+        return self._int_list_field("note_ids")
 
     @property
     def card_count(self) -> int:
         return len(self._list_field("card_ids"))
 
     @property
+    def card_ids(self) -> tuple[int, ...]:
+        return self._int_list_field("card_ids")
+
+    @property
     def pre_change_suspended_count(self) -> int:
         return len(self._list_field("pre_change_suspended_card_ids"))
+
+    @property
+    def pre_change_suspended_card_ids(self) -> tuple[int, ...]:
+        return self._int_list_field("pre_change_suspended_card_ids")
+
+    @property
+    def card_ids_to_suspend(self) -> tuple[int, ...]:
+        return self._int_list_field("card_ids_to_suspend")
+
+    @property
+    def remove_tag(self) -> bool:
+        return bool(self.data.get("remove_tag", False))
 
     @property
     def mutation_card_count(self) -> int:
@@ -118,6 +147,12 @@ def list_activation_snapshots(snapshot_dir: Path, *, limit: int = 0) -> list[Act
 
 
 def resolve_activation_snapshot(snapshot_dir: Path, reference: str) -> Path:
+    if reference == "latest":
+        snapshots = list_activation_snapshots(snapshot_dir, limit=1)
+        if snapshots:
+            return snapshots[0].path
+        raise SnapshotError(f"Snapshot not found: {reference}")
+
     candidate = Path(reference)
     candidates: list[Path] = []
     if candidate.is_absolute() or candidate.parent != Path("."):

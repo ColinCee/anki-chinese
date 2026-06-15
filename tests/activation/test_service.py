@@ -13,6 +13,7 @@ from anki_chinese.activation import (
     preview_tag_resuspension,
     resolve_activation_snapshot,
     resuspend_tagged_cards,
+    undo_activation_snapshot,
 )
 
 
@@ -25,7 +26,9 @@ class StubAnkiClient:
         }
         self.suspended = {10, 11}
         self.unsuspended: list[int] = []
+        self.resuspended: list[int] = []
         self.tags: list[tuple[list[int], str]] = []
+        self.removed_tags: list[tuple[list[int], str]] = []
 
     def find_notes_by_chars(self, chars: list[str]) -> dict[str, LiveNoteCards]:
         return {char: self.notes[char] for char in chars if char in self.notes}
@@ -35,11 +38,23 @@ class StubAnkiClient:
 
     def unsuspend_cards(self, card_ids: list[int]) -> None:
         if self.snapshot_dir is not None:
-            assert list(self.snapshot_dir.glob("activation-*.json"))
+            assert list(self.snapshot_dir.glob("activation-*.json")) or list(
+                self.snapshot_dir.glob("restore-*.json")
+            )
         self.unsuspended.extend(card_ids)
+        self.suspended.difference_update(card_ids)
+
+    def suspend_cards(self, card_ids: list[int]) -> None:
+        if self.snapshot_dir is not None:
+            assert list(self.snapshot_dir.glob("restore-*.json"))
+        self.resuspended.extend(card_ids)
+        self.suspended.update(card_ids)
 
     def add_tags(self, note_ids: list[int], tag: str) -> None:
         self.tags.append((note_ids, tag))
+
+    def remove_tags(self, note_ids: list[int], tag: str) -> None:
+        self.removed_tags.append((note_ids, tag))
 
 
 class StubResuspendClient:
@@ -246,3 +261,110 @@ def test_resolve_activation_snapshot_accepts_stem(tmp_path: Path) -> None:
     path.write_text("{}", encoding="utf-8")
 
     assert resolve_activation_snapshot(tmp_path, "activation-20260101-010000") == path
+
+
+def test_undo_activation_snapshot_preview_is_dry_run(tmp_path: Path) -> None:
+    snapshot_path = tmp_path / "activation-20260101-010000.json"
+    snapshot_path.write_text(
+        json.dumps(
+            {
+                "created_at": "2026-01-01T01:00:00Z",
+                "operation": "activate-song",
+                "found_chars": ["水"],
+                "note_ids": [1],
+                "card_ids": [10, 11],
+                "pre_change_suspended_card_ids": [10, 11],
+                "tag": "activated::song::test",
+            }
+        ),
+        encoding="utf-8",
+    )
+    snapshot = list_activation_snapshots(tmp_path)[0]
+    client = StubAnkiClient()
+    client.suspended = set()
+
+    result = undo_activation_snapshot(
+        client,
+        snapshot,
+        dry_run=True,
+        snapshot_dir=tmp_path,
+    )
+
+    assert result.preview.cards_to_suspend == (10, 11)
+    assert result.preview.remove_tag is True
+    assert result.snapshot_path is None
+    assert client.resuspended == []
+    assert client.removed_tags == []
+
+
+def test_undo_activation_snapshot_writes_restore_snapshot_before_mutation(
+    tmp_path: Path,
+) -> None:
+    snapshot_path = tmp_path / "activation-20260101-010000.json"
+    snapshot_path.write_text(
+        json.dumps(
+            {
+                "created_at": "2026-01-01T01:00:00Z",
+                "operation": "activate-chars",
+                "found_chars": ["水"],
+                "note_ids": [1],
+                "card_ids": [10, 11],
+                "pre_change_suspended_card_ids": [10, 11],
+                "tag": "batch::test",
+            }
+        ),
+        encoding="utf-8",
+    )
+    snapshot = list_activation_snapshots(tmp_path)[0]
+    client = StubAnkiClient(snapshot_dir=tmp_path)
+    client.suspended = set()
+
+    result = undo_activation_snapshot(
+        client,
+        snapshot,
+        dry_run=False,
+        snapshot_dir=tmp_path,
+    )
+
+    assert client.resuspended == [10, 11]
+    assert client.removed_tags == [([1], "batch::test")]
+    assert result.snapshot_path is not None
+    restore = json.loads(result.snapshot_path.read_text(encoding="utf-8"))
+    assert restore["operation"] == "restore-activation-snapshot"
+    assert restore["source_operation"] == "activate-chars"
+    assert restore["card_ids_to_suspend"] == [10, 11]
+
+
+def test_undo_resuspend_snapshot_restores_cards_and_tag(tmp_path: Path) -> None:
+    snapshot_path = tmp_path / "resuspend-20260101-010000.json"
+    snapshot_path.write_text(
+        json.dumps(
+            {
+                "created_at": "2026-01-01T01:00:00Z",
+                "operation": "resuspend-tagged-cards",
+                "found_chars": ["水"],
+                "note_ids": [1],
+                "card_ids": [10, 11],
+                "pre_change_suspended_card_ids": [11],
+                "card_ids_to_suspend": [10],
+                "tag": "activated::song::test",
+                "remove_tag": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    snapshot = list_activation_snapshots(tmp_path)[0]
+    client = StubAnkiClient(snapshot_dir=tmp_path)
+    client.suspended = {10, 11}
+
+    result = undo_activation_snapshot(
+        client,
+        snapshot,
+        dry_run=False,
+        snapshot_dir=tmp_path,
+    )
+
+    assert client.unsuspended == [10]
+    assert client.tags == [([1], "activated::song::test")]
+    assert result.preview.cards_to_unsuspend == (10,)
+    assert result.preview.restore_tag is True
