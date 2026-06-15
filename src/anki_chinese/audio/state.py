@@ -37,6 +37,20 @@ class AudioIdentity:
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
 
+    def matches_generation(self, other: AudioIdentity) -> bool:
+        reading_matches = self.kind == "sentence" or self.reading == other.reading
+        return (
+            self.kind == other.kind
+            and self.text == other.text
+            and reading_matches
+            and self.tag == other.tag
+            and self.provider == other.provider
+            and self.model == other.model
+            and self.voice == other.voice
+            and self.language_code == other.language_code
+            and self.settings == other.settings
+        )
+
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> AudioIdentity:
         kind = data.get("kind")
@@ -251,7 +265,7 @@ def audio_requirement_for_note(
         )
 
     manifest_identity = manifest.generated.get(current_tag)
-    if manifest_identity is not None and manifest_identity != expected:
+    if manifest_identity is not None and not manifest_identity.matches_generation(expected):
         return AudioRequirement(
             kind=kind,
             hanzi=note.hanzi,

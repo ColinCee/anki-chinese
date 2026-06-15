@@ -99,3 +99,41 @@ def test_manifest_profile_change_marks_audio_stale(tmp_path: Path, stub_tts_prov
     mandarin = next(req for req in state.requirements if req.kind == "mandarin")
     assert mandarin.status == "stale"
     assert mandarin.reason == "Audio was generated with different provider settings."
+
+
+def test_shared_sentence_audio_is_valid_for_multiple_notes(
+    tmp_path: Path,
+    stub_tts_provider,
+) -> None:
+    notes = [
+        CharacterNote(
+            hanzi="天",
+            meaning="sky",
+            sentence="今天天气很好。",
+            sentence_pinyin="jīn tiān tiān qì hěn hǎo",
+            sentence_audio="[sound:cmn_sentence_今天天气很好。.mp3]",
+        ),
+        CharacterNote(
+            hanzi="气",
+            meaning="air",
+            sentence="今天天气很好。",
+            sentence_pinyin="jīntiān tiānqì hěn hǎo",
+            sentence_audio="[sound:cmn_sentence_今天天气很好。.mp3]",
+        ),
+    ]
+    _write_audio_files(tmp_path, ["cmn_sentence_今天天气很好。.mp3"])
+    manifest = backfill_audio_manifest(
+        notes,
+        profiles=audio_generation_profiles(stub_tts_provider),
+        generated_audio_dir=tmp_path,
+    )
+
+    state = build_audio_deck_state(
+        notes,
+        profiles=audio_generation_profiles(stub_tts_provider),
+        generated_audio_dir=tmp_path,
+        manifest=manifest,
+    )
+
+    sentence_requirements = [req for req in state.requirements if req.kind == "sentence"]
+    assert [req.status for req in sentence_requirements] == ["valid", "valid"]
