@@ -12,6 +12,7 @@ from anki_chinese.cli.songs import (
     run_songs_analyze,
     run_songs_next,
     run_songs_resuspend,
+    run_songs_undo,
 )
 
 
@@ -262,6 +263,155 @@ def test_songs_resuspend_cli_confirm_mutates(runtime_factory, runner) -> None:
     assert result.exit_code == 0
     resuspend.assert_called_once()
     assert resuspend.call_args.kwargs["dry_run"] is False
+
+
+def _write_song_activation_snapshot(
+    snapshot_dir: Path,
+    *,
+    created_at: str = "2026-01-01T01:00:00Z",
+    tag: str = "activated::song::测试歌",
+) -> Path:
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    path = snapshot_dir / f"activation-{created_at[11:13]}{created_at[14:16]}{created_at[17:19]}.json"
+    path.write_text(
+        json.dumps(
+            {
+                "created_at": created_at,
+                "operation": "activate-song",
+                "found_chars": ["二"],
+                "note_ids": [2],
+                "card_ids": [20, 21],
+                "pre_change_suspended_card_ids": [20, 21],
+                "tag": tag,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_run_songs_undo_resolves_song_snapshot_preview(
+    runtime_factory,
+    tmp_path: Path,
+) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    _write_song(runtime.song_lyrics_dir)
+    _write_song_activation_snapshot(tmp_path)
+    client = StubAnkiClient()
+    client.suspended = set()
+
+    result = run_songs_undo(
+        runtime,
+        "测试歌",
+        lyrics_dir=runtime.song_lyrics_dir,
+        dry_run=True,
+        snapshot_dir=tmp_path,
+        client=client,
+    )
+
+    assert result.preview.cards_to_suspend == (20, 21)
+    assert result.snapshot_path is None
+    assert client.resuspended == []
+    output = runtime.console.file.getvalue()
+    assert "Song:" in output
+    assert "Would restore by suspending 2 cards" in output
+
+
+def test_run_songs_undo_confirm_writes_restore_snapshot(
+    runtime_factory,
+    tmp_path: Path,
+) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    _write_song(runtime.song_lyrics_dir)
+    _write_song_activation_snapshot(tmp_path)
+    client = StubAnkiClient()
+    client.suspended = set()
+
+    result = run_songs_undo(
+        runtime,
+        "测试歌",
+        lyrics_dir=runtime.song_lyrics_dir,
+        dry_run=False,
+        snapshot_dir=tmp_path,
+        client=client,
+    )
+
+    assert client.resuspended == [20, 21]
+    assert client.removed_tags == [([2], "activated::song::测试歌")]
+    assert result.snapshot_path is not None
+    assert result.snapshot_path.name.startswith("restore-")
+
+
+def test_run_songs_undo_without_song_uses_latest_song_snapshot(
+    runtime_factory,
+    tmp_path: Path,
+) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    newer_restore = tmp_path / "restore-20260101-020000.json"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    newer_restore.write_text(
+        json.dumps(
+            {
+                "created_at": "2026-01-01T02:00:00Z",
+                "operation": "restore-activation-snapshot",
+                "tag": "activated::song::other",
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_song_activation_snapshot(tmp_path, created_at="2026-01-01T01:00:00Z")
+    client = StubAnkiClient()
+    client.suspended = set()
+
+    result = run_songs_undo(
+        runtime,
+        lyrics_dir=runtime.song_lyrics_dir,
+        dry_run=True,
+        snapshot_dir=tmp_path,
+        client=client,
+    )
+
+    assert result.preview.tag == "activated::song::测试歌"
+    assert result.preview.cards_to_suspend == (20, 21)
+
+
+def test_songs_undo_cli_previews_without_confirm(runtime_factory, runner) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    app = create_app(runtime)
+
+    with patch("anki_chinese.cli.songs.run_songs_undo") as undo:
+        result = runner.invoke(app, ["songs", "undo", "测试歌"])
+
+    assert result.exit_code == 0
+    undo.assert_called_once()
+    assert undo.call_args.kwargs["dry_run"] is True
+    assert "--confirm" in runtime.console.file.getvalue()
+
+
+def test_songs_undo_cli_confirm_mutates(runtime_factory, runner) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    app = create_app(runtime)
+
+    with patch("anki_chinese.cli.songs.run_songs_undo") as undo:
+        result = runner.invoke(app, ["songs", "undo", "测试歌", "--confirm"])
+
+    assert result.exit_code == 0
+    undo.assert_called_once()
+    assert undo.call_args.kwargs["dry_run"] is False
+
+
+def test_songs_undo_cli_json_preview_is_clean(runtime_factory, runner) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    app = create_app(runtime)
+
+    with patch("anki_chinese.cli.songs.run_songs_undo") as undo:
+        result = runner.invoke(app, ["songs", "undo", "测试歌", "--json"])
+
+    assert result.exit_code == 0
+    undo.assert_called_once()
+    assert undo.call_args.kwargs["dry_run"] is True
+    assert undo.call_args.kwargs["json_output"] is True
+    assert "--confirm" not in runtime.console.file.getvalue()
 
 
 def test_run_songs_next_without_song_selects_first_analyzed_song_with_new_chars(

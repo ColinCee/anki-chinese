@@ -15,6 +15,7 @@ from ..activation import (
     AnkiConnectClient,
     AnkiConnectError,
     SnapshotError,
+    SnapshotUndoClient,
     SnapshotUndoResult,
     activate_characters,
     list_activation_snapshots,
@@ -222,7 +223,7 @@ def run_activate_undo(
     dry_run: bool = False,
     keep_tag: bool = False,
     json_output: bool = False,
-    client: AnkiConnectClient | None = None,
+    client: SnapshotUndoClient | None = None,
     snapshot_dir: Path = ANKI_BACKUP_DIR,
 ) -> SnapshotUndoResult:
     try:

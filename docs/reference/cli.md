@@ -98,12 +98,18 @@ displayed sequence.
 | `uv run anki-chinese songs activate 学猫叫 --all --dry-run` | Preview all remaining in-deck characters for a song. |
 | `uv run anki-chinese songs resuspend 学猫叫 --dry-run` | Preview resuspending cards from a mistaken song activation tag. |
 | `uv run anki-chinese songs resuspend 学猫叫 --confirm` | Resuspend tagged song cards and write an undo snapshot. |
+| `uv run anki-chinese songs undo 学猫叫` | Preview undoing the latest activation/resuspension snapshot for a song. |
+| `uv run anki-chinese songs undo --confirm` | Undo the latest song snapshot after writing a restore safety snapshot. |
 | `uv run anki-chinese songs fetch "天后"` | Search lyrics.net.cn and save a selected lyric file. |
 | `uv run anki-chinese songs fetch --url https://lyrics.net.cn/lyrics/58445` | Fetch a known lyrics.net.cn URL. |
 | `uv run anki-chinese songs verify` | Verify frontmatter, numbering, duplicates, and local lyric integrity. |
 | `uv run anki-chinese songs verify --online` | Also compare local lyrics to lyrics.net.cn. |
 
-Run dry-runs before any real activation/resuspension. Live mutations require `--confirm`; without it, activation and resuspension commands preview only. Confirmed activation and resuspension commands write targeted undo snapshots under `data/build/anki_backups/`.
+Run dry-runs before any real activation/resuspension/undo. Live mutations
+require `--confirm`; without it, activation, resuspension, and undo commands
+preview only. Confirmed activation and resuspension commands write targeted undo
+snapshots under `data/build/anki_backups/`; confirmed undo commands write
+`restore-*.json` safety snapshots before changing live cards or tags.
 
 ## Live activation commands
 

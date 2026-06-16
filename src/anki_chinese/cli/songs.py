@@ -12,12 +12,17 @@ from rich.table import Table
 
 from ..activation import (
     ActivationResult,
+    ActivationSnapshot,
     ActiveStateClient,
     AnkiClient,
     AnkiConnectClient,
     AnkiConnectError,
     ResuspendClient,
     ResuspendResult,
+    SnapshotError,
+    SnapshotUndoClient,
+    SnapshotUndoResult,
+    list_activation_snapshots,
     resuspend_tagged_cards,
 )
 from ..config import ANKI_BACKUP_DIR
@@ -34,7 +39,7 @@ from ..songs import (
     save_lyrics,
     search_lyrics,
 )
-from .activate import run_activate_chars
+from .activate import run_activate_chars, run_activate_undo
 from .app import AppRuntime
 from .interaction import preview_unless_confirmed
 
@@ -217,6 +222,30 @@ def _song_from_query(
         runtime.console.print(f"[red]✗[/red] Song not found or ambiguous: {song_query}")
         raise typer.Exit(1)
     return song
+
+
+def _is_song_undo_snapshot(snapshot: ActivationSnapshot) -> bool:
+    return (
+        snapshot.operation in {"activate-song", "resuspend-tagged-cards"}
+        and snapshot.tag.startswith("activated::song::")
+    )
+
+
+def _resolve_song_undo_snapshot(
+    snapshot_dir: Path,
+    *,
+    tag: str = "",
+) -> ActivationSnapshot:
+    snapshots = list_activation_snapshots(snapshot_dir)
+    for snapshot in snapshots:
+        if tag:
+            if snapshot.tag == tag and snapshot.operation in {"activate-song", "resuspend-tagged-cards"}:
+                return snapshot
+        elif _is_song_undo_snapshot(snapshot):
+            return snapshot
+    if tag:
+        raise SnapshotError(f"No song activation snapshot found for tag: {tag}")
+    raise SnapshotError("No song activation snapshots found")
 
 
 def _song_plan_from_next_sequence(
@@ -402,6 +431,42 @@ def run_songs_resuspend(
     runtime.console.print(f"[bold]Song:[/bold] {song.label}")
     _print_resuspend_result(runtime, result, dry_run=dry_run, remove_tag=not keep_tag)
     return result
+
+
+def run_songs_undo(
+    runtime: AppRuntime,
+    song_query: str = "",
+    *,
+    lyrics_dir: Path,
+    dry_run: bool = False,
+    keep_tag: bool = False,
+    json_output: bool = False,
+    tag: str = "",
+    snapshot_dir: Path = ANKI_BACKUP_DIR,
+    client: SnapshotUndoClient | None = None,
+) -> SnapshotUndoResult:
+    activation_tag = tag
+    if song_query:
+        song = _song_from_query(runtime, song_query, lyrics_dir=lyrics_dir)
+        activation_tag = activation_tag or f"activated::song::{song.title}"
+        if not json_output:
+            runtime.console.print(f"[bold]Song:[/bold] {song.label}")
+
+    try:
+        snapshot = _resolve_song_undo_snapshot(snapshot_dir, tag=activation_tag)
+    except SnapshotError as error:
+        runtime.console.print(f"[red]✗[/red] {error}")
+        raise typer.Exit(1) from None
+
+    return run_activate_undo(
+        runtime,
+        str(snapshot.path),
+        dry_run=dry_run,
+        keep_tag=keep_tag,
+        json_output=json_output,
+        client=client,
+        snapshot_dir=snapshot_dir,
+    )
 
 
 def run_songs_fetch(
@@ -863,6 +928,68 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             dry_run=effective_dry_run,
             tag=tag,
             keep_tag=keep_tag,
+            snapshot_dir=snapshot_dir,
+        )
+
+    @songs_app.command("undo")
+    def undo_command(
+        song: str = typer.Argument(
+            "",
+            help=(
+                "Song title, file stem, or unique substring. "
+                "Omit to undo the latest song activation/resuspension snapshot."
+            ),
+        ),
+        dry_run: bool = typer.Option(
+            False,
+            "--dry-run",
+            help="Preview undo effects without changing Anki.",
+        ),
+        confirm: bool = typer.Option(
+            False,
+            "--confirm",
+            help="Mutate live Anki after writing a safety snapshot. Without this, only previews.",
+        ),
+        keep_tag: bool = typer.Option(
+            False,
+            "--keep-tag",
+            help="Do not remove or restore snapshot tags during undo.",
+        ),
+        tag: str = typer.Option("", "--tag", help="Override the activation tag to undo."),
+        json_output: bool = typer.Option(
+            False,
+            "--json",
+            help="Print undo preview/result as machine-readable JSON.",
+        ),
+        lyrics_dir: Path = typer.Option(
+            runtime.song_lyrics_dir,
+            "--lyrics-dir",
+            help="Directory of lyric markdown files.",
+        ),
+        snapshot_dir: Path = typer.Option(
+            ANKI_BACKUP_DIR,
+            "--snapshot-dir",
+            help="Directory for live Anki undo snapshots.",
+        ),
+    ) -> None:
+        """Undo a song activation/resuspension snapshot safely."""
+        if json_output:
+            effective_dry_run = dry_run or not confirm
+        else:
+            effective_dry_run = preview_unless_confirmed(
+                runtime.console,
+                dry_run=dry_run,
+                confirm=confirm,
+                action="Undoing song activation snapshot",
+            )
+        run_songs_undo(
+            runtime,
+            song,
+            lyrics_dir=lyrics_dir,
+            dry_run=effective_dry_run,
+            keep_tag=keep_tag,
+            tag=tag,
+            json_output=json_output,
             snapshot_dir=snapshot_dir,
         )
 
