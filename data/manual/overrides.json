@@ -33,5 +33,19 @@
     "sentence_pinyin": "wǒ dǎ suàn zhōu mò zài jiā xiū xi",
     "sentence_english": "I plan to rest at home this weekend.",
     "sentence_audio": ""
+  },
+  "敏": {
+    "meaning": "quick/sharp; as in 敏感: sensitive",
+    "sentence": "我对花粉有点敏感。",
+    "sentence_pinyin": "wǒ duì huā fěn yǒu diǎn mǐn gǎn",
+    "sentence_english": "I'm a bit sensitive to pollen.",
+    "sentence_audio": ""
+  },
+  "戏": {
+    "meaning": "play/drama; as in 游戏: game",
+    "sentence": "《英雄联盟》是我最喜欢的游戏。",
+    "sentence_pinyin": "yīng xióng lián méng shì wǒ zuì xǐ huan de yóu xì",
+    "sentence_english": "League of Legends is my favorite game.",
+    "sentence_audio": ""
   }
 }
