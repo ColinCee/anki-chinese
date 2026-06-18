@@ -93,6 +93,8 @@ displayed sequence.
 | `uv run anki-chinese songs analyze --chars` | Include new-character lists in the output. |
 | `uv run anki-chinese songs next` | Auto-select the first song with inactive in-deck characters. |
 | `uv run anki-chinese songs next 学猫叫 --limit 20` | Preview next characters for a specific song. |
+| `uv run anki-chinese songs learn 学猫叫 --limit 20` | Preview the recommended song-learning activation and print the confirm command. |
+| `uv run anki-chinese songs learn 学猫叫 --limit 20 --confirm` | Write an undo snapshot, activate the batch, and print the matching undo command. |
 | `uv run anki-chinese songs activate --limit 20 --dry-run` | Preview live unsuspension for the auto-selected next song. |
 | `uv run anki-chinese songs activate 学猫叫 --limit 20 --confirm` | Write an undo snapshot, then unsuspend the selected song batch. |
 | `uv run anki-chinese songs activate 学猫叫 --all --dry-run` | Preview all remaining in-deck characters for a song. |
@@ -105,11 +107,12 @@ displayed sequence.
 | `uv run anki-chinese songs verify` | Verify frontmatter, numbering, duplicates, and local lyric integrity. |
 | `uv run anki-chinese songs verify --online` | Also compare local lyrics to lyrics.net.cn. |
 
-Run dry-runs before any real activation/resuspension/undo. Live mutations
-require `--confirm`; without it, activation, resuspension, and undo commands
-preview only. Confirmed activation and resuspension commands write targeted undo
-snapshots under `data/build/anki_backups/`; confirmed undo commands write
-`restore-*.json` safety snapshots before changing live cards or tags.
+Prefer `songs learn` for human song study; keep `songs activate` as the lower-level
+activation primitive. Run dry-runs before any real activation/resuspension/undo.
+Live mutations require `--confirm`; without it, activation, resuspension, and
+undo commands preview only. Confirmed activation and resuspension commands write
+targeted undo snapshots under `data/build/anki_backups/`; confirmed undo commands
+write `restore-*.json` safety snapshots before changing live cards or tags.
 
 ## Live activation commands
 

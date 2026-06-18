@@ -10,6 +10,7 @@ from anki_chinese.cli import create_app
 from anki_chinese.cli.songs import (
     run_songs_activate,
     run_songs_analyze,
+    run_songs_learn,
     run_songs_next,
     run_songs_resuspend,
     run_songs_undo,
@@ -238,6 +239,95 @@ def test_songs_activate_cli_confirm_mutates(runtime_factory, runner) -> None:
     assert result.exit_code == 0
     activate.assert_called_once()
     assert activate.call_args.kwargs["dry_run"] is False
+
+
+def test_run_songs_learn_dry_run_guides_next_step(
+    runtime_factory,
+    tmp_path,
+) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    _write_song(runtime.song_lyrics_dir)
+    knowledge = StubKnowledgeClient(
+        active={"一"},
+        deck_order=["一", "二", "三"],
+    )
+    client = StubAnkiClient()
+
+    result = run_songs_learn(
+        runtime,
+        "测试歌",
+        lyrics_dir=runtime.song_lyrics_dir,
+        limit=2,
+        dry_run=True,
+        client=client,
+        knowledge_client=knowledge,
+        snapshot_dir=tmp_path,
+    )
+
+    assert result is not None
+    assert result.snapshot_path is None
+    assert client.unsuspended == []
+    output = runtime.console.file.getvalue()
+    assert "Would activate 4 cards across 2 notes" in output
+    assert "Next step:" in output
+    assert "songs learn '测试歌' --limit 2 --confirm" in output
+
+
+def test_run_songs_learn_confirm_prints_undo_guidance(
+    runtime_factory,
+    tmp_path,
+) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    _write_song(runtime.song_lyrics_dir)
+    knowledge = StubKnowledgeClient(
+        active={"一"},
+        deck_order=["一", "二", "三"],
+    )
+    client = StubAnkiClient()
+
+    result = run_songs_learn(
+        runtime,
+        "测试歌",
+        lyrics_dir=runtime.song_lyrics_dir,
+        limit=2,
+        dry_run=False,
+        client=client,
+        knowledge_client=knowledge,
+        snapshot_dir=tmp_path,
+    )
+
+    assert result is not None
+    assert result.snapshot_path is not None
+    assert client.unsuspended == [20, 21, 30, 31]
+    output = runtime.console.file.getvalue()
+    assert "Activated 4 cards across 2 notes" in output
+    assert "Undo with:" in output
+    assert "songs undo '测试歌'" in output
+
+
+def test_songs_learn_cli_previews_without_confirm(runtime_factory, runner) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    app = create_app(runtime)
+
+    with patch("anki_chinese.cli.songs.run_songs_learn") as learn:
+        result = runner.invoke(app, ["songs", "learn", "测试歌"])
+
+    assert result.exit_code == 0
+    learn.assert_called_once()
+    assert learn.call_args.kwargs["dry_run"] is True
+    assert "--confirm" in runtime.console.file.getvalue()
+
+
+def test_songs_learn_cli_confirm_mutates(runtime_factory, runner) -> None:
+    runtime = runtime_factory(parsed_notes=[])
+    app = create_app(runtime)
+
+    with patch("anki_chinese.cli.songs.run_songs_learn") as learn:
+        result = runner.invoke(app, ["songs", "learn", "测试歌", "--confirm"])
+
+    assert result.exit_code == 0
+    learn.assert_called_once()
+    assert learn.call_args.kwargs["dry_run"] is False
 
 
 def test_songs_resuspend_cli_previews_without_confirm(runtime_factory, runner) -> None:

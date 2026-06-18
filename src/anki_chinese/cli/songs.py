@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 from pathlib import Path
 from typing import Protocol
 
@@ -356,6 +357,58 @@ def run_songs_activate(
         operation="activate-song",
         client=client,
     )
+
+
+def run_songs_learn(
+    runtime: AppRuntime,
+    song_query: str = "",
+    *,
+    lyrics_dir: Path,
+    limit: int = 20,
+    all_remaining: bool = False,
+    dry_run: bool = False,
+    tag: str = "",
+    snapshot_dir: Path = ANKI_BACKUP_DIR,
+    client: AnkiClient | None = None,
+    knowledge_client: KnowledgeClient | None = None,
+) -> ActivationResult | None:
+    """Guide the human song-learning workflow from plan to safe activation."""
+
+    plan_limit = 0 if all_remaining else limit
+    plan = run_songs_next(
+        runtime,
+        song_query,
+        lyrics_dir=lyrics_dir,
+        limit=plan_limit,
+        knowledge_client=knowledge_client,
+    )
+    if not plan.chars:
+        return None
+
+    activation_tag = tag or f"activated::song::{plan.song.title}"
+    result = run_activate_chars(
+        runtime,
+        list(plan.chars),
+        dry_run=dry_run,
+        tag=activation_tag,
+        snapshot_dir=snapshot_dir,
+        operation="activate-song",
+        client=client,
+    )
+
+    command_song = shlex.quote(plan.song.title)
+    if dry_run:
+        limit_part = " --all" if all_remaining else f" --limit {limit}"
+        runtime.console.print(
+            "[dim]Next step:[/dim] "
+            f"uv run anki-chinese songs learn {command_song}{limit_part} --confirm"
+        )
+    elif result.snapshot_path is not None:
+        runtime.console.print(
+            "[dim]Undo with:[/dim] "
+            f"uv run anki-chinese songs undo {command_song}"
+        )
+    return result
 
 
 def _print_resuspend_result(
@@ -879,6 +932,61 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             all_remaining=all_remaining,
             dry_run=effective_dry_run,
             tag=tag,
+        )
+
+    @songs_app.command("learn")
+    def learn_command(
+        song: str = typer.Argument(
+            "",
+            help=(
+                "Song title, file stem, or unique substring. "
+                "Omit to select the first song with inactive in-deck chars."
+            ),
+        ),
+        limit: int = typer.Option(20, "--limit", "-n", min=1, help="Max chars to activate."),
+        all_remaining: bool = typer.Option(
+            False,
+            "--all",
+            help="Activate all remaining in-deck chars for this song.",
+        ),
+        dry_run: bool = typer.Option(
+            False,
+            "--dry-run",
+            help="Preview the song learning activation without changing Anki.",
+        ),
+        tag: str = typer.Option("", "--tag", help="Override the tag added to activated notes."),
+        confirm: bool = typer.Option(
+            False,
+            "--confirm",
+            help="Mutate live Anki after writing an undo snapshot. Without this, only previews.",
+        ),
+        lyrics_dir: Path = typer.Option(
+            runtime.song_lyrics_dir,
+            "--lyrics-dir",
+            help="Directory of lyric markdown files.",
+        ),
+        snapshot_dir: Path = typer.Option(
+            ANKI_BACKUP_DIR,
+            "--snapshot-dir",
+            help="Directory for live Anki undo snapshots.",
+        ),
+    ) -> None:
+        """Plan and safely activate the next song-learning batch."""
+        effective_dry_run = preview_unless_confirmed(
+            runtime.console,
+            dry_run=dry_run,
+            confirm=confirm,
+            action="Learning song cards",
+        )
+        run_songs_learn(
+            runtime,
+            song,
+            lyrics_dir=lyrics_dir,
+            limit=limit,
+            all_remaining=all_remaining,
+            dry_run=effective_dry_run,
+            tag=tag,
+            snapshot_dir=snapshot_dir,
         )
 
     @songs_app.command("resuspend")

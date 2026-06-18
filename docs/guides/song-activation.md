@@ -152,9 +152,31 @@ Preview a specific song:
 uv run anki-chinese songs next 学猫叫 --limit 20
 ```
 
-## Activate cards
+## Learn a song batch
 
-Dry-run first:
+For normal study, use the high-level `learn` workflow. It plans the next batch,
+previews the exact live Anki activation, and prints the follow-up command.
+
+Preview first:
+
+```bash
+uv run anki-chinese songs learn 学猫叫 --limit 20
+uv run anki-chinese songs learn --limit 20
+```
+
+Activate after checking the preview:
+
+```bash
+uv run anki-chinese songs learn 学猫叫 --limit 20 --confirm
+uv run anki-chinese songs learn --limit 20 --confirm
+```
+
+A confirmed `songs learn` writes the same activation undo snapshot as
+`songs activate`, then prints the matching `songs undo ...` command.
+
+## Activate cards directly
+
+`songs activate` is the lower-level activation primitive. Dry-run first:
 
 ```bash
 uv run anki-chinese songs activate 学猫叫 --limit 20 --dry-run
