@@ -54,5 +54,33 @@
     "sentence_pinyin": "wǒ yīng gāi zǎo diǎn shuì jiào",
     "sentence_english": "I should go to sleep earlier.",
     "sentence_audio": ""
+  },
+  "者": {
+    "meaning": "person/one who; as in 或者: or/perhaps",
+    "sentence": "晚上我们可以出去吃饭，或者在家做饭。",
+    "sentence_pinyin": "wǎn shang wǒ men kě yǐ chū qù chī fàn, huò zhě zài jiā zuò fàn",
+    "sentence_english": "Tonight we can eat out, or cook at home.",
+    "sentence_audio": ""
+  },
+  "交": {
+    "meaning": "to hand in/pay; to make friends; to exchange/interact; as in 交作业 or 交朋友",
+    "sentence": "我明天要交作业。",
+    "sentence_pinyin": "wǒ míng tiān yào jiāo zuò yè",
+    "sentence_english": "I need to hand in my homework tomorrow.",
+    "sentence_audio": ""
+  },
+  "童": {
+    "meaning": "child; as in 童话: fairy tale",
+    "sentence": "我小时候很喜欢听童话故事。",
+    "sentence_pinyin": "wǒ xiǎo shí hou hěn xǐ huan tīng tóng huà gù shì",
+    "sentence_english": "When I was little, I really liked listening to fairy tales.",
+    "sentence_audio": ""
+  },
+  "计": {
+    "meaning": "to calculate; to plan; as in 计划",
+    "sentence": "我明天没有什么计划。",
+    "sentence_pinyin": "wǒ míng tiān méi yǒu shén me jì huà",
+    "sentence_english": "I don't have many plans tomorrow.",
+    "sentence_audio": ""
   }
 }
