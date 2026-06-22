@@ -82,5 +82,12 @@
     "sentence_pinyin": "wǒ míng tiān méi yǒu shén me jì huà",
     "sentence_english": "I don't have many plans tomorrow.",
     "sentence_audio": ""
+  },
+  "而": {
+    "meaning": "and; moreover; as in 而且",
+    "sentence": "这家店便宜，而且很好吃。",
+    "sentence_pinyin": "zhè jiā diàn pián yi, ér qiě hěn hǎo chī",
+    "sentence_english": "This place is cheap, and also really tasty.",
+    "sentence_audio": ""
   }
 }
