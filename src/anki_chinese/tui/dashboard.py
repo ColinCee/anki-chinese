@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from textual.app import App, ComposeResult
-from textual.containers import Vertical
-from textual.widgets import DataTable, Footer, Header, Label, ListItem, ListView, Static
+from textual.containers import Vertical, VerticalScroll
+from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
 
 from ..workflows.sync import SyncPlan
 from .dashboard_model import (
@@ -48,6 +48,15 @@ class DashboardApp(App[None]):
         height: 1fr;
     }
 
+    #menu-help {
+        color: $text-muted;
+        margin-bottom: 1;
+    }
+
+    #detail-scroll {
+        height: 1fr;
+    }
+
     #detail-title {
         text-style: bold;
         color: $accent;
@@ -68,14 +77,14 @@ class DashboardApp(App[None]):
         color: $warning;
     }
 
+    #sync-stages {
+        margin-top: 1;
+        margin-bottom: 1;
+    }
+
     #back-hint {
         dock: bottom;
         color: $text-muted;
-    }
-
-    DataTable {
-        height: auto;
-        margin-top: 1;
     }
     """
 
@@ -98,10 +107,11 @@ class DashboardApp(App[None]):
         with Vertical(id="body"):
             with Vertical(id="menu-view"):
                 yield Label("Workflows", id="workflow-heading")
+                yield Static("Choose a workflow, then press Enter.", id="menu-help")
                 yield ListView(
                     *[
                         ListItem(
-                            Label(f"{item.key}. {item.label}\n[dim]{item.detail}[/dim]"),
+                            Label(f"{item.key}. {item.label}"),
                             id=f"workflow-{item.key}",
                         )
                         for item in self.items
@@ -109,11 +119,12 @@ class DashboardApp(App[None]):
                     id="workflow-list",
                 )
             with Vertical(id="detail-view"):
-                yield Static("", id="detail-title")
-                yield Static("", id="detail-body")
-                yield DataTable(id="sync-table", zebra_stripes=True)
-                yield Static("", id="commands")
-                yield Static("", id="safety")
+                with VerticalScroll(id="detail-scroll"):
+                    yield Static("", id="detail-title")
+                    yield Static("", id="detail-body")
+                    yield Static("", id="sync-stages")
+                    yield Static("", id="commands")
+                    yield Static("", id="safety")
                 yield Static("Esc: back · r: refresh · q: quit", id="back-hint")
         yield Footer()
 
@@ -154,7 +165,7 @@ class DashboardApp(App[None]):
         self.query_one("#detail-view", Vertical).display = True
         self.query_one("#detail-title", Static).update(item.label)
         self.query_one("#detail-body", Static).update(item.detail)
-        self._render_sync_table(show=item.key == "1")
+        self._render_sync_stages(show=item.key == "1")
         self._render_commands(item)
         safety = f"Safety: {item.safety}" if item.safety else ""
         self.query_one("#safety", Static).update(safety)
@@ -164,20 +175,27 @@ class DashboardApp(App[None]):
         self.query_one("#detail-view", Vertical).display = False
         self.query_one("#workflow-list", ListView).focus()
 
-    def _render_sync_table(self, *, show: bool) -> None:
-        table = self.query_one("#sync-table", DataTable)
-        table.clear(columns=True)
+    def _render_sync_stages(self, *, show: bool) -> None:
+        sync_stages = self.query_one("#sync-stages", Static)
         if not show:
-            table.display = False
+            sync_stages.display = False
             return
 
-        table.display = True
-        table.add_columns("Stage", "Status", "Reason")
+        sync_stages.display = True
         if self.plan is None:
             self._refresh_plan()
         assert self.plan is not None
+        lines = ["[bold]Sync plan[/bold]"]
         for stage in self.plan.stages:
-            table.add_row(stage.label, stage.status, stage.reason)
+            lines.extend(
+                [
+                    "",
+                    f"[cyan]{stage.label}[/cyan]",
+                    f"  Status: {stage.status}",
+                    f"  Reason: {stage.reason}",
+                ]
+            )
+        sync_stages.update("\n".join(lines))
 
     def _render_commands(self, item: WorkflowItem) -> None:
         commands = self.query_one("#commands", Static)

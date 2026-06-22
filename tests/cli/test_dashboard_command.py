@@ -68,8 +68,12 @@ async def test_textual_dashboard_renders_sync_plan(runtime_factory) -> None:
         assert "anki-chinese" in _content(app, "#summary")
         assert app.query_one("#menu-view").display is True
         assert app.query_one("#detail-view").display is False
+        assert "Choose a workflow" in _content(app, "#menu-help")
+        assert "Inspect cards" not in _content(app, "#workflow-2 Label")
         await pilot.press("enter")
         assert "Sync & rebuild" in _content(app, "#detail-title")
+        assert "Sync plan" in _content(app, "#sync-stages")
+        assert "Reason:" in _content(app, "#sync-stages")
         assert "anki-chinese build" in _content(app, "#commands")
 
 

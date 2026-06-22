@@ -22,10 +22,12 @@ Run `uv run anki-chinese --help` and `uv run anki-chinese <command> --help` for 
 
 The Textual dashboard is the human entrypoint. It uses a narrow-friendly
 drill-down layout: choose a workflow from the full-width list, open its detail
-screen, and press Escape to go back. It keeps the sync plan visible and shows
-the equivalent CLI commands for card edits, content/audio generation, song
-learning, live activation, health checks, cleanup, and undo. Live Anki guidance
-uses preview-first commands and points to snapshot-backed undo paths.
+screen, and press Escape to go back. Detail screens avoid wide tables; sync
+stages, command examples, and safety notes are rendered as wrapped vertical
+sections. It keeps the sync plan visible and shows the equivalent CLI commands
+for card edits, content/audio generation, song learning, live activation, health
+checks, cleanup, and undo. Live Anki guidance uses preview-first commands and
+points to snapshot-backed undo paths.
 
 ## Card override commands
 
