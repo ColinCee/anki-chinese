@@ -9,7 +9,7 @@ Run `uv run anki-chinese --help` and `uv run anki-chinese <command> --help` for 
 | `uv run anki-chinese sync --dry-run` | Preview the stale-state plan for `init`, `audio`, and `build` without changing files. |
 | `uv run anki-chinese sync` | Execute needed rebuild stages in dependency order and replan after each stage. |
 | `uv run anki-chinese sync --json` | Print a machine-readable plan/result with Rich output captured in a log field. |
-| `uv run anki-chinese dashboard` | Open the terminal dashboard for human workflow navigation. |
+| `uv run anki-chinese dashboard` | Open the terminal dashboard for human workflow navigation and command guidance. |
 | `uv run anki-chinese init` | Parse `data/source/All Decks.apkg`, enrich notes, restore cached generated fields, and save `data/state/enriched.json`. |
 | `uv run anki-chinese status` | Show field coverage, learned-character sentence/audio coverage, audio health, and validation issues. |
 | `uv run anki-chinese review` | Inspect notes flagged for manual correction. |
@@ -19,6 +19,11 @@ Run `uv run anki-chinese --help` and `uv run anki-chinese <command> --help` for 
 | `uv run anki-chinese build` | Build `data/build/decks/chinese_rsh.apkg` from `data/state/enriched.json`, warning first if expected audio is missing or stale. |
 | `uv run anki-chinese build --full` | Primitive shortcut for `init -> audio -> build`; prefer `sync` for stale-state planning. |
 | `uv run anki-chinese build --full --skip-audio` | Primitive shortcut for `init -> build` without audio generation. |
+
+The dashboard is the human entrypoint. It keeps the sync plan visible and shows
+the equivalent CLI commands for card edits, content/audio generation, song
+learning, live activation, health checks, cleanup, and undo. Live Anki guidance
+uses preview-first commands and points to snapshot-backed undo paths.
 
 ## Card override commands
 

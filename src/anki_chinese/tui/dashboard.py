@@ -34,15 +34,72 @@ class MenuItem:
     key: str
     label: str
     detail: str
+    commands: tuple[str, ...] = ()
+    safety: str = ""
 
 
 _MENU_ITEMS = [
     MenuItem("1", "Sync & rebuild", "Show the current init/audio/build plan"),
-    MenuItem("2", "Review / edit cards", "Coming soon; use card/status/review today"),
-    MenuItem("3", "Generate sentences/audio", "Coming soon; use sentences/audio today"),
-    MenuItem("4", "Song study planner", "Coming soon; use songs today"),
-    MenuItem("5", "Activate / unsuspend in Anki", "Coming soon; use activate/songs activate today"),
-    MenuItem("6", "Health, cleanup, undo", "Coming soon; use status/audio-clean today"),
+    MenuItem(
+        "2",
+        "Review / edit cards",
+        "Inspect cards, write manual overrides, then let sync rebuild what changed",
+        (
+            "uv run anki-chinese status",
+            "uv run anki-chinese review",
+            "uv run anki-chinese card show <hanzi>",
+            "uv run anki-chinese card set <hanzi> --sentence ...",
+            "uv run anki-chinese sync --dry-run",
+        ),
+    ),
+    MenuItem(
+        "3",
+        "Generate sentences/audio",
+        "Generate or repair content, then refresh stale audio and deck output",
+        (
+            "uv run anki-chinese sentences --char <hanzi>",
+            "uv run anki-chinese keywords",
+            "uv run anki-chinese audio",
+            "uv run anki-chinese sync --dry-run",
+        ),
+    ),
+    MenuItem(
+        "4",
+        "Song study planner",
+        "Use the high-level learn/undo workflow for human song study",
+        (
+            "uv run anki-chinese songs analyze",
+            "uv run anki-chinese songs next --limit 20",
+            "uv run anki-chinese songs learn --limit 20",
+            "uv run anki-chinese songs learn --limit 20 --confirm",
+            "uv run anki-chinese songs undo",
+        ),
+        "Live Anki changes preview by default; use --confirm only after reviewing counts.",
+    ),
+    MenuItem(
+        "5",
+        "Activate / unsuspend in Anki",
+        "Preview explicit character activation before mutating live Anki",
+        (
+            "uv run anki-chinese activate chars <chars> --dry-run",
+            "uv run anki-chinese activate chars <chars> --confirm",
+            "uv run anki-chinese activate snapshots list",
+            "uv run anki-chinese activate undo latest",
+        ),
+        "Confirmed activation writes an undo snapshot before unsuspending cards.",
+    ),
+    MenuItem(
+        "6",
+        "Health, cleanup, undo",
+        "Check deck/audio health and inspect reversible live-state snapshots",
+        (
+            "uv run anki-chinese status",
+            "uv run anki-chinese audio-clean",
+            "uv run anki-chinese activate snapshots list",
+            "uv run anki-chinese activate snapshots show <snapshot>",
+        ),
+        "Snapshot inspection is local-file only; undo previews before live changes.",
+    ),
 ]
 
 
@@ -119,9 +176,15 @@ def _render_sync_plan(runtime: DashboardRuntime, plan: SyncPlan) -> None:
         runtime.console.print("\n[green]✓[/green] No sync steps required")
 
 
-def _render_coming_soon(runtime: DashboardRuntime, item: MenuItem) -> None:
-    runtime.console.print(f"\n[yellow]{item.label} is not interactive yet.[/yellow]")
+def _render_workflow_guidance(runtime: DashboardRuntime, item: MenuItem) -> None:
+    runtime.console.print(f"\n[bold]{item.label}[/bold]")
     runtime.console.print(f"[dim]{item.detail}[/dim]")
+    if item.commands:
+        runtime.console.print("\n[bold]Useful commands:[/bold]")
+        for command in item.commands:
+            runtime.console.print(f"  {command}")
+    if item.safety:
+        runtime.console.print(f"\n[yellow]Safety:[/yellow] {item.safety}")
 
 
 def run_dashboard(runtime: DashboardRuntime) -> None:
@@ -150,4 +213,4 @@ def run_dashboard(runtime: DashboardRuntime) -> None:
         if choice == "1":
             _render_sync_plan(runtime, plan)
         else:
-            _render_coming_soon(runtime, items_by_key[choice])
+            _render_workflow_guidance(runtime, items_by_key[choice])
