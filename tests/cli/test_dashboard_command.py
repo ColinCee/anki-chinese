@@ -1,7 +1,20 @@
 from io import StringIO
+from unittest.mock import patch
+
+import pytest
 
 from anki_chinese.cli import AppRuntime, create_app
 from anki_chinese.notes import CharacterNote
+from anki_chinese.tui.dashboard import DashboardApp
+
+
+def _content(app: DashboardApp, selector: str) -> str:
+    return str(app.query_one(selector).content)
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
 
 
 def _console_output(runtime: AppRuntime) -> str:
@@ -34,72 +47,50 @@ def test_dashboard_command_refuses_non_interactive_context(runtime_factory, runn
     assert "--json" in output
 
 
-def test_dashboard_command_can_quit_when_forced(runtime_factory, runner) -> None:
+def test_dashboard_command_runs_textual_app_when_forced(runtime_factory, runner) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
     app = create_app(runtime)
 
-    result = runner.invoke(app, ["dashboard", "--force"], input="q\n")
+    with patch("anki_chinese.cli.dashboard.run_dashboard") as run_dashboard:
+        result = runner.invoke(app, ["dashboard", "--force"])
 
     assert result.exit_code == 0
-    output = _console_output(runtime)
-    assert "anki-chinese" in output
-    assert "Sync & rebuild" in output
-    assert "Goodbye" in output
+    run_dashboard.assert_called_once_with(runtime)
 
 
-def test_forced_dashboard_exits_cleanly_when_input_ends(runtime_factory, runner) -> None:
+@pytest.mark.anyio
+async def test_textual_dashboard_renders_sync_plan(runtime_factory) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
-    app = create_app(runtime)
+    app = DashboardApp(runtime)
 
-    result = runner.invoke(app, ["dashboard", "--force"], input="")
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        assert "anki-chinese" in _content(app, "#summary")
+        assert "Sync & rebuild" in _content(app, "#detail-title")
+        assert "anki-chinese build" in _content(app, "#commands")
 
-    assert result.exit_code == 0
-    output = _console_output(runtime)
-    assert "Input ended; exiting dashboard" in output
 
-
-def test_dashboard_can_show_sync_plan_then_quit(runtime_factory, runner) -> None:
+@pytest.mark.anyio
+async def test_textual_dashboard_song_guidance(runtime_factory) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
-    app = create_app(runtime)
+    app = DashboardApp(runtime)
 
-    result = runner.invoke(app, ["dashboard", "--force"], input="1\nq\n")
+    async with app.run_test() as pilot:
+        await pilot.press("down", "down", "down", "enter")
+        assert "Song study planner" in _content(app, "#detail-title")
+        assert "songs learn --limit 20" in _content(app, "#commands")
+        assert "songs undo" in _content(app, "#commands")
+        assert "Live Anki changes preview by default" in _content(app, "#safety")
 
-    assert result.exit_code == 0
-    output = _console_output(runtime)
-    assert "Sync plan" in output
-    assert "anki-chinese build" in output
-    assert "Goodbye" in output
 
-
-def test_dashboard_song_planner_shows_learn_and_undo_commands(
-    runtime_factory,
-    runner,
-) -> None:
+@pytest.mark.anyio
+async def test_textual_dashboard_activation_guidance(runtime_factory) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
-    app = create_app(runtime)
+    app = DashboardApp(runtime)
 
-    result = runner.invoke(app, ["dashboard", "--force"], input="4\nq\n")
-
-    assert result.exit_code == 0
-    output = _console_output(runtime)
-    assert "Song study planner" in output
-    assert "songs learn --limit 20" in output
-    assert "songs undo" in output
-    assert "Live Anki changes preview by default" in output
-
-
-def test_dashboard_activation_guidance_mentions_snapshots(
-    runtime_factory,
-    runner,
-) -> None:
-    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
-    app = create_app(runtime)
-
-    result = runner.invoke(app, ["dashboard", "--force"], input="5\nq\n")
-
-    assert result.exit_code == 0
-    output = _console_output(runtime)
-    assert "Activate / unsuspend in Anki" in output
-    assert "activate chars <chars> --dry-run" in output
-    assert "activate undo latest" in output
-    assert "undo snapshot" in output
+    async with app.run_test() as pilot:
+        await pilot.press("down", "down", "down", "down", "enter")
+        assert "Activate / unsuspend in Anki" in _content(app, "#detail-title")
+        assert "activate chars <chars> --dry-run" in _content(app, "#commands")
+        assert "activate undo latest" in _content(app, "#commands")
+        assert "undo snapshot" in _content(app, "#safety")

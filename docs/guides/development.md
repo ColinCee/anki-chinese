@@ -29,7 +29,7 @@ uv run python -m anki_chinese.cli --help
 | Path | Purpose |
 | --- | --- |
 | `src/anki_chinese/cli/` | Typer commands and Rich UI helpers. |
-| `src/anki_chinese/tui/` | Rich terminal dashboard. |
+| `src/anki_chinese/tui/` | Textual dashboard app and workflow guidance model. |
 | `src/anki_chinese/workflows/` | Shared workflow planning/state, including sync and pipeline fingerprints. |
 | `src/anki_chinese/notes/` | Character note model, `.apkg` parsing, enrichment, storage, reporting. |
 | `src/anki_chinese/deck.py` | `genanki` package creation. |

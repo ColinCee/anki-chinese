@@ -20,10 +20,10 @@ Run `uv run anki-chinese --help` and `uv run anki-chinese <command> --help` for 
 | `uv run anki-chinese build --full` | Primitive shortcut for `init -> audio -> build`; prefer `sync` for stale-state planning. |
 | `uv run anki-chinese build --full --skip-audio` | Primitive shortcut for `init -> build` without audio generation. |
 
-The dashboard is the human entrypoint. It keeps the sync plan visible and shows
-the equivalent CLI commands for card edits, content/audio generation, song
-learning, live activation, health checks, cleanup, and undo. Live Anki guidance
-uses preview-first commands and points to snapshot-backed undo paths.
+The Textual dashboard is the human entrypoint. It keeps the sync plan visible
+and shows the equivalent CLI commands for card edits, content/audio generation,
+song learning, live activation, health checks, cleanup, and undo. Live Anki
+guidance uses preview-first commands and points to snapshot-backed undo paths.
 
 ## Card override commands
 

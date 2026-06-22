@@ -16,6 +16,7 @@ dependencies = [
     "google-auth>=2.0.0",
     "google-genai>=1.68.0",
     "zstandard>=0.23.0",
+    "textual>=8.2.7",
 ]
 
 [project.scripts]

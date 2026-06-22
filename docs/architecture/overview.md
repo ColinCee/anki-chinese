@@ -64,6 +64,7 @@ mutating live cards or tags.
 | Path | Purpose |
 | --- | --- |
 | `src/anki_chinese/cli/` | Typer commands and Rich output |
+| `src/anki_chinese/tui/` | Textual dashboard app plus workflow guidance model |
 | `src/anki_chinese/notes/` | Note model, `.apkg` parsing, enrichment, reporting, JSON persistence |
 | `src/anki_chinese/deck.py` | `genanki` package creation |
 | `src/anki_chinese/cards/` | Card HTML/CSS templates |
