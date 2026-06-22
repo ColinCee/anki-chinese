@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Vertical
 from textual.widgets import DataTable, Footer, Header, Label, ListItem, ListView, Static
 
 from ..workflows.sync import SyncPlan
@@ -33,18 +33,12 @@ class DashboardApp(App[None]):
         border: round $primary;
     }
 
-    #body {
+    #body, #menu-view, #detail-view {
         height: 1fr;
-    }
-
-    #sidebar {
-        width: 36;
-        border: round $primary;
-        margin: 1 0 1 1;
-    }
-
-    #content {
         width: 1fr;
+    }
+
+    #menu-view, #detail-view {
         border: round $primary;
         margin: 1;
         padding: 1 2;
@@ -74,6 +68,11 @@ class DashboardApp(App[None]):
         color: $warning;
     }
 
+    #back-hint {
+        dock: bottom;
+        color: $text-muted;
+    }
+
     DataTable {
         height: auto;
         margin-top: 1;
@@ -82,6 +81,7 @@ class DashboardApp(App[None]):
 
     BINDINGS = [
         ("q", "quit", "Quit"),
+        ("escape", "go_back", "Back"),
         ("r", "refresh", "Refresh"),
     ]
 
@@ -90,12 +90,13 @@ class DashboardApp(App[None]):
         self.runtime = runtime
         self.plan: SyncPlan | None = None
         self.items = WORKFLOW_ITEMS
+        self.current_index = 0
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Static("", id="summary")
-        with Horizontal(id="body"):
-            with Vertical(id="sidebar"):
+        with Vertical(id="body"):
+            with Vertical(id="menu-view"):
                 yield Label("Workflows", id="workflow-heading")
                 yield ListView(
                     *[
@@ -107,27 +108,32 @@ class DashboardApp(App[None]):
                     ],
                     id="workflow-list",
                 )
-            with Vertical(id="content"):
+            with Vertical(id="detail-view"):
                 yield Static("", id="detail-title")
                 yield Static("", id="detail-body")
                 yield DataTable(id="sync-table", zebra_stripes=True)
                 yield Static("", id="commands")
                 yield Static("", id="safety")
+                yield Static("Esc: back · r: refresh · q: quit", id="back-hint")
         yield Footer()
 
     def on_mount(self) -> None:
         self.title = "anki-chinese"
         self.sub_title = "workflow dashboard"
         self._refresh_plan()
-        self._show_workflow(self.items[0])
+        self._show_menu()
 
     def action_refresh(self) -> None:
         self._refresh_plan()
-        list_view = self.query_one("#workflow-list", ListView)
-        index = list_view.index or 0
-        self._show_workflow(self.items[index])
+        detail_view = self.query_one("#detail-view", Vertical)
+        if detail_view.display:
+            self._show_workflow(self.items[self.current_index])
+
+    def action_go_back(self) -> None:
+        self._show_menu()
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
+        self.current_index = event.index
         self._show_workflow(self.items[event.index])
 
     def _refresh_plan(self) -> None:
@@ -144,12 +150,19 @@ class DashboardApp(App[None]):
         )
 
     def _show_workflow(self, item: WorkflowItem) -> None:
+        self.query_one("#menu-view", Vertical).display = False
+        self.query_one("#detail-view", Vertical).display = True
         self.query_one("#detail-title", Static).update(item.label)
         self.query_one("#detail-body", Static).update(item.detail)
         self._render_sync_table(show=item.key == "1")
         self._render_commands(item)
         safety = f"Safety: {item.safety}" if item.safety else ""
         self.query_one("#safety", Static).update(safety)
+
+    def _show_menu(self) -> None:
+        self.query_one("#menu-view", Vertical).display = True
+        self.query_one("#detail-view", Vertical).display = False
+        self.query_one("#workflow-list", ListView).focus()
 
     def _render_sync_table(self, *, show: bool) -> None:
         table = self.query_one("#sync-table", DataTable)
