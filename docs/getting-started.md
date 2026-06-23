@@ -115,6 +115,7 @@ activation commands write targeted undo snapshots under
 
 ```bash
 uv run anki-chinese --help
+uv run anki-chinese doctor
 uv run anki-chinese status
 uv run anki-chinese songs verify
 ```

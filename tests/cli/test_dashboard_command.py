@@ -96,6 +96,17 @@ async def test_textual_dashboard_song_guidance(runtime_factory) -> None:
 
 
 @pytest.mark.anyio
+async def test_textual_dashboard_health_guidance_includes_doctor(runtime_factory) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
+    app = DashboardApp(runtime)
+
+    async with app.run_test(size=(50, 24)) as pilot:
+        await pilot.press("down", "down", "down", "down", "down", "enter")
+        assert "Health, cleanup, undo" in _content(app, "#detail-title")
+        assert "doctor" in _content(app, "#commands")
+
+
+@pytest.mark.anyio
 async def test_textual_dashboard_activation_guidance(runtime_factory) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
     app = DashboardApp(runtime)

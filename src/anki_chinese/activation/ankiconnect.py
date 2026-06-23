@@ -24,11 +24,13 @@ class AnkiConnectClient:
         api_key: str = "",
         model_name: str = MODEL_NAME,
         field_name: str = "Hanzi",
+        timeout_seconds: float = 10.0,
     ) -> None:
         self.url = url
         self.api_key = api_key
         self.model_name = model_name
         self.field_name = field_name
+        self.timeout_seconds = timeout_seconds
 
     def _invoke(self, action: str, params: dict[str, Any] | None = None) -> Any:
         payload: dict[str, Any] = {
@@ -46,7 +48,7 @@ class AnkiConnectClient:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=10) as response:
+            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
                 body = json.loads(response.read().decode("utf-8"))
         except urllib.error.URLError as error:
             raise AnkiConnectError(
@@ -59,6 +61,12 @@ class AnkiConnectClient:
         if body["error"] is not None:
             raise AnkiConnectError(str(body["error"]))
         return body["result"]
+
+    def version(self) -> int:
+        result = self._invoke("version")
+        if not isinstance(result, int):
+            raise AnkiConnectError("version returned an unexpected response shape.")
+        return result
 
     def _find_note_ids(self, char: str) -> list[int]:
         query = f'note:"{self.model_name}" {self.field_name}:{char}'

@@ -90,6 +90,7 @@ WORKFLOW_ITEMS = (
         "Health, cleanup, undo",
         "Check deck/audio health and inspect reversible live-state snapshots",
         (
+            "uv run anki-chinese doctor",
             "uv run anki-chinese status",
             "uv run anki-chinese audio-clean",
             "uv run anki-chinese activate snapshots list",

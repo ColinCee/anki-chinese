@@ -10,6 +10,7 @@ Run `uv run anki-chinese --help` and `uv run anki-chinese <command> --help` for 
 | `uv run anki-chinese sync` | Execute needed rebuild stages in dependency order and replan after each stage. |
 | `uv run anki-chinese sync --json` | Print a machine-readable plan/result with Rich output captured in a log field. |
 | `uv run anki-chinese dashboard` | Open the terminal dashboard for human workflow navigation and command guidance. |
+| `uv run anki-chinese doctor` | Run read-only local readiness checks for files, sync state, audio health, credentials, and optional AnkiConnect reachability. |
 | `uv run anki-chinese init` | Parse `data/source/All Decks.apkg`, enrich notes, restore cached generated fields, and save `data/state/enriched.json`. |
 | `uv run anki-chinese status` | Show field coverage, learned-character sentence/audio coverage, audio health, and validation issues. |
 | `uv run anki-chinese review` | Inspect notes flagged for manual correction. |
@@ -28,6 +29,12 @@ sections. It keeps the sync plan visible and shows the equivalent CLI commands
 for card edits, content/audio generation, song learning, live activation, health
 checks, cleanup, and undo. Live Anki guidance uses preview-first commands and
 points to snapshot-backed undo paths.
+
+`doctor` is read-only. By default it checks local files, generated state, sync
+planning, audio health, and credential presence without contacting Anki. Add
+`--check-anki` when Anki is open to probe AnkiConnect reachability; this performs
+a version request only and does not mutate live Anki state. Use `--json` for
+machine-readable output or `--strict` to exit non-zero on warnings.
 
 ## Card override commands
 
