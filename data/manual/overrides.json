@@ -89,5 +89,33 @@
     "sentence_pinyin": "zhè jiā diàn pián yi, ér qiě hěn hǎo chī",
     "sentence_english": "This place is cheap, and also really tasty.",
     "sentence_audio": ""
+  },
+  "专": {
+    "meaning": "specialized; focused; as in 专家: expert/specialist",
+    "sentence": "他是这方面的专家。",
+    "sentence_pinyin": "tā shì zhè fāng miàn de zhuān jiā",
+    "sentence_english": "He is an expert in this area.",
+    "sentence_audio": ""
+  },
+  "隐": {
+    "meaning": "hidden; invisible; as in 隐形眼镜: contact lenses",
+    "sentence": "我平时戴隐形眼镜。",
+    "sentence_pinyin": "wǒ píng shí dài yǐn xíng yǎn jìng",
+    "sentence_english": "I usually wear contact lenses.",
+    "sentence_audio": ""
+  },
+  "如": {
+    "meaning": "as; if; as in 如果: if",
+    "sentence": "如果你有空，给我打电话。",
+    "sentence_pinyin": "rú guǒ nǐ yǒu kòng, gěi wǒ dǎ diàn huà",
+    "sentence_english": "If you're free, give me a call.",
+    "sentence_audio": ""
+  },
+  "程": {
+    "meaning": "process; program/course; as in 编程: programming or 工程师: engineer",
+    "sentence": "我是软件工程师，平时喜欢编程。",
+    "sentence_pinyin": "wǒ shì ruǎn jiàn gōng chéng shī, píng shí xǐ huan biān chéng",
+    "sentence_english": "I'm a software engineer, and I usually like programming.",
+    "sentence_audio": ""
   }
 }
