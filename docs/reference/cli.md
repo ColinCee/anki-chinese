@@ -23,12 +23,14 @@ Run `uv run anki-chinese --help` and `uv run anki-chinese <command> --help` for 
 
 The Textual dashboard is the human entrypoint. It uses a narrow-friendly
 drill-down layout: choose a workflow from the full-width list, open its detail
-screen, and press Escape to go back. Detail screens avoid wide tables; sync
-stages, command examples, and safety notes are rendered as wrapped vertical
-sections. It keeps the sync plan visible and shows the equivalent CLI commands
-for card edits, content/audio generation, song learning, live activation, health
-checks, cleanup, and undo. Live Anki guidance uses preview-first commands and
-points to snapshot-backed undo paths.
+screen, and press Escape to go back. The top summary recommends one workflow
+from local state, such as sync when generated artifacts are stale, review when
+notes need attention, or health when setup/cleanup checks are more relevant.
+Detail screens avoid wide tables; sync stages, command examples, and safety
+notes are rendered as wrapped vertical sections. It keeps the sync plan visible
+and shows the equivalent CLI commands for card edits, content/audio generation,
+song learning, live activation, health checks, cleanup, and undo. Live Anki
+guidance uses preview-first commands and points to snapshot-backed undo paths.
 
 `doctor` is read-only. By default it checks local files, generated state, sync
 planning, audio health, and credential presence without contacting Anki. Add

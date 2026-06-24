@@ -1,15 +1,19 @@
 from io import StringIO
+from typing import cast
 from unittest.mock import patch
 
 import pytest
+from textual.widgets import Static
 
 from anki_chinese.cli import AppRuntime, create_app
 from anki_chinese.notes import CharacterNote
 from anki_chinese.tui.dashboard import DashboardApp
+from anki_chinese.tui.dashboard_model import recommend_workflow
+from anki_chinese.workflows.sync import SyncPlan, SyncStagePlan
 
 
 def _content(app: DashboardApp, selector: str) -> str:
-    return str(app.query_one(selector).content)
+    return str(cast(Static, app.query_one(selector)).content)
 
 
 @pytest.fixture
@@ -66,6 +70,8 @@ async def test_textual_dashboard_renders_sync_plan(runtime_factory) -> None:
     async with app.run_test(size=(50, 24)) as pilot:
         await pilot.pause()
         assert "anki-chinese" in _content(app, "#summary")
+        assert "Next:" in _content(app, "#summary")
+        assert "Recommended" in _content(app, "#workflow-1 Label")
         assert app.query_one("#menu-view").display is True
         assert app.query_one("#detail-view").display is False
         assert "Choose a workflow" in _content(app, "#menu-help")
@@ -75,6 +81,36 @@ async def test_textual_dashboard_renders_sync_plan(runtime_factory) -> None:
         assert "Sync plan" in _content(app, "#sync-stages")
         assert "Reason:" in _content(app, "#sync-stages")
         assert "anki-chinese build" in _content(app, "#commands")
+
+
+def test_dashboard_recommendation_prefers_review_after_sync_is_current(runtime_factory) -> None:
+    runtime = runtime_factory(
+        saved_notes=[
+            CharacterNote(
+                hanzi="行",
+                meaning="go",
+                pinyin="xíng",
+                needs_review=True,
+                review_reason="Check reading",
+            )
+        ]
+    )
+    current_plan = SyncPlan(
+        stages=[
+            SyncStagePlan(
+                id="init",
+                label="Parse + enrich",
+                status="up_to_date",
+                reason="current",
+                command="anki-chinese init",
+            ),
+        ]
+    )
+
+    recommendation = recommend_workflow(runtime, current_plan)
+
+    assert recommendation.workflow_key == "2"
+    assert recommendation.title == "Review / edit cards"
 
 
 @pytest.mark.anyio

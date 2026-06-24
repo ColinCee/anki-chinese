@@ -12,6 +12,7 @@ from .dashboard_model import (
     DashboardRuntime,
     WorkflowItem,
     current_sync_plan,
+    recommend_workflow,
     recommended_command,
     sync_summary,
 )
@@ -27,7 +28,7 @@ class DashboardApp(App[None]):
 
     #summary {
         dock: top;
-        height: 5;
+        height: 7;
         padding: 1 2;
         background: $panel;
         border: round $primary;
@@ -100,6 +101,7 @@ class DashboardApp(App[None]):
         self.plan: SyncPlan | None = None
         self.items = WORKFLOW_ITEMS
         self.current_index = 0
+        self.recommended_key = "1"
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -149,16 +151,31 @@ class DashboardApp(App[None]):
 
     def _refresh_plan(self) -> None:
         self.plan = current_sync_plan(self.runtime)
+        recommendation = recommend_workflow(self.runtime, self.plan)
         summary = self.query_one("#summary", Static)
         summary.update(
             "\n".join(
                 [
                     "[bold]anki-chinese[/bold]",
                     f"Sync: [cyan]{sync_summary(self.plan)}[/cyan]",
-                    f"Recommended: [bold]{recommended_command(self.plan)}[/bold]",
+                    f"Next: [bold]{recommendation.title}[/bold]",
+                    f"Why: {recommendation.reason}",
+                    f"Command hint: [bold]{recommended_command(self.plan)}[/bold]",
                 ]
             )
         )
+        self.recommended_key = recommendation.workflow_key
+        self.current_index = self._item_index(self.recommended_key)
+        self._refresh_menu_labels()
+
+    def _item_index(self, key: str) -> int:
+        return next((index for index, item in enumerate(self.items) if item.key == key), 0)
+
+    def _refresh_menu_labels(self) -> None:
+        for item in self.items:
+            label = self.query_one(f"#workflow-{item.key} Label", Label)
+            suffix = "  [green]Recommended[/green]" if item.key == self.recommended_key else ""
+            label.update(f"{item.key}. {item.label}{suffix}")
 
     def _show_workflow(self, item: WorkflowItem) -> None:
         self.query_one("#menu-view", Vertical).display = False
@@ -173,7 +190,9 @@ class DashboardApp(App[None]):
     def _show_menu(self) -> None:
         self.query_one("#menu-view", Vertical).display = True
         self.query_one("#detail-view", Vertical).display = False
-        self.query_one("#workflow-list", ListView).focus()
+        workflow_list = self.query_one("#workflow-list", ListView)
+        workflow_list.index = self.current_index
+        workflow_list.focus()
 
     def _render_sync_stages(self, *, show: bool) -> None:
         sync_stages = self.query_one("#sync-stages", Static)

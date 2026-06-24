@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -9,7 +10,8 @@ from typing import Protocol
 from rich.console import Console
 
 from ..audio import TTSProvider
-from ..notes import JsonNoteStore
+from ..audio.state import audio_generation_profiles, build_audio_deck_state, load_audio_manifest
+from ..notes import JsonNoteStore, flagged_notes, validation_issues
 from ..workflows.sync import SyncPlan, plan_sync
 
 
@@ -33,6 +35,13 @@ class WorkflowItem:
     detail: str
     commands: tuple[str, ...] = ()
     safety: str = ""
+
+
+@dataclass(frozen=True)
+class DashboardRecommendation:
+    workflow_key: str
+    title: str
+    reason: str
 
 
 WORKFLOW_ITEMS = (
@@ -133,3 +142,64 @@ def sync_summary(plan: SyncPlan) -> str:
 
 def recommended_command(plan: SyncPlan) -> str:
     return plan.required_commands[0] if plan.required_commands else "No sync steps required"
+
+
+def recommend_workflow(runtime: DashboardRuntime, plan: SyncPlan) -> DashboardRecommendation:
+    """Choose one helpful next workflow without taking over workflow execution."""
+
+    if not runtime.source_deck_path.is_file() or not runtime.note_store.exists():
+        return DashboardRecommendation(
+            "6",
+            "Health, cleanup, undo",
+            "Required local deck/state files are missing; run doctor before other workflows.",
+        )
+
+    if not plan.is_up_to_date:
+        return DashboardRecommendation(
+            "1",
+            "Sync & rebuild",
+            f"Generated deck state is not current ({sync_summary(plan)}).",
+        )
+
+    try:
+        notes = runtime.note_store.load()
+    except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+        return DashboardRecommendation(
+            "6",
+            "Health, cleanup, undo",
+            f"Could not read enriched notes: {error}",
+        )
+
+    issues = validation_issues(notes)
+    flagged = flagged_notes(notes)
+    if issues or flagged:
+        reason_parts: list[str] = []
+        if issues:
+            reason_parts.append(f"{len(issues)} validation issues")
+        if flagged:
+            reason_parts.append(f"{len(flagged)} notes flagged for review")
+        return DashboardRecommendation(
+            "2",
+            "Review / edit cards",
+            "; ".join(reason_parts) + ".",
+        )
+
+    profiles = audio_generation_profiles(runtime.tts_provider, runtime.sentence_tts_provider)
+    audio_state = build_audio_deck_state(
+        notes,
+        profiles=profiles,
+        generated_audio_dir=runtime.generated_audio_dir,
+        manifest=load_audio_manifest(runtime.audio_manifest_path),
+    )
+    if audio_state.orphaned_files:
+        return DashboardRecommendation(
+            "6",
+            "Health, cleanup, undo",
+            f"{len(audio_state.orphaned_files)} orphaned generated audio files can be previewed for cleanup.",
+        )
+
+    return DashboardRecommendation(
+        "4",
+        "Song study planner",
+        "Deck rebuild state looks current; choose the next study batch when ready.",
+    )
