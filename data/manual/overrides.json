@@ -10,6 +10,13 @@
     "sentence_pinyin": "nǐ wèi shén me xué xí zhōng wén",
     "sentence_english": "Why are you studying Chinese?"
   },
+  "才": {
+    "meaning": "only; just; not until; talent/ability",
+    "sentence": "你怎么现在才来？",
+    "sentence_pinyin": "nǐ zěn me xiàn zài cái lái",
+    "sentence_english": "Why are you only getting here now?",
+    "sentence_audio": ""
+  },
   "染": {
     "meaning": "to infect; to spread; to dye or stain; as in 传染",
     "sentence": "他感冒了，会传染给别人。",
@@ -116,6 +123,13 @@
     "sentence": "我是软件工程师，平时喜欢编程。",
     "sentence_pinyin": "wǒ shì ruǎn jiàn gōng chéng shī, píng shí xǐ huan biān chéng",
     "sentence_english": "I'm a software engineer, and I usually like programming.",
+    "sentence_audio": ""
+  },
+  "编": {
+    "meaning": "to compile; arrange; make up; as in 编程: programming",
+    "sentence": "我最近在学编程，想自己做个小程序。",
+    "sentence_pinyin": "wǒ zuì jìn zài xué biān chéng, xiǎng zì jǐ zuò ge xiǎo chéng xù",
+    "sentence_english": "I’ve been learning programming recently and want to make a small app myself.",
     "sentence_audio": ""
   }
 }
