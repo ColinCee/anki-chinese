@@ -42,9 +42,8 @@ The existing `TTSProvider` Protocol in `audio/provider.py` and factory pattern i
 | Google Text-to-Speech | ~6,036 chars (Mandarin + Cantonese singles) | Verify current Google pricing before large rebuilds |
 | MiniMax | sentence audio workload | Verify current MiniMax pricing before large rebuilds |
 
-Provider pricing and free tiers change over time. Keep precise pricing in research notes, not setup docs.
+Provider pricing and free tiers change over time. Verify current provider pricing before large rebuilds.
 
 ## References
 
-- [TTS Provider Research](../research/tts-providers.md) — point-in-time provider comparison
 - [ADR-001](ADR-001-sentence-generation.md) — sentence generation strategy (sentences fed to MiniMax)

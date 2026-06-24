@@ -198,7 +198,6 @@ Start with [docs/](docs/README.md):
 
 - [Getting started](docs/getting-started.md)
 - [Architecture overview](docs/architecture/overview.md)
-- [Deck rebuild workflow](docs/guides/deck-rebuild.md)
 - [TTS setup](docs/guides/tts-setup.md)
 - [Sentence generation](docs/guides/sentence-generation.md)
 - [Song activation](docs/guides/song-activation.md)

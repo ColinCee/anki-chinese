@@ -94,6 +94,5 @@ Docs are organized by purpose:
 - `docs/reference/` — stable command/config/data facts
 - `docs/architecture/` — system overview
 - `docs/decisions/` — ADRs and historical decision context
-- `docs/research/` — point-in-time research
 
 Update docs when setup, CLI behavior, environment variables, or data layout changes.

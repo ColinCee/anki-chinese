@@ -1,6 +1,6 @@
 # Documentation
 
-This is the canonical documentation map for **anki-chinese**. The README is the public landing page; these docs hold the detailed setup, workflows, reference material, architecture notes, and historical decisions.
+This is the canonical documentation map for **anki-chinese**. The README is the public landing page; these docs hold setup, workflow, reference, architecture, and decision material that should remain useful today.
 
 ## Start here
 
@@ -21,7 +21,6 @@ commands documented in the CLI reference.
 
 Task-oriented docs for common workflows.
 
-- [Deck rebuild workflow](guides/deck-rebuild.md) — dashboard/sync-first rebuilds, card edits, generated content, build, and import
 - [TTS setup](guides/tts-setup.md) — Google Cloud ADC/service-account auth, MiniMax setup, and smoke tests
 - [Sentence generation](guides/sentence-generation.md) — Gemini setup, sentence generation, meaning repair, and confuser audits
 - [Song activation](guides/song-activation.md) — AnkiConnect setup and song-driven unsuspending
@@ -45,11 +44,3 @@ Architecture Decision Records explain why major choices were made. They may incl
 - [ADR-001: Sentence generation strategy](decisions/ADR-001-sentence-generation.md)
 - [ADR-002: TTS provider strategy](decisions/ADR-002-tts-provider-strategy.md)
 - [ADR-003: Mainland Mandarin study target policy](decisions/ADR-003-study-target-policy.md)
-
-## Research
-
-Research docs are point-in-time notes, not setup instructions.
-
-- [Research index](research/README.md)
-- [Anki ecosystem pain points](research/anki-ecosystem-pain-points.md)
-- [TTS providers](research/tts-providers.md)

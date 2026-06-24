@@ -121,4 +121,4 @@ detect that existing files are stale even when filenames still exist.
 
 ## Cost and limits
 
-Provider pricing, free tiers, and model availability change over time. Treat [TTS provider research](../research/tts-providers.md) as point-in-time background and verify pricing against the provider before a large run.
+Provider pricing, free tiers, and model availability change over time. Verify current provider pricing before a large run.

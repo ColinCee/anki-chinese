@@ -45,7 +45,6 @@ uv run anki-chinese songs verify
 - `docs/reference/`: stable command/config/data/model facts.
 - `docs/architecture/`: system overview.
 - `docs/decisions/`: ADRs and historical context.
-- `docs/research/`: point-in-time research.
 
 ## Secrets and generated files
 

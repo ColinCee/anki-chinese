@@ -1,6 +1,6 @@
 # Customization guide
 
-Non-default tweaks only. For normal setup and rebuild workflow see [Getting started](../getting-started.md) and the [deck rebuild guide](deck-rebuild.md).
+Non-default tweaks only. For normal setup and rebuild workflow see [Getting started](../getting-started.md) and the [CLI reference](../reference/cli.md).
 
 ## Character data overrides
 
