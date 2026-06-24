@@ -60,8 +60,8 @@ If you add, remove, or rename fields, update:
 The normal rebuild loop is:
 
 ```bash
-uv run anki-chinese init
-uv run anki-chinese build
+uv run anki-chinese sync --dry-run
+uv run anki-chinese sync
 ```
 
 Then import:

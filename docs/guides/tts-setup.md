@@ -76,6 +76,8 @@ MINIMAX_API_HOST=https://api.minimaxi.com
 ## Smoke tests
 
 ```bash
+uv run anki-chinese doctor
+
 # Google character audio
 uv run anki-chinese test-tts --char 一 --provider google
 
@@ -106,10 +108,10 @@ uv run anki-chinese audio-clean
 uv run anki-chinese audio-clean --apply
 ```
 
-After audio generation:
+After audio generation, use `sync` so any stale deck output is rebuilt:
 
 ```bash
-uv run anki-chinese build
+uv run anki-chinese sync
 ```
 
 Generated files are checked against local provenance in

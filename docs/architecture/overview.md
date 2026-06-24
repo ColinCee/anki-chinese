@@ -8,8 +8,9 @@ The project intentionally separates content rebuilds from live study-state chang
 
 | Lane | Commands | Source of truth | What changes |
 | --- | --- | --- | --- |
-| Content rebuild | `init`, `sentences`, `keywords`, `audio`, `build` | Exported `.apkg` plus `data/state/enriched.json` | Fields, sentences, audio references, templates, generated package |
-| Live activation | `activate`, `songs next`, `songs activate` | Open Anki collection through AnkiConnect | Suspended state and optional tags |
+| Human navigation | `dashboard`, `doctor` | Local files, workflow state, optional AnkiConnect probe | Recommendations and readiness checks only. |
+| Content rebuild | `sync`, `card`, `init`, `sentences`, `keywords`, `audio`, `build` | Exported `.apkg` plus `data/state/enriched.json` | Fields, sentences, audio references, templates, generated package |
+| Live activation | `songs learn`, `activate`, `songs activate` | Open Anki collection through AnkiConnect | Suspended state and optional tags |
 
 Do not treat `data/source/All Decks.apkg` as current live state after AnkiConnect mutations unless you exported it immediately beforehand.
 
@@ -17,10 +18,11 @@ Do not treat `data/source/All Decks.apkg` as current live state after AnkiConnec
 
 ```text
 data/source/All Decks.apkg
-  -> init
+  -> dashboard / doctor
+  -> sync / init
   -> data/state/enriched.json
-  -> optional sentences / keywords / audio
-  -> build
+  -> optional card / sentences / keywords / audio
+  -> sync / build
   -> data/build/decks/chinese_rsh.apkg
 ```
 
@@ -43,6 +45,10 @@ workflow commands state-aware: if a MiniMax model, voice, Google voice, sentence
 reading, or referenced file changes, `sync` can plan audio regeneration and
 `build` can warn before packaging stale media.
 
+The dashboard consumes the same planning/readiness logic. It recommends one
+workflow from local state but does not duplicate or replace the deterministic
+CLI commands used by agents and scripts.
+
 ## Live activation flow
 
 ```text
@@ -52,7 +58,9 @@ manual chars or song planner
   -> live Anki cards
 ```
 
-Activation is general infrastructure. The song planner is one source of character batches, but the `activate chars` command can activate any explicit character list.
+Activation is general infrastructure. The song `learn` workflow is the preferred
+human path for song batches, while `songs activate` and `activate chars` remain
+lower-level primitives.
 
 Song planning uses live Anki active state: a character counts as active when any
 card for its `Chinese RSH` note is unsuspended. Real activation and resuspension

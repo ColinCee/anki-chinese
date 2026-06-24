@@ -2,9 +2,10 @@
 
 Configuration is read from environment variables. The project uses `python-dotenv`, so local development can put non-secret defaults in `.env`. Never commit `.env` or credential files.
 
-Use `uv run anki-chinese doctor` to check whether the local files and optional
+Use `uv run anki-chinese doctor` to check whether local files and optional
 credentials needed by the main workflows are present. Add `--check-anki` when
-Anki is open to include a read-only AnkiConnect reachability probe.
+Anki is open to include a read-only AnkiConnect version probe. Use `--strict`
+when warnings should fail automation.
 
 ## Environment variables
 

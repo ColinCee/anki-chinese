@@ -93,17 +93,19 @@ uv run anki-chinese sentences repair-confusers --limit 10 --attempts 5 --apply
 
 Repair clears stale sentence audio so `audio` can regenerate the matching file.
 
-## Build after changes
+## Sync after changes
 
-Sentence and meaning commands update `data/state/enriched.json`. Rebuild the package before importing into Anki:
+Sentence and meaning commands update `data/state/enriched.json` and can make
+audio/build output stale. Let `sync` decide the downstream work:
 
 ```bash
-uv run anki-chinese build
+uv run anki-chinese sync --dry-run
+uv run anki-chinese sync
 ```
 
-If you changed sentence text, regenerate sentence audio before the final build:
+If you only want to inspect the current recommendation in a terminal, open the
+dashboard:
 
 ```bash
-uv run anki-chinese audio
-uv run anki-chinese build
+uv run anki-chinese
 ```

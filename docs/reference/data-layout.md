@@ -48,14 +48,14 @@ cache.
 | Path | Committed? | Used by | Notes |
 | --- | --- | --- | --- |
 | `data/state/enriched.json` | Yes | `status`, `sentences`, `keywords`, `audio`, `build`, `sync` | Rebuildable note content plus generated references. It can be regenerated, but tracked diffs are useful because they show content changes. |
-| `data/state/pipeline.json` | No | `sync`, dashboard | Local stage fingerprints. It answers "did this command complete successfully for these inputs/outputs?" |
+| `data/state/pipeline.json` | No | `sync`, dashboard, `doctor` | Local stage fingerprints. It answers "did this command complete successfully for these inputs/outputs?" |
 | `data/state/audio_manifest.json` | No | `sync`, `status`, `audio`, `build` | Local audio provenance. It answers "does this referenced audio file match the current text, reading, provider, model, voice, and settings?" |
 
 The audio manifest exists so existing workflow commands can make better
 decisions. It is not intended to become another manual editing surface: `audio`
 backfills it from valid current files, `sync` uses it to decide whether audio is
-needed, `status` summarizes audio health, and `build` warns if it would package
-stale or missing audio.
+needed, `status` and `doctor` summarize audio health, and `build` warns if it
+would package stale or missing audio.
 
 ## Lyric files
 

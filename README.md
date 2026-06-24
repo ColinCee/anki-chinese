@@ -32,19 +32,41 @@ cd anki-chinese
 uv sync
 ```
 
-### Build without optional network features
+### Check local readiness
 
 ```bash
-uv run anki-chinese init
-uv run anki-chinese status
-uv run anki-chinese build
+uv run anki-chinese doctor
 ```
 
-For the state-aware rebuild planner:
+`doctor` is read-only. It checks local files, generated state, sync planning,
+audio health, credential presence, and optionally AnkiConnect reachability with
+`--check-anki`.
+
+### Open the human dashboard
+
+```bash
+uv run anki-chinese
+# or
+uv run anki-chinese dashboard
+```
+
+The dashboard inspects local state, recommends the next workflow, and shows the
+equivalent CLI commands. It is for human navigation; scripts and agents should
+use deterministic commands directly.
+
+### First rebuild without audio credentials
 
 ```bash
 uv run anki-chinese sync --dry-run
 uv run anki-chinese sync --skip-audio
+```
+
+For the full state-aware rebuild planner, including audio when credentials are
+configured:
+
+```bash
+uv run anki-chinese sync --dry-run
+uv run anki-chinese sync
 ```
 
 Import the generated package into Anki:
@@ -64,8 +86,9 @@ uv run anki-chinese sync --dry-run
 uv run anki-chinese sync
 ```
 
-Optional generated content can still be run directly, then `sync` can refresh
-anything downstream:
+`sync` decides whether `init`, `audio`, and `build` are needed. Optional
+generated content can still be run directly, then `sync` refreshes anything
+downstream:
 
 ```bash
 uv run anki-chinese sentences       # requires GEMINI_API_KEY
@@ -73,20 +96,25 @@ uv run anki-chinese audio           # requires TTS credentials
 uv run anki-chinese sync
 ```
 
-For primitive one-command rebuilds:
-
-```bash
-uv run anki-chinese build --full --skip-audio
-uv run anki-chinese build --full --audio-limit 50
-```
-
 ### Inspect saved deck state
 
 ```bash
+uv run anki-chinese doctor
 uv run anki-chinese status
 uv run anki-chinese review
 uv run anki-chinese radicals
 uv run anki-chinese radicals --scope learned
+```
+
+For one-card fixes, use the card workflow instead of editing JSON by hand:
+
+```bash
+uv run anki-chinese card show 编
+uv run anki-chinese card set 编 \
+  --sentence "我最近在学编程，想自己做个小程序。" \
+  --sentence-pinyin "wǒ zuì jìn zài xué biān chéng, xiǎng zì jǐ zuò ge xiǎo chéng xù" \
+  --sentence-english "I’ve been learning programming recently and want to make a small app myself."
+uv run anki-chinese sync
 ```
 
 ### Generate and audit sentences
@@ -137,8 +165,8 @@ activation commands write targeted undo snapshots under `data/build/anki_backups
 ```bash
 uv run anki-chinese songs analyze
 uv run anki-chinese songs next --limit 20
-uv run anki-chinese songs activate --limit 20 --dry-run
-uv run anki-chinese songs activate --limit 20 --confirm
+uv run anki-chinese songs learn --limit 20
+uv run anki-chinese songs learn --limit 20 --confirm
 ```
 
 If a song activation was a mistake, dry-run the tag-based recovery command
@@ -161,7 +189,7 @@ uv run anki-chinese songs verify --online
 
 - Do not change `MODEL_ID` or `DECK_ID` after first import; Anki will treat the next import as a different model/deck.
 - `.apkg` rebuilds update note content. They are not the source of truth for live suspended state after AnkiConnect changes.
-- `activate`, `songs activate`, and `songs resuspend` mutate the open Anki collection. Use `--dry-run` first; real activation/resuspension commands write targeted undo snapshots under `data/build/anki_backups/`.
+- `activate`, `songs learn`, `songs activate`, `songs resuspend`, and undo commands mutate the open Anki collection only with `--confirm`. Preview first; confirmed live mutations write safety snapshots under `data/build/anki_backups/`.
 - Keep `.env`, API keys, Google service-account files, generated audio, and generated deck outputs out of commits.
 
 ## Documentation

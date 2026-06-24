@@ -41,19 +41,40 @@ data/source/All Decks.apkg
 
 In Anki, use **File -> Export**, choose an Anki package (`.apkg`), and include the notes/cards needed by the `Chinese RSH` note type. The default path is configured in `src/anki_chinese/config.py`.
 
-## Build without optional network features
+## Check readiness
 
 ```bash
-uv run anki-chinese init
-uv run anki-chinese status
-uv run anki-chinese build
+uv run anki-chinese doctor
 ```
 
-You can also let the workflow planner decide what is stale:
+`doctor` is read-only. It checks source files, generated state, sync planning,
+audio health, and optional credentials. Add `--check-anki` when Anki is open to
+probe AnkiConnect reachability without mutating live Anki.
+
+## Use the dashboard
+
+```bash
+uv run anki-chinese
+# or
+uv run anki-chinese dashboard
+```
+
+The dashboard is the human entrypoint. It recommends one workflow from local
+state, such as sync when generated artifacts are stale, review when notes need
+attention, or health when setup/cleanup checks are more relevant.
+
+## First rebuild without audio credentials
 
 ```bash
 uv run anki-chinese sync --dry-run
 uv run anki-chinese sync --skip-audio
+```
+
+With audio credentials configured, let the workflow planner include all stages:
+
+```bash
+uv run anki-chinese sync --dry-run
+uv run anki-chinese sync
 ```
 
 The generated package is:
@@ -78,7 +99,7 @@ Then run:
 ```bash
 uv run anki-chinese sentences
 uv run anki-chinese sentences audit
-uv run anki-chinese build
+uv run anki-chinese sync
 ```
 
 See [sentence generation](guides/sentence-generation.md) for candidate picking, confuser repair, and meaning repair.
@@ -90,7 +111,7 @@ Audio uses Google Cloud Text-to-Speech for single-character audio and MiniMax fo
 ```bash
 uv run anki-chinese test-tts --char 早 --provider google
 uv run anki-chinese audio --limit 20
-uv run anki-chinese build
+uv run anki-chinese sync
 ```
 
 After audio generation, future `sync` and `status` runs use local audio
@@ -104,11 +125,11 @@ Live activation changes the open Anki collection through AnkiConnect. It does no
 ```bash
 uv run anki-chinese songs analyze
 uv run anki-chinese songs next --limit 20
-uv run anki-chinese songs activate --limit 20 --dry-run
+uv run anki-chinese songs learn --limit 20
 ```
 
 After checking the preview, add `--confirm` for the real activation. Confirmed
-activation commands write targeted undo snapshots under
+song learning writes targeted undo snapshots under
 `data/build/anki_backups/`; see [song activation](guides/song-activation.md).
 
 ## Common checks

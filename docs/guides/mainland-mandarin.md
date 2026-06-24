@@ -83,9 +83,9 @@ The repo handles the main `著` / `着` learner-facing issue in three ways:
 3. The `著` note is now labeled as the **traditional form of `着`** instead of
    looking like a second primary simplified-study card.
 
-The current curated song corpus contains 30 lyric files. Remaining `著`
-occurrences are not automatically wrong; lexical words and unaudited source forms
-must be reviewed in context.
+The curated song corpus changes over time. Remaining `著` occurrences are not
+automatically wrong; lexical words and unaudited source forms must be reviewed in
+context.
 
 ## Long-term direction
 

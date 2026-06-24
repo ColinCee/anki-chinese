@@ -7,11 +7,21 @@ This is the canonical documentation map for **anki-chinese**. The README is the 
 - [Getting started](getting-started.md) — first-run setup from an Anki export to a rebuilt `.apkg`
 - [Architecture overview](architecture/overview.md) — how the content rebuild and live activation lanes fit together
 
+For day-to-day human use, start with:
+
+```bash
+uv run anki-chinese
+```
+
+The Textual dashboard inspects local state, recommends the next workflow, and
+shows equivalent CLI commands. Agents and scripts should use the deterministic
+commands documented in the CLI reference.
+
 ## Guides
 
 Task-oriented docs for common workflows.
 
-- [Deck rebuild workflow](guides/deck-rebuild.md) — export, enrich, generate optional content, build, and import
+- [Deck rebuild workflow](guides/deck-rebuild.md) — dashboard/sync-first rebuilds, card edits, generated content, build, and import
 - [TTS setup](guides/tts-setup.md) — Google Cloud ADC/service-account auth, MiniMax setup, and smoke tests
 - [Sentence generation](guides/sentence-generation.md) — Gemini setup, sentence generation, meaning repair, and confuser audits
 - [Song activation](guides/song-activation.md) — AnkiConnect setup and song-driven unsuspending

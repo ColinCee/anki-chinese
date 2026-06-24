@@ -4,16 +4,37 @@ Non-default tweaks only. For normal setup and rebuild workflow see [Getting star
 
 ## Character data overrides
 
-Edit `data/manual/overrides.json` to force fields per character:
+Prefer the card command for one-card fixes:
+
+```bash
+uv run anki-chinese card show 行
+uv run anki-chinese card set 行 --pinyin "xíng" --jyutping "haang4"
+uv run anki-chinese card set 水 \
+  --meaning "water; liquid" \
+  --sentence "我每天都喝水。" \
+  --sentence-pinyin "wǒ měi tiān dōu hē shuǐ" \
+  --sentence-english "I drink water every day."
+uv run anki-chinese sync
+```
+
+`card set` writes `data/manual/overrides.json`. When sentence text changes, it
+also clears the sentence-audio override so `sync` can regenerate matching audio.
+
+For batch edits, edit `data/manual/overrides.json` directly:
 
 ```json
 {
-  "行": { "pinyin": "xíng", "jyutping": "haang4", "keyword": "go" },
+  "行": { "pinyin": "xíng", "jyutping": "haang4", "meaning": "go; walk" },
   "了": { "pinyin": "le" }
 }
 ```
 
-Then rerun `uv run anki-chinese init`.
+Then run:
+
+```bash
+uv run anki-chinese sync --dry-run
+uv run anki-chinese sync
+```
 
 ## Card templates
 
@@ -25,7 +46,11 @@ Files in `src/anki_chinese/cards/` control card UI:
 | `recognition_front.html` / `recognition_back.html` | Character → meaning direction |
 | `recall_front.html` / `recall_back.html` | Listening-first: audio + optional example phrase |
 
-After editing: `uv run anki-chinese build`.
+After editing:
+
+```bash
+uv run anki-chinese sync
+```
 
 ## Deck settings
 
@@ -66,7 +91,7 @@ Edit `data/manual/example_words.json`:
 }
 ```
 
-Then rerun `uv run anki-chinese init`.
+Then run `uv run anki-chinese sync`.
 
 - Manual entries always override auto-generated examples.
 - If `pinyin` is omitted, the tool derives it automatically.

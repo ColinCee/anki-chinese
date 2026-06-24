@@ -6,8 +6,8 @@ Use this workflow when you want the CLI to pick characters from curated song lyr
 
 | Workflow | Commands | What changes |
 | --- | --- | --- |
-| Content rebuild | `init`, `sentences`, `audio`, `build` | Note fields, generated audio, sentences, templates, generated `.apkg`. |
-| Live activation | `activate`, `songs activate` | Suspended/unsuspended state and optional tags in the open Anki collection. |
+| Content rebuild | `sync`, `card`, `sentences`, `audio`, `build` | Note fields, generated audio, sentences, templates, generated `.apkg`. |
+| Live activation | `songs learn`, `activate`, `songs activate` | Suspended/unsuspended state and optional tags in the open Anki collection. |
 
 Song planning and activation use live Anki state through AnkiConnect. Keep Anki open while running these commands.
 
@@ -22,8 +22,11 @@ Song planning and activation use live Anki state through AnkiConnect. Keep Anki 
 Check AnkiConnect:
 
 ```bash
-curl http://127.0.0.1:8765
+uv run anki-chinese doctor --check-anki
 ```
+
+For raw troubleshooting, `curl http://127.0.0.1:8765` should also reach the
+local add-on.
 
 Default AnkiConnect does not need an API key. If you configure one:
 
@@ -65,7 +68,8 @@ Leave AnkiConnect bound to `127.0.0.1` unless you intentionally expose it and ha
 Live activation mutates the open Anki collection.
 
 1. Make sure Anki has a recent backup or you have another undo path.
-2. Run the command with `--dry-run`.
+2. Run the preview command first. `songs learn` previews by default; lower-level
+   commands also support `--dry-run`.
 3. Check requested characters, missing characters, already-active characters, card counts, and note counts.
 4. Rerun with `--confirm` only when the preview is correct; the CLI writes a targeted undo snapshot before the real mutation.
 5. If planning another song immediately afterward, query live Anki again instead of relying on an old `.apkg` export.
@@ -111,7 +115,8 @@ uv run anki-chinese songs verify --online
 
 `verify` checks frontmatter, numbering, duplicate titles, obvious markup/timestamps, and traditional characters in lyric text. Warnings do not fail the command; errors do.
 
-The current curated corpus contains 30 lyric markdown files.
+The curated corpus lives in `data/songs/lyrics/`; use `songs verify` as the
+source of truth for current file validity.
 
 ## Analyze the corpus
 
@@ -290,7 +295,7 @@ If activation fails, check:
 
 - Anki desktop is open.
 - AnkiConnect is installed and Anki was restarted.
-- `curl http://127.0.0.1:8765` reaches AnkiConnect.
+- `uv run anki-chinese doctor --check-anki` reaches AnkiConnect.
 - WSL mirrored networking is enabled when using WSL with Windows Anki.
 - `ANKICONNECT_API_KEY` is set if your AnkiConnect config requires it.
 

@@ -85,7 +85,7 @@ Remaining follow-up:
 ### Current-state note
 
 The historical audit above covered the corpus at decision time. The current
-curated lyric corpus contains 30 files. Song planning uses
+curated lyric corpus changes as songs are added. Song planning uses
 `LyricSong.study_characters` and conservative `normalize_lyric_text_for_study`
 logic so particle `著` maps to `着` for study planning while lexical `著` words
 remain valid.

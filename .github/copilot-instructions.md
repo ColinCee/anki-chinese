@@ -18,6 +18,8 @@ For current user-facing setup and command docs, prefer:
 ```text
 src/anki_chinese/
 ├── cli/          # Typer commands + Rich UI helpers
+├── tui/          # Textual dashboard and recommendation/guidance model
+├── workflows/    # Shared sync planning, pipeline fingerprints, workflow state
 ├── notes/        # CharacterNote model, .apkg parsing, enrichment, persistence, reporting
 ├── activation/   # Live Anki activation via AnkiConnect
 ├── songs/        # Lyric parsing, study normalization, song analysis, activation planning
@@ -32,6 +34,7 @@ src/anki_chinese/
 ## Core patterns
 
 - Keep the CLI surface narrow: user workflows go through `uv run anki-chinese ...`.
+- Human workflow navigation starts with the Textual dashboard; agents/scripts should use deterministic CLI commands.
 - Preserve stable Anki identity: do not change `MODEL_ID`, `DECK_ID`, field order, or GUID behavior without an explicit migration.
 - Keep rebuild and live activation separate:
   - `.apkg` import/export is for rebuildable content.
@@ -54,12 +57,21 @@ uv run python -m anki_chinese.cli --help
 Core CLI families:
 
 - `init`, `status`, `review`, `build`
+- `dashboard`, `doctor`, `sync`
+- `card`
 - `sentences`, `keywords`
 - `audio`, `audio-clean`, `test-tts`
 - `songs`
 - `activate`
 
 Use `uv run anki-chinese <command> --help` as the authoritative command reference.
+
+Dashboard behavior:
+
+- `uv run anki-chinese` opens the dashboard only in an interactive terminal.
+- The dashboard recommends one workflow from local state but does not replace scriptable commands.
+- Keep dashboard logic presentational; reuse workflow/domain functions instead of duplicating sync, audio, song, or activation logic.
+- `doctor` is read-only; `--check-anki` performs an AnkiConnect version probe only.
 
 ## TTS and AI setup
 
@@ -72,7 +84,7 @@ Use `uv run anki-chinese <command> --help` as the authoritative command referenc
 
 The default learner target is mainland Mandarin with simplified characters for active study and traditional characters as recognition support. Song planning uses normalized study characters: particle `著` can map to `着`, while lexical `著` words such as `著名` and `原著` remain valid.
 
-Do not add LLM calls, network translation, OpenCC passes, or pypinyin guessing to runtime song planning. Keep `songs analyze`, `songs next`, and `songs activate` deterministic apart from local AnkiConnect state.
+Do not add LLM calls, network translation, OpenCC passes, or pypinyin guessing to runtime song planning. Keep `songs analyze`, `songs next`, `songs learn`, and `songs activate` deterministic apart from local AnkiConnect state.
 
 ## Documentation
 
