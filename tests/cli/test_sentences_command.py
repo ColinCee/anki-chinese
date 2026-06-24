@@ -196,6 +196,14 @@ class TestAllSentencesExist:
 
 
 class TestSentenceAudit:
+    def test_legacy_top_level_audit_aliases_are_hidden(self, runtime_factory, runner):
+        app = create_app(runtime_factory())
+        result = runner.invoke(app, ["--help"])
+
+        assert result.exit_code == 0
+        assert "sentences-audit" not in result.output
+        assert "sentences-pinyin-audit" not in result.output
+
     def test_reports_ambiguous_sentences_without_mutating_notes(self, runtime_factory):
         notes = [
             CharacterNote(

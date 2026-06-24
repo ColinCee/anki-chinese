@@ -10,7 +10,7 @@ Do not commit:
 - Anki backups or exports that contain private study data unless you intentionally want them public
 - generated audio/deck artifacts from `data/build/`
 
-Use environment variables documented in [Configuration reference](docs/reference/configuration.md).
+Use environment variables documented in [Reference](docs/reference.md).
 
 ## AnkiConnect
 

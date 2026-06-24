@@ -32,7 +32,7 @@ uv run anki-chinese songs verify
 
 ## Pull request checklist
 
-- Keep changes focused, avoid committing generated artifacts from `data/build/`, and do not include unintended churn in tracked generated state such as `data/state/enriched.json`.
+- Keep changes focused, avoid committing generated artifacts from `data/build/` or derived local state under `data/state/`.
 - Update docs when setup, CLI behavior, environment variables, data layout, or safety expectations change.
 - Add or update tests for behavior changes and regressions.
 - Do not change `MODEL_ID`, `DECK_ID`, note fields, or card template field references without an explicit migration plan.

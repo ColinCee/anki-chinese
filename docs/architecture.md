@@ -9,7 +9,7 @@ sentences/audio, and writes a regenerated `.apkg`.
 | Lane | Commands | Source of truth | What changes |
 | --- | --- | --- | --- |
 | Human navigation | `dashboard`, `doctor` | Local files, workflow state, optional AnkiConnect probe | Recommendations and readiness checks only. |
-| Content rebuild | `sync`, `card`, `sentences`, `keywords`, `audio`, `build` | Exported `.apkg` plus `data/state/enriched.json` | Fields, sentences, audio references, templates, generated package. |
+| Content rebuild | `sync`, `card`, `sentences`, `keywords`, `audio`, `build` | Exported `.apkg` plus manual overrides | Fields, sentences, audio references, templates, generated package. |
 | Live activation | `songs learn`, `activate`, `songs activate` | Open Anki collection through AnkiConnect | Suspended state and optional tags. |
 
 Do not treat `data/source/All Decks.apkg` as current live state after
@@ -34,7 +34,7 @@ existing Anki notes instead of duplicating them.
 
 | State | Path | Purpose |
 | --- | --- | --- |
-| Enriched notes | `data/state/enriched.json` | Rebuildable note content and generated field references; tracked for reviewable content diffs. |
+| Enriched notes | `data/state/enriched.json` | Ignored rebuildable note content and generated field references. |
 | Pipeline fingerprints | `data/state/pipeline.json` | Local record of successful stages and their inputs/outputs. |
 | Audio provenance | `data/state/audio_manifest.json` | Local record of provider/model/voice/settings used for valid generated audio. |
 

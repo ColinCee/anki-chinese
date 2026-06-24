@@ -45,9 +45,9 @@ Do not treat `著` as globally wrong. Remaining lexical `著` can be correct.
 ## Recommended workflow
 
 1. Read the project policy docs first:
-   - `docs/decisions/ADR-003-study-target-policy.md`
-   - `docs/guides/mainland-mandarin.md`
-   - `docs/guides/song-activation.md`
+   - `docs/decisions/study-target-policy.md`
+   - `docs/workflows.md`
+   - `docs/architecture.md`
 2. Collect candidate occurrences from lyric files:
    ```bash
    rg -n "著|臺|台|妳|裏|裡" data/songs/lyrics

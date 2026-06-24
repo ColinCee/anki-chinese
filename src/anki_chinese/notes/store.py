@@ -27,7 +27,7 @@ class JsonNoteStore:
 
 
 def save_notes(notes: list[CharacterNote], path: Path) -> None:
-    """Save enriched notes to JSON for inspection / manual editing."""
+    """Save generated enriched notes to JSON for inspection."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as file:
         json.dump([note.to_dict() for note in notes], file, ensure_ascii=False, indent=2)

@@ -535,7 +535,7 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
 
     app.add_typer(sentences_app, name="sentences")
 
-    @app.command("sentences-audit")
+    @app.command("sentences-audit", hidden=True)
     def sentences_audit(
         include_same_final: bool = typer.Option(
             False,
@@ -547,7 +547,7 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
         """Audit existing example sentences for audio-confusing characters."""
         run_sentence_audit(runtime, include_same_final=include_same_final, limit=limit)
 
-    @app.command("sentences-pinyin-audit")
+    @app.command("sentences-pinyin-audit", hidden=True)
     def sentences_pinyin_audit(
         char: str = typer.Option("", "--char", "-c", help="Audit one character only."),
         limit: int = typer.Option(0, "--limit", "-n", help="Max rows to display."),
