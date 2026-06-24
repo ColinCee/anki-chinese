@@ -10,7 +10,7 @@ cd anki-chinese
 uv sync --group dev
 ```
 
-For a first deck build, follow [Getting started](docs/getting-started.md).
+For a first deck build, follow [Start](docs/start.md).
 
 ## Before opening a PR
 
@@ -41,10 +41,11 @@ uv run anki-chinese songs verify
 ## Documentation structure
 
 - README: public overview and shortest successful path.
-- `docs/guides/`: task workflows.
-- `docs/reference/`: stable command/config/data/model facts.
-- `docs/architecture/`: system overview.
-- `docs/decisions/`: ADRs and historical context.
+- `docs/start.md`: first setup and first rebuild.
+- `docs/workflows.md`: common day-to-day tasks.
+- `docs/reference.md`: commands, config, data layout, model facts, and development commands.
+- `docs/architecture.md`: system overview.
+- `docs/decisions/`: durable decisions and tradeoffs.
 
 ## Secrets and generated files
 

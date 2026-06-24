@@ -6,12 +6,10 @@
 
 For current user-facing setup and command docs, prefer:
 
-- `docs/getting-started.md`
-- `docs/architecture/overview.md`
-- `docs/reference/cli.md`
-- `docs/reference/configuration.md`
-- `docs/guides/tts-setup.md`
-- `docs/guides/song-activation.md`
+- `docs/start.md`
+- `docs/workflows.md`
+- `docs/reference.md`
+- `docs/architecture.md`
 
 ## Architecture map
 
@@ -90,9 +88,10 @@ Do not add LLM calls, network translation, OpenCC passes, or pypinyin guessing t
 
 Docs are organized by purpose:
 
-- `docs/guides/` — task workflows
-- `docs/reference/` — stable command/config/data facts
-- `docs/architecture/` — system overview
-- `docs/decisions/` — ADRs and historical decision context
+- `docs/start.md` — first setup and first rebuild
+- `docs/workflows.md` — common task workflows
+- `docs/reference.md` — stable command/config/data/model facts
+- `docs/architecture.md` — system overview
+- `docs/decisions/` — durable decisions and tradeoffs
 
 Update docs when setup, CLI behavior, environment variables, or data layout changes.

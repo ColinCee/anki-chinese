@@ -75,7 +75,7 @@ Import the generated package into Anki:
 data/build/decks/chinese_rsh.apkg
 ```
 
-See [Getting started](docs/getting-started.md) for export/import details and optional credentials.
+See [Start](docs/start.md) for export/import details and optional credentials.
 
 ## Main workflows
 
@@ -155,7 +155,7 @@ uv run anki-chinese activate chars 内 合 哟 着 --confirm
 uv run anki-chinese activate chars 内 合 哟 着 --tag batch::manual --confirm
 ```
 
-See [Song activation](docs/guides/song-activation.md#manual-activation) for AnkiConnect setup and recovery notes.
+See [Workflows](docs/workflows.md) for AnkiConnect setup and recovery notes.
 
 ### Activate cards from songs
 
@@ -194,16 +194,13 @@ uv run anki-chinese songs verify --online
 
 ## Documentation
 
-Start with [docs/](docs/README.md):
+Start with:
 
-- [Getting started](docs/getting-started.md)
-- [Architecture overview](docs/architecture/overview.md)
-- [TTS setup](docs/guides/tts-setup.md)
-- [Sentence generation](docs/guides/sentence-generation.md)
-- [Song activation](docs/guides/song-activation.md)
-- [CLI reference](docs/reference/cli.md)
-- [Configuration reference](docs/reference/configuration.md)
-- [Development guide](docs/guides/development.md)
+- [Start](docs/start.md)
+- [Workflows](docs/workflows.md)
+- [Reference](docs/reference.md)
+- [Architecture](docs/architecture.md)
+- [Decisions](docs/decisions/)
 
 ## Development
 
