@@ -23,6 +23,20 @@
     "sentence_pinyin": "tā gǎn mào le, huì chuán rǎn gěi bié rén",
     "sentence_english": "He has a cold and can spread it to other people."
   },
+  "实": {
+    "meaning": "real; true; actually; as in 其实",
+    "sentence": "其实我不太喜欢这个。",
+    "sentence_pinyin": "qí shí wǒ bù tài xǐ huan zhè ge",
+    "sentence_english": "Actually, I don't really like this.",
+    "sentence_audio": ""
+  },
+  "化": {
+    "meaning": "to change/transform; as in 变化: change",
+    "sentence": "最近天气变化很大。",
+    "sentence_pinyin": "zuì jìn tiān qì biàn huà hěn dà",
+    "sentence_english": "The weather has been changing a lot lately.",
+    "sentence_audio": ""
+  },
   "微": {
     "meaning": "slight; tiny; as in 微辣",
     "sentence": "这道菜微辣，但是不太辣。",
@@ -62,11 +76,46 @@
     "sentence_english": "I should go to sleep earlier.",
     "sentence_audio": ""
   },
+  "起": {
+    "meaning": "to rise/get up; as in 起床: to get up",
+    "sentence": "你每天早上几点起床？",
+    "sentence_pinyin": "nǐ měi tiān zǎo shang jǐ diǎn qǐ chuáng",
+    "sentence_english": "What time do you get up every morning?",
+    "sentence_audio": ""
+  },
+  "助": {
+    "meaning": "to help; to assist; as in 帮助: help",
+    "sentence": "如果你需要帮助，可以告诉我。",
+    "sentence_pinyin": "rú guǒ nǐ xū yào bāng zhù, kě yǐ gào su wǒ",
+    "sentence_english": "If you need help, you can tell me.",
+    "sentence_audio": ""
+  },
+  "守": {
+    "meaning": "to keep/guard; as in 保守秘密: to keep a secret",
+    "sentence": "你能帮我保守这个秘密吗？",
+    "sentence_pinyin": "nǐ néng bāng wǒ bǎo shǒu zhè ge mì mì ma",
+    "sentence_english": "Can you help me keep this secret?",
+    "sentence_audio": ""
+  },
+  "项": {
+    "meaning": "item; project; as in 项目",
+    "sentence": "这个项目什么时候开始？",
+    "sentence_pinyin": "zhè ge xiàng mù shén me shí hou kāi shǐ",
+    "sentence_english": "When does this project start?",
+    "sentence_audio": ""
+  },
+  "卓": {
+    "meaning": "outstanding; excellent; as in 卓越",
+    "sentence": "他的中文进步很快，表现很卓越。",
+    "sentence_pinyin": "tā de zhōng wén jìn bù hěn kuài, biǎo xiàn hěn zhuó yuè",
+    "sentence_english": "His Chinese has improved quickly, and his performance is excellent.",
+    "sentence_audio": ""
+  },
   "者": {
-    "meaning": "person/one who; as in 或者: or/perhaps",
-    "sentence": "晚上我们可以出去吃饭，或者在家做饭。",
-    "sentence_pinyin": "wǎn shang wǒ men kě yǐ chū qù chī fàn, huò zhě zài jiā zuò fàn",
-    "sentence_english": "Tonight we can eat out, or cook at home.",
+    "meaning": "person/one who; as in 记者: journalist",
+    "sentence": "我朋友是记者，平时写新闻。",
+    "sentence_pinyin": "wǒ péng you shì jì zhě, píng shí xiě xīn wén",
+    "sentence_english": "My friend is a journalist and usually writes news stories.",
     "sentence_audio": ""
   },
   "交": {
