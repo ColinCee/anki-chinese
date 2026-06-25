@@ -6,8 +6,8 @@ Use the dashboard for human navigation:
 uv run anki-chinese
 ```
 
-It recommends one next action from local state and previews safe workflows
-in-place, for example:
+It recommends one next action from local state, previews safe workflows
+in-place, and can run non-live actions such as sync/doctor. Examples:
 
 - setup/health when required files or credentials are missing
 - sync when generated artifacts are stale

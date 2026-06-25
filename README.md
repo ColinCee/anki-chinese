@@ -26,8 +26,9 @@ uv run anki-chinese
 ```
 
 The dashboard is the human entrypoint: it inspects local state, recommends one
-next action, previews safe workflows in-place, and still shows equivalent CLI
-commands. `doctor` is read-only and checks local readiness.
+next action, previews safe workflows in-place, can run non-live actions such as
+sync/doctor, and still shows equivalent CLI commands. `doctor` is read-only and
+checks local readiness.
 
 Prerequisites and setup details are in [Start](docs/start.md).
 

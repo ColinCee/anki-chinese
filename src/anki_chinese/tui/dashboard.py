@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from io import StringIO
+from typing import cast
 
+import typer
+from rich.console import Console
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
@@ -83,6 +88,13 @@ class DashboardApp(App[None]):
         margin-bottom: 1;
     }
 
+    #action-output {
+        height: auto;
+        margin-bottom: 1;
+        border: round $accent;
+        padding: 1 2;
+    }
+
     #safety {
         color: $warning;
     }
@@ -102,6 +114,7 @@ class DashboardApp(App[None]):
         ("q", "quit", "Quit"),
         ("escape", "go_back", "Back"),
         ("p", "preview_recommendation", "Preview"),
+        ("x", "run_selected", "Run"),
         ("r", "refresh", "Refresh"),
     ]
 
@@ -136,9 +149,10 @@ class DashboardApp(App[None]):
                     yield Static("", id="detail-title")
                     yield Static("", id="detail-body")
                     yield Static("", id="sync-stages")
+                    yield Static("", id="action-output")
                     yield Static("", id="commands")
                     yield Static("", id="safety")
-                yield Static("Esc: back · r: refresh · q: quit", id="back-hint")
+                yield Static("p: preview · x: run safe action · Esc: back · r: refresh · q: quit", id="back-hint")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -155,6 +169,9 @@ class DashboardApp(App[None]):
 
     def action_preview_recommendation(self) -> None:
         self._preview_recommended_action()
+
+    def action_run_selected(self) -> None:
+        self._run_workflow_action(self._active_item())
 
     def action_go_back(self) -> None:
         self._show_menu()
@@ -191,6 +208,14 @@ class DashboardApp(App[None]):
     def _item_index(self, key: str) -> int:
         return next((index for index, item in enumerate(self.items) if item.key == key), 0)
 
+    def _active_item(self) -> WorkflowItem:
+        menu_view = self.query_one("#menu-view", Vertical)
+        if menu_view.display:
+            workflow_list = self.query_one("#workflow-list", ListView)
+            if workflow_list.index is not None:
+                self.current_index = workflow_list.index
+        return self.items[self.current_index]
+
     def _refresh_menu_labels(self) -> None:
         for item in self.items:
             label = self.query_one(f"#workflow-{item.key} Label", Label)
@@ -211,7 +236,7 @@ class DashboardApp(App[None]):
                     f"[bold]Recommended:[/bold] {title}",
                     f"[bold]Why:[/bold] {reason}",
                     f"[bold]Action:[/bold] {item.primary_action}",
-                    "[dim]Press p, or press Enter on the recommended row, to preview in-place.[/dim]",
+                    "[dim]Press p to preview, x to run safe actions, or Enter on a row for details.[/dim]",
                 ]
             )
         )
@@ -222,6 +247,7 @@ class DashboardApp(App[None]):
         self.query_one("#detail-title", Static).update(item.label)
         self.query_one("#detail-body", Static).update(item.detail)
         self._render_sync_stages(show=item.key == "1")
+        self._clear_action_output()
         self._render_commands(item)
         safety = f"Safety: {item.safety}" if item.safety else ""
         self.query_one("#safety", Static).update(safety)
@@ -235,6 +261,7 @@ class DashboardApp(App[None]):
         self.query_one("#detail-title", Static).update(f"Preview: {item.label}")
         self.query_one("#detail-body", Static).update(self._preview_body(item))
         self._render_sync_stages(show=item.key == "1")
+        self._render_preview_action_hint(item)
         self._render_commands(item, preview=True)
         safety = f"Safety: {item.safety}" if item.safety else "Preview only. No files or live Anki state changed."
         self.query_one("#safety", Static).update(safety)
@@ -267,6 +294,97 @@ class DashboardApp(App[None]):
                 ]
             )
         sync_stages.update("\n".join(lines))
+
+    def _clear_action_output(self) -> None:
+        action_output = self.query_one("#action-output", Static)
+        action_output.display = False
+        action_output.update("")
+
+    def _render_preview_action_hint(self, item: WorkflowItem) -> None:
+        action_output = self.query_one("#action-output", Static)
+        action_output.display = True
+        if item.key == "1":
+            action_output.update("[bold]Ready:[/bold] Press x to run `uv run anki-chinese sync` in-place.")
+            return
+        if item.key == "5":
+            action_output.update(
+                "[bold]Ready:[/bold] Press x to run read-only doctor checks in-place. "
+                "This does not probe AnkiConnect."
+            )
+            return
+        action_output.update("[dim]No in-place run action yet for this workflow; use the command equivalents below.[/dim]")
+
+    def _capture_runtime_output(self, action: Callable[[], object]) -> str:
+        original_console = self.runtime.console
+        buffer = StringIO()
+        self.runtime.console = Console(file=buffer, force_terminal=False, color_system=None, width=100)
+        try:
+            action()
+        except typer.Exit as error:
+            output = buffer.getvalue().rstrip()
+            code = error.exit_code if error.exit_code is not None else 0
+            suffix = f"Exited with code {code}."
+            return f"{output}\n{suffix}" if output else suffix
+        finally:
+            self.runtime.console = original_console
+        return buffer.getvalue().rstrip() or "Completed."
+
+    def _run_workflow_action(self, item: WorkflowItem) -> None:
+        if item.key == "1":
+            self._run_sync_action()
+            return
+        if item.key == "5":
+            self._run_health_action()
+            return
+
+        action_output = self.query_one("#action-output", Static)
+        action_output.display = True
+        action_output.update(
+            "[yellow]No safe in-place action is wired for this workflow yet.[/yellow]\n"
+            "Use the command equivalents for now."
+        )
+
+    def _run_sync_action(self) -> None:
+        from ..cli.app import AppRuntime
+        from ..cli.sync import run_sync
+
+        self.query_one("#menu-view", Vertical).display = False
+        self.query_one("#detail-view", Vertical).display = True
+        self.query_one("#detail-title", Static).update("Run: Rebuild deck")
+        self.query_one("#detail-body", Static).update("Running `uv run anki-chinese sync` in-place.")
+        action_output = self.query_one("#action-output", Static)
+        action_output.display = True
+        action_output.update("[bold]Running sync...[/bold]")
+
+        output = self._capture_runtime_output(
+            lambda: run_sync(cast(AppRuntime, self.runtime), dry_run=False, json_output=False)
+        )
+        self._refresh_plan()
+        self._render_sync_stages(show=True)
+        self._render_commands(self.items[self._item_index("1")], preview=True)
+        action_output.update("\n".join(["[bold]Sync output[/bold]", output]))
+        self.query_one("#safety", Static).update("No live Anki state was changed.")
+
+    def _run_health_action(self) -> None:
+        from ..cli.app import AppRuntime
+        from ..cli.doctor import run_doctor
+
+        self.query_one("#menu-view", Vertical).display = False
+        self.query_one("#detail-view", Vertical).display = True
+        self.query_one("#detail-title", Static).update("Run: Health, cleanup, undo")
+        self.query_one("#detail-body", Static).update("Running read-only doctor checks without AnkiConnect probing.")
+        self._render_sync_stages(show=False)
+        action_output = self.query_one("#action-output", Static)
+        action_output.display = True
+        action_output.update("[bold]Running doctor...[/bold]")
+
+        output = self._capture_runtime_output(
+            lambda: run_doctor(cast(AppRuntime, self.runtime), check_anki=False, strict=False)
+        )
+        self._refresh_plan()
+        self._render_commands(self.items[self._item_index("5")], preview=True)
+        action_output.update("\n".join(["[bold]Doctor output[/bold]", output]))
+        self.query_one("#safety", Static).update("Read-only. No live Anki state was changed.")
 
     def _preview_body(self, item: WorkflowItem) -> str:
         if item.key == "1":

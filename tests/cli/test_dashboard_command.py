@@ -85,6 +85,20 @@ async def test_textual_dashboard_renders_sync_plan(runtime_factory) -> None:
         assert "uv run anki-chinese sync --dry-run" in _content(app, "#commands")
 
 
+@pytest.mark.anyio
+async def test_textual_dashboard_runs_sync_action(runtime_factory) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
+    app = DashboardApp(runtime)
+
+    async with app.run_test(size=(70, 28)) as pilot:
+        await pilot.press("x")
+        assert "Run: Rebuild deck" in _content(app, "#detail-title")
+        assert "Sync output" in _content(app, "#action-output")
+        assert "Sync complete" in _content(app, "#action-output")
+        assert runtime.deck_output_path.is_file()
+        assert "No live Anki state was changed" in _content(app, "#safety")
+
+
 def test_dashboard_recommendation_prefers_review_after_sync_is_current(runtime_factory) -> None:
     runtime = runtime_factory(
         saved_notes=[
@@ -142,6 +156,19 @@ async def test_textual_dashboard_health_guidance_includes_doctor(runtime_factory
         await pilot.press("down", "down", "down", "down", "enter")
         assert "Health, cleanup, undo" in _content(app, "#detail-title")
         assert "doctor" in _content(app, "#commands")
+
+
+@pytest.mark.anyio
+async def test_textual_dashboard_runs_health_action(runtime_factory) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
+    app = DashboardApp(runtime)
+
+    async with app.run_test(size=(70, 28)) as pilot:
+        await pilot.press("down", "down", "down", "down", "x")
+        assert "Run: Health, cleanup, undo" in _content(app, "#detail-title")
+        assert "Doctor output" in _content(app, "#action-output")
+        assert "Source deck export" in _content(app, "#action-output")
+        assert "No live Anki state was changed" in _content(app, "#safety")
 
 
 @pytest.mark.anyio
