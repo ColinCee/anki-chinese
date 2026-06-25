@@ -67,7 +67,7 @@ Use `uv run anki-chinese <command> --help` as the authoritative command referenc
 Dashboard behavior:
 
 - `uv run anki-chinese` opens the dashboard only in an interactive terminal.
-- The dashboard recommends one next action from local state, previews safe workflows in-place, and can run non-live actions such as sync/doctor, but does not replace scriptable commands.
+- The dashboard recommends one next action from local state, previews safe workflows in-place, and can run sync/doctor/card-edit and song-preview actions, but does not replace scriptable commands.
 - Keep dashboard logic presentational; reuse workflow/domain functions instead of duplicating sync, audio, song, or activation logic.
 - `doctor` is read-only; `--check-anki` performs an AnkiConnect version probe only.
 

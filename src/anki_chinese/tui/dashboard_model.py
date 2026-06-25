@@ -18,6 +18,7 @@ from ..workflows.sync import SyncPlan, plan_sync
 class DashboardRuntime(Protocol):
     source_deck_path: Path
     overrides_path: Path
+    song_lyrics_dir: Path
     note_store: JsonNoteStore
     generated_audio_dir: Path
     deck_output_path: Path

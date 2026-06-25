@@ -11,10 +11,10 @@ import typer
 from rich.console import Console
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, VerticalScroll
-from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
+from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, Static
 
 from ..audio.state import audio_generation_profiles, build_audio_deck_state, load_audio_manifest
-from ..notes import flagged_notes, validation_issues
+from ..notes import CharacterNote, flagged_notes, validation_issues
 from ..workflows.sync import SyncPlan
 from .dashboard_model import (
     WORKFLOW_ITEMS,
@@ -95,6 +95,13 @@ class DashboardApp(App[None]):
         padding: 1 2;
     }
 
+    #card-editor, #song-planner {
+        height: auto;
+        margin-bottom: 1;
+        border: round $primary;
+        padding: 1 2;
+    }
+
     #safety {
         color: $warning;
     }
@@ -115,6 +122,8 @@ class DashboardApp(App[None]):
         ("escape", "go_back", "Back"),
         ("p", "preview_recommendation", "Preview"),
         ("x", "run_selected", "Run"),
+        ("l", "load_card", "Load card"),
+        ("s", "save_card", "Save card"),
         ("r", "refresh", "Refresh"),
     ]
 
@@ -150,6 +159,20 @@ class DashboardApp(App[None]):
                     yield Static("", id="detail-body")
                     yield Static("", id="sync-stages")
                     yield Static("", id="action-output")
+                    with Vertical(id="card-editor"):
+                        yield Static("[bold]Card editor[/bold]\nEnter a character, press l to load, edit fields, press s to save.")
+                        yield Input(placeholder="Character", id="card-hanzi", max_length=4)
+                        yield Input(placeholder="Meaning", id="card-meaning")
+                        yield Input(placeholder="Sentence", id="card-sentence")
+                        yield Input(placeholder="Sentence pinyin", id="card-sentence-pinyin")
+                        yield Input(placeholder="Sentence English", id="card-sentence-english")
+                    with Vertical(id="song-planner"):
+                        yield Static(
+                            "[bold]Song planner[/bold]\n"
+                            "Optionally enter a song title, then press x to preview the next batch. "
+                            "This does not activate cards."
+                        )
+                        yield Input(placeholder="Song title or blank for next recommended song", id="song-query")
                     yield Static("", id="commands")
                     yield Static("", id="safety")
                 yield Static("p: preview · x: run safe action · Esc: back · r: refresh · q: quit", id="back-hint")
@@ -172,6 +195,14 @@ class DashboardApp(App[None]):
 
     def action_run_selected(self) -> None:
         self._run_workflow_action(self._active_item())
+
+    def action_load_card(self) -> None:
+        if self._active_item().key == "2":
+            self._load_card_editor()
+
+    def action_save_card(self) -> None:
+        if self._active_item().key == "2":
+            self._save_card_editor()
 
     def action_go_back(self) -> None:
         self._show_menu()
@@ -248,6 +279,8 @@ class DashboardApp(App[None]):
         self.query_one("#detail-body", Static).update(item.detail)
         self._render_sync_stages(show=item.key == "1")
         self._clear_action_output()
+        self._render_card_editor(show=item.key == "2")
+        self._render_song_planner(show=item.key == "4")
         self._render_commands(item)
         safety = f"Safety: {item.safety}" if item.safety else ""
         self.query_one("#safety", Static).update(safety)
@@ -262,6 +295,8 @@ class DashboardApp(App[None]):
         self.query_one("#detail-body", Static).update(self._preview_body(item))
         self._render_sync_stages(show=item.key == "1")
         self._render_preview_action_hint(item)
+        self._render_card_editor(show=item.key == "2")
+        self._render_song_planner(show=item.key == "4")
         self._render_commands(item, preview=True)
         safety = f"Safety: {item.safety}" if item.safety else "Preview only. No files or live Anki state changed."
         self.query_one("#safety", Static).update(safety)
@@ -300,6 +335,14 @@ class DashboardApp(App[None]):
         action_output.display = False
         action_output.update("")
 
+    def _render_card_editor(self, *, show: bool) -> None:
+        editor = self.query_one("#card-editor", Vertical)
+        editor.display = show
+
+    def _render_song_planner(self, *, show: bool) -> None:
+        planner = self.query_one("#song-planner", Vertical)
+        planner.display = show
+
     def _render_preview_action_hint(self, item: WorkflowItem) -> None:
         action_output = self.query_one("#action-output", Static)
         action_output.display = True
@@ -311,6 +354,15 @@ class DashboardApp(App[None]):
                 "[bold]Ready:[/bold] Press x to run read-only doctor checks in-place. "
                 "This does not probe AnkiConnect."
             )
+            return
+        if item.key == "4":
+            action_output.update(
+                "[bold]Ready:[/bold] Press x to preview the next song batch. "
+                "This queries local AnkiConnect state but does not activate cards."
+            )
+            return
+        if item.key == "3":
+            action_output.update("[bold]Ready:[/bold] Press x to inspect generated content and audio state.")
             return
         action_output.update("[dim]No in-place run action yet for this workflow; use the command equivalents below.[/dim]")
 
@@ -335,6 +387,12 @@ class DashboardApp(App[None]):
             return
         if item.key == "5":
             self._run_health_action()
+            return
+        if item.key == "4":
+            self._run_song_preview_action()
+            return
+        if item.key == "3":
+            self._run_content_audio_action()
             return
 
         action_output = self.query_one("#action-output", Static)
@@ -366,8 +424,10 @@ class DashboardApp(App[None]):
         self.query_one("#safety", Static).update("No live Anki state was changed.")
 
     def _run_health_action(self) -> None:
+        from ..activation import list_activation_snapshots
         from ..cli.app import AppRuntime
         from ..cli.doctor import run_doctor
+        from ..config import ANKI_BACKUP_DIR
 
         self.query_one("#menu-view", Vertical).display = False
         self.query_one("#detail-view", Vertical).display = True
@@ -381,10 +441,136 @@ class DashboardApp(App[None]):
         output = self._capture_runtime_output(
             lambda: run_doctor(cast(AppRuntime, self.runtime), check_anki=False, strict=False)
         )
+        snapshots = list_activation_snapshots(ANKI_BACKUP_DIR, limit=5)
+        snapshot_lines = ["", "[bold]Recent snapshots[/bold]"]
+        if snapshots:
+            snapshot_lines.extend(
+                f"{snapshot.path.name}: {snapshot.operation}, {snapshot.mutation_card_count} cards, {snapshot.note_count} notes"
+                for snapshot in snapshots
+            )
+        else:
+            snapshot_lines.append("No activation snapshots found.")
         self._refresh_plan()
         self._render_commands(self.items[self._item_index("5")], preview=True)
-        action_output.update("\n".join(["[bold]Doctor output[/bold]", output]))
+        action_output.update("\n".join(["[bold]Doctor output[/bold]", output, *snapshot_lines]))
         self.query_one("#safety", Static).update("Read-only. No live Anki state was changed.")
+
+    def _run_song_preview_action(self) -> None:
+        from ..cli.app import AppRuntime
+        from ..cli.songs import run_songs_next
+
+        song_query = self._card_input_value("#song-query")
+        self.query_one("#menu-view", Vertical).display = False
+        self.query_one("#detail-view", Vertical).display = True
+        self.query_one("#detail-title", Static).update("Preview: Learn songs")
+        self.query_one("#detail-body", Static).update(
+            "Previewing the next song-learning batch. This does not activate cards."
+        )
+        self._render_sync_stages(show=False)
+        self._render_song_planner(show=True)
+        action_output = self.query_one("#action-output", Static)
+        action_output.display = True
+        action_output.update("[bold]Planning song batch...[/bold]")
+
+        output = self._capture_runtime_output(
+            lambda: run_songs_next(
+                cast(AppRuntime, self.runtime),
+                song_query,
+                lyrics_dir=self.runtime.song_lyrics_dir,
+                limit=20,
+            )
+        )
+        self._render_commands(self.items[self._item_index("4")], preview=True)
+        action_output.update("\n".join(["[bold]Song preview output[/bold]", output]))
+        self.query_one("#safety", Static).update(
+            "Preview only. No cards were activated and no live Anki state was changed."
+        )
+
+    def _run_content_audio_action(self) -> None:
+        self.query_one("#menu-view", Vertical).display = False
+        self.query_one("#detail-view", Vertical).display = True
+        self.query_one("#detail-title", Static).update("Inspect: Generate content/audio")
+        self.query_one("#detail-body", Static).update(
+            "Inspecting generated content and audio freshness. This does not call Gemini or TTS."
+        )
+        self._render_sync_stages(show=False)
+        action_output = self.query_one("#action-output", Static)
+        action_output.display = True
+        action_output.update("\n".join(["[bold]Content/audio state[/bold]", self._content_audio_preview_body()]))
+        self._render_commands(self.items[self._item_index("3")], preview=True)
+        self.query_one("#safety", Static).update("Read-only. No Gemini, TTS, or live Anki action was run.")
+
+    def _card_input_value(self, selector: str) -> str:
+        return self.query_one(selector, Input).value.strip()
+
+    def _set_card_input_value(self, selector: str, value: str) -> None:
+        self.query_one(selector, Input).value = value
+
+    def _find_note(self, hanzi: str) -> CharacterNote | None:
+        try:
+            notes = self.runtime.note_store.load()
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+            return None
+        return next((note for note in notes if note.hanzi == hanzi), None)
+
+    def _load_card_editor(self) -> None:
+        from ..notes import load_overrides
+
+        key = self._card_input_value("#card-hanzi")
+        action_output = self.query_one("#action-output", Static)
+        action_output.display = True
+        if not key:
+            action_output.update("[yellow]Enter a character to load.[/yellow]")
+            return
+
+        note = self._find_note(key)
+        override = load_overrides(self.runtime.overrides_path).get(key, {})
+        if note is None:
+            action_output.update(f"[yellow]{key} is not in saved enriched state.[/yellow]")
+            return
+
+        self._set_card_input_value("#card-meaning", str(override.get("meaning", note.meaning)))
+        self._set_card_input_value("#card-sentence", str(override.get("sentence", note.sentence)))
+        self._set_card_input_value("#card-sentence-pinyin", str(override.get("sentence_pinyin", note.sentence_pinyin)))
+        self._set_card_input_value("#card-sentence-english", str(override.get("sentence_english", note.sentence_english)))
+        action_output.update(
+            "\n".join(
+                [
+                    f"[bold]Loaded card:[/bold] {key}",
+                    "Edit fields and press s to save overrides.",
+                ]
+            )
+        )
+
+    def _save_card_editor(self) -> None:
+        from ..cli.app import AppRuntime
+        from ..cli.card import run_card_set
+
+        key = self._card_input_value("#card-hanzi")
+        action_output = self.query_one("#action-output", Static)
+        action_output.display = True
+        if not key:
+            action_output.update("[yellow]Enter a character before saving.[/yellow]")
+            return
+
+        updates = {
+            "meaning": self._card_input_value("#card-meaning") or None,
+            "sentence": self._card_input_value("#card-sentence") or None,
+            "sentence_pinyin": self._card_input_value("#card-sentence-pinyin") or None,
+            "sentence_english": self._card_input_value("#card-sentence-english") or None,
+        }
+        if not any(value is not None for value in updates.values()):
+            action_output.update("[yellow]Enter at least one field before saving.[/yellow]")
+            return
+
+        output = self._capture_runtime_output(
+            lambda: run_card_set(cast(AppRuntime, self.runtime), key, **updates)
+        )
+        self._refresh_plan()
+        self._render_sync_stages(show=False)
+        self._render_commands(self.items[self._item_index("2")], preview=True)
+        action_output.update("\n".join(["[bold]Saved card override[/bold]", output]))
+        self.query_one("#safety", Static).update("Local manual override saved. No live Anki state was changed.")
 
     def _preview_body(self, item: WorkflowItem) -> str:
         if item.key == "1":
