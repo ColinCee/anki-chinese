@@ -25,9 +25,9 @@ uv run anki-chinese doctor
 uv run anki-chinese
 ```
 
-The dashboard is the human entrypoint: it inspects local state, recommends the
-next workflow, and shows the equivalent CLI commands. `doctor` is read-only and
-checks local readiness.
+The dashboard is the human entrypoint: it inspects local state, recommends one
+next action, previews safe workflows in-place, and still shows equivalent CLI
+commands. `doctor` is read-only and checks local readiness.
 
 Prerequisites and setup details are in [Start](docs/start.md).
 

@@ -33,6 +33,7 @@ class WorkflowItem:
     key: str
     label: str
     detail: str
+    primary_action: str
     commands: tuple[str, ...] = ()
     safety: str = ""
 
@@ -45,11 +46,17 @@ class DashboardRecommendation:
 
 
 WORKFLOW_ITEMS = (
-    WorkflowItem("1", "Sync & rebuild", "Show the current init/audio/build plan"),
+    WorkflowItem(
+        "1",
+        "Rebuild deck",
+        "Preview the current init/audio/build plan, then run sync when ready.",
+        "Preview sync plan",
+    ),
     WorkflowItem(
         "2",
-        "Review / edit cards",
-        "Inspect cards, write manual overrides, then let sync rebuild what changed",
+        "Improve cards",
+        "Find cards that need review, edit one character, then preview the downstream rebuild.",
+        "Inspect review state",
         (
             "uv run anki-chinese status",
             "uv run anki-chinese review",
@@ -60,8 +67,9 @@ WORKFLOW_ITEMS = (
     ),
     WorkflowItem(
         "3",
-        "Generate sentences/audio",
-        "Generate or repair content, then refresh stale audio and deck output",
+        "Generate content/audio",
+        "Inspect missing generated content and audio before running Gemini or TTS workflows.",
+        "Inspect content/audio state",
         (
             "uv run anki-chinese sentences --char <hanzi>",
             "uv run anki-chinese keywords",
@@ -71,8 +79,9 @@ WORKFLOW_ITEMS = (
     ),
     WorkflowItem(
         "4",
-        "Song study planner",
-        "Use the high-level learn/undo workflow for human song study",
+        "Learn songs",
+        "Choose a song, preview the next character batch, then confirm snapshot-backed activation.",
+        "Preview next song batch",
         (
             "uv run anki-chinese songs analyze",
             "uv run anki-chinese songs next --limit 20",
@@ -84,28 +93,19 @@ WORKFLOW_ITEMS = (
     ),
     WorkflowItem(
         "5",
-        "Activate / unsuspend in Anki",
-        "Preview explicit character activation before mutating live Anki",
-        (
-            "uv run anki-chinese activate chars <chars> --dry-run",
-            "uv run anki-chinese activate chars <chars> --confirm",
-            "uv run anki-chinese activate snapshots list",
-            "uv run anki-chinese activate undo latest",
-        ),
-        "Confirmed activation writes an undo snapshot before unsuspending cards.",
-    ),
-    WorkflowItem(
-        "6",
         "Health, cleanup, undo",
-        "Check deck/audio health and inspect reversible live-state snapshots",
+        "Run readiness checks, inspect generated-audio cleanup, and recover snapshot-backed live changes.",
+        "Inspect health",
         (
             "uv run anki-chinese doctor",
             "uv run anki-chinese status",
             "uv run anki-chinese audio-clean",
+            "uv run anki-chinese activate chars <chars> --dry-run",
             "uv run anki-chinese activate snapshots list",
             "uv run anki-chinese activate snapshots show <snapshot>",
+            "uv run anki-chinese activate undo latest",
         ),
-        "Snapshot inspection is local-file only; undo previews before live changes.",
+        "Live changes must preview first and confirmed mutations write undo snapshots.",
     ),
 )
 
@@ -140,16 +140,12 @@ def sync_summary(plan: SyncPlan) -> str:
     return ", ".join(parts)
 
 
-def recommended_command(plan: SyncPlan) -> str:
-    return plan.required_commands[0] if plan.required_commands else "No sync steps required"
-
-
 def recommend_workflow(runtime: DashboardRuntime, plan: SyncPlan) -> DashboardRecommendation:
     """Choose one helpful next workflow without taking over workflow execution."""
 
     if not runtime.source_deck_path.is_file() or not runtime.note_store.exists():
         return DashboardRecommendation(
-            "6",
+            "5",
             "Health, cleanup, undo",
             "Required local deck/state files are missing; run doctor before other workflows.",
         )
@@ -157,7 +153,7 @@ def recommend_workflow(runtime: DashboardRuntime, plan: SyncPlan) -> DashboardRe
     if not plan.is_up_to_date:
         return DashboardRecommendation(
             "1",
-            "Sync & rebuild",
+            "Rebuild deck",
             f"Generated deck state is not current ({sync_summary(plan)}).",
         )
 
@@ -165,7 +161,7 @@ def recommend_workflow(runtime: DashboardRuntime, plan: SyncPlan) -> DashboardRe
         notes = runtime.note_store.load()
     except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
         return DashboardRecommendation(
-            "6",
+            "5",
             "Health, cleanup, undo",
             f"Could not read enriched notes: {error}",
         )
@@ -180,7 +176,7 @@ def recommend_workflow(runtime: DashboardRuntime, plan: SyncPlan) -> DashboardRe
             reason_parts.append(f"{len(flagged)} notes flagged for review")
         return DashboardRecommendation(
             "2",
-            "Review / edit cards",
+            "Improve cards",
             "; ".join(reason_parts) + ".",
         )
 
@@ -193,13 +189,13 @@ def recommend_workflow(runtime: DashboardRuntime, plan: SyncPlan) -> DashboardRe
     )
     if audio_state.orphaned_files:
         return DashboardRecommendation(
-            "6",
+            "5",
             "Health, cleanup, undo",
             f"{len(audio_state.orphaned_files)} orphaned generated audio files can be previewed for cleanup.",
         )
 
     return DashboardRecommendation(
         "4",
-        "Song study planner",
+        "Learn songs",
         "Deck rebuild state looks current; choose the next study batch when ready.",
     )

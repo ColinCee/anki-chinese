@@ -67,8 +67,8 @@ uv run anki-chinese dashboard
 ```
 
 The dashboard is the human entrypoint. It inspects local state, recommends one
-workflow, and shows equivalent CLI commands. Agents and scripts should use the
-deterministic commands directly.
+next action, previews safe workflows in-place, and shows equivalent CLI
+commands. Agents and scripts should use deterministic commands directly.
 
 ## First rebuild
 

@@ -70,17 +70,19 @@ async def test_textual_dashboard_renders_sync_plan(runtime_factory) -> None:
     async with app.run_test(size=(50, 24)) as pilot:
         await pilot.pause()
         assert "anki-chinese" in _content(app, "#summary")
-        assert "Next:" in _content(app, "#summary")
+        assert "Recommended:" in _content(app, "#summary")
+        assert "Primary action:" in _content(app, "#summary")
+        assert "Preview sync plan" in _content(app, "#primary-action")
         assert "Recommended" in _content(app, "#workflow-1 Label")
         assert app.query_one("#menu-view").display is True
         assert app.query_one("#detail-view").display is False
-        assert "Choose a workflow" in _content(app, "#menu-help")
+        assert "Other workflows" in _content(app, "#menu-help")
         assert "Inspect cards" not in _content(app, "#workflow-2 Label")
         await pilot.press("enter")
-        assert "Sync & rebuild" in _content(app, "#detail-title")
+        assert "Preview: Rebuild deck" in _content(app, "#detail-title")
         assert "Sync plan" in _content(app, "#sync-stages")
         assert "Reason:" in _content(app, "#sync-stages")
-        assert "anki-chinese build" in _content(app, "#commands")
+        assert "uv run anki-chinese sync --dry-run" in _content(app, "#commands")
 
 
 def test_dashboard_recommendation_prefers_review_after_sync_is_current(runtime_factory) -> None:
@@ -110,7 +112,7 @@ def test_dashboard_recommendation_prefers_review_after_sync_is_current(runtime_f
     recommendation = recommend_workflow(runtime, current_plan)
 
     assert recommendation.workflow_key == "2"
-    assert recommendation.title == "Review / edit cards"
+    assert recommendation.title == "Improve cards"
 
 
 @pytest.mark.anyio
@@ -120,7 +122,7 @@ async def test_textual_dashboard_song_guidance(runtime_factory) -> None:
 
     async with app.run_test(size=(50, 24)) as pilot:
         await pilot.press("down", "down", "down", "enter")
-        assert "Song study planner" in _content(app, "#detail-title")
+        assert "Learn songs" in _content(app, "#detail-title")
         assert "songs learn --limit 20" in _content(app, "#commands")
         assert "songs undo" in _content(app, "#commands")
         assert "Live Anki changes preview by default" in _content(app, "#safety")
@@ -137,19 +139,19 @@ async def test_textual_dashboard_health_guidance_includes_doctor(runtime_factory
     app = DashboardApp(runtime)
 
     async with app.run_test(size=(50, 24)) as pilot:
-        await pilot.press("down", "down", "down", "down", "down", "enter")
+        await pilot.press("down", "down", "down", "down", "enter")
         assert "Health, cleanup, undo" in _content(app, "#detail-title")
         assert "doctor" in _content(app, "#commands")
 
 
 @pytest.mark.anyio
-async def test_textual_dashboard_activation_guidance(runtime_factory) -> None:
+async def test_textual_dashboard_health_guidance_includes_activation_recovery(runtime_factory) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
     app = DashboardApp(runtime)
 
     async with app.run_test(size=(50, 24)) as pilot:
         await pilot.press("down", "down", "down", "down", "enter")
-        assert "Activate / unsuspend in Anki" in _content(app, "#detail-title")
+        assert "Health, cleanup, undo" in _content(app, "#detail-title")
         assert "activate chars <chars> --dry-run" in _content(app, "#commands")
         assert "activate undo latest" in _content(app, "#commands")
-        assert "undo snapshot" in _content(app, "#safety")
+        assert "undo snapshots" in _content(app, "#safety")

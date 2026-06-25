@@ -8,7 +8,7 @@ sentences/audio, and writes a regenerated `.apkg`.
 
 | Lane | Commands | Source of truth | What changes |
 | --- | --- | --- | --- |
-| Human navigation | `dashboard`, `doctor` | Local files, workflow state, optional AnkiConnect probe | Recommendations and readiness checks only. |
+| Human navigation | `dashboard`, `doctor` | Local files, workflow state, optional AnkiConnect probe | Recommendations, safe previews, readiness checks. |
 | Content rebuild | `sync`, `card`, `sentences`, `keywords`, `audio`, `build` | Exported `.apkg` plus manual overrides | Fields, sentences, audio references, templates, generated package. |
 | Live activation | `songs learn`, `activate`, `songs activate` | Open Anki collection through AnkiConnect | Suspended state and optional tags. |
 

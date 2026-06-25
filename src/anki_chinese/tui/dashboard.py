@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import json
+
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Footer, Header, Label, ListItem, ListView, Static
 
+from ..audio.state import audio_generation_profiles, build_audio_deck_state, load_audio_manifest
+from ..notes import flagged_notes, validation_issues
 from ..workflows.sync import SyncPlan
 from .dashboard_model import (
     WORKFLOW_ITEMS,
@@ -13,7 +17,6 @@ from .dashboard_model import (
     WorkflowItem,
     current_sync_plan,
     recommend_workflow,
-    recommended_command,
     sync_summary,
 )
 
@@ -28,7 +31,7 @@ class DashboardApp(App[None]):
 
     #summary {
         dock: top;
-        height: 7;
+        height: 8;
         padding: 1 2;
         background: $panel;
         border: round $primary;
@@ -43,6 +46,12 @@ class DashboardApp(App[None]):
         border: round $primary;
         margin: 1;
         padding: 1 2;
+    }
+
+    #primary-action {
+        border: round $success;
+        padding: 1 2;
+        margin-bottom: 1;
     }
 
     #workflow-list {
@@ -92,6 +101,7 @@ class DashboardApp(App[None]):
     BINDINGS = [
         ("q", "quit", "Quit"),
         ("escape", "go_back", "Back"),
+        ("p", "preview_recommendation", "Preview"),
         ("r", "refresh", "Refresh"),
     ]
 
@@ -108,8 +118,9 @@ class DashboardApp(App[None]):
         yield Static("", id="summary")
         with Vertical(id="body"):
             with Vertical(id="menu-view"):
-                yield Label("Workflows", id="workflow-heading")
-                yield Static("Choose a workflow, then press Enter.", id="menu-help")
+                yield Label("Dashboard cockpit", id="workflow-heading")
+                yield Static("", id="primary-action")
+                yield Static("Other workflows: choose one, then press Enter for details.", id="menu-help")
                 yield ListView(
                     *[
                         ListItem(
@@ -142,12 +153,19 @@ class DashboardApp(App[None]):
         if detail_view.display:
             self._show_workflow(self.items[self.current_index])
 
+    def action_preview_recommendation(self) -> None:
+        self._preview_recommended_action()
+
     def action_go_back(self) -> None:
         self._show_menu()
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         self.current_index = event.index
-        self._show_workflow(self.items[event.index])
+        item = self.items[event.index]
+        if item.key == self.recommended_key:
+            self._preview_workflow(item)
+            return
+        self._show_workflow(item)
 
     def _refresh_plan(self) -> None:
         self.plan = current_sync_plan(self.runtime)
@@ -158,15 +176,17 @@ class DashboardApp(App[None]):
                 [
                     "[bold]anki-chinese[/bold]",
                     f"Sync: [cyan]{sync_summary(self.plan)}[/cyan]",
-                    f"Next: [bold]{recommendation.title}[/bold]",
+                    f"Recommended: [bold]{recommendation.title}[/bold]",
                     f"Why: {recommendation.reason}",
-                    f"Command hint: [bold]{recommended_command(self.plan)}[/bold]",
+                    f"Primary action: [bold]{self.items[self._item_index(recommendation.workflow_key)].primary_action}[/bold]",
+                    f"Command equivalent: [bold]{self._primary_command_equivalent(recommendation.workflow_key)}[/bold]",
                 ]
             )
         )
         self.recommended_key = recommendation.workflow_key
         self.current_index = self._item_index(self.recommended_key)
         self._refresh_menu_labels()
+        self._refresh_primary_action(recommendation.title, recommendation.reason)
 
     def _item_index(self, key: str) -> int:
         return next((index for index, item in enumerate(self.items) if item.key == key), 0)
@@ -177,6 +197,25 @@ class DashboardApp(App[None]):
             suffix = "  [green]Recommended[/green]" if item.key == self.recommended_key else ""
             label.update(f"{item.key}. {item.label}{suffix}")
 
+    def _primary_command_equivalent(self, workflow_key: str) -> str:
+        if workflow_key == "1":
+            return "uv run anki-chinese sync --dry-run"
+        item = self.items[self._item_index(workflow_key)]
+        return item.commands[0] if item.commands else "No command equivalent"
+
+    def _refresh_primary_action(self, title: str, reason: str) -> None:
+        item = self.items[self._item_index(self.recommended_key)]
+        self.query_one("#primary-action", Static).update(
+            "\n".join(
+                [
+                    f"[bold]Recommended:[/bold] {title}",
+                    f"[bold]Why:[/bold] {reason}",
+                    f"[bold]Action:[/bold] {item.primary_action}",
+                    "[dim]Press p, or press Enter on the recommended row, to preview in-place.[/dim]",
+                ]
+            )
+        )
+
     def _show_workflow(self, item: WorkflowItem) -> None:
         self.query_one("#menu-view", Vertical).display = False
         self.query_one("#detail-view", Vertical).display = True
@@ -185,6 +224,19 @@ class DashboardApp(App[None]):
         self._render_sync_stages(show=item.key == "1")
         self._render_commands(item)
         safety = f"Safety: {item.safety}" if item.safety else ""
+        self.query_one("#safety", Static).update(safety)
+
+    def _preview_recommended_action(self) -> None:
+        self._preview_workflow(self.items[self._item_index(self.recommended_key)])
+
+    def _preview_workflow(self, item: WorkflowItem) -> None:
+        self.query_one("#menu-view", Vertical).display = False
+        self.query_one("#detail-view", Vertical).display = True
+        self.query_one("#detail-title", Static).update(f"Preview: {item.label}")
+        self.query_one("#detail-body", Static).update(self._preview_body(item))
+        self._render_sync_stages(show=item.key == "1")
+        self._render_commands(item, preview=True)
+        safety = f"Safety: {item.safety}" if item.safety else "Preview only. No files or live Anki state changed."
         self.query_one("#safety", Static).update(safety)
 
     def _show_menu(self) -> None:
@@ -216,21 +268,99 @@ class DashboardApp(App[None]):
             )
         sync_stages.update("\n".join(lines))
 
-    def _render_commands(self, item: WorkflowItem) -> None:
+    def _preview_body(self, item: WorkflowItem) -> str:
+        if item.key == "1":
+            return "Dry-run rebuild preview. This only explains stale stages and required work."
+        if item.key == "2":
+            return self._card_preview_body()
+        if item.key == "3":
+            return self._content_audio_preview_body()
+        if item.key == "4":
+            return (
+                "Song planning needs current live Anki state. The first cockpit slice keeps this "
+                "as a preview-only handoff; the next slice should run the existing songs planner "
+                "inside the dashboard and require confirmation before activation."
+            )
+        if item.key == "5":
+            return self._health_preview_body()
+        return item.detail
+
+    def _card_preview_body(self) -> str:
+        try:
+            notes = self.runtime.note_store.load()
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+            return f"Could not load enriched notes: {error}\nRun health checks before editing cards."
+
+        issues = validation_issues(notes)
+        flagged = flagged_notes(notes)
+        return "\n".join(
+            [
+                f"Loaded {len(notes)} notes.",
+                f"Validation issues: {len(issues)}",
+                f"Flagged for review: {len(flagged)}",
+                "Next interactive slice: search/select a character and save overrides through the card workflow.",
+            ]
+        )
+
+    def _content_audio_preview_body(self) -> str:
+        try:
+            notes = self.runtime.note_store.load()
+            profiles = audio_generation_profiles(self.runtime.tts_provider, self.runtime.sentence_tts_provider)
+            audio_state = build_audio_deck_state(
+                notes,
+                profiles=profiles,
+                generated_audio_dir=self.runtime.generated_audio_dir,
+                manifest=load_audio_manifest(self.runtime.audio_manifest_path),
+            )
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+            return f"Could not inspect content/audio state: {error}"
+
+        pending = audio_state.pending_counts_by_kind()
+        return "\n".join(
+            [
+                f"Loaded {len(notes)} notes.",
+                f"Notes needing audio updates: {audio_state.pending_notes}",
+                f"Pending audio: Mandarin {pending['mandarin']}, Cantonese {pending['cantonese']}, Sentence {pending['sentence']}",
+                f"Orphaned generated audio files: {len(audio_state.orphaned_files)}",
+            ]
+        )
+
+    def _health_preview_body(self) -> str:
+        assert self.plan is not None
+        lines = [
+            f"Source deck: {'present' if self.runtime.source_deck_path.is_file() else 'missing'}",
+            f"Enriched state: {'present' if self.runtime.note_store.exists() else 'missing'}",
+            f"Built deck: {'present' if self.runtime.deck_output_path.is_file() else 'missing'}",
+            f"Sync plan: {sync_summary(self.plan)}",
+            "AnkiConnect: not probed from this preview; use doctor --check-anki when Anki is open.",
+        ]
+        return "\n".join(lines)
+
+    def _render_commands(self, item: WorkflowItem, *, preview: bool = False) -> None:
         commands = self.query_one("#commands", Static)
         if item.key == "1":
             assert self.plan is not None
             if self.plan.required_commands:
                 rendered = "\n".join(
-                    ["[bold]Next commands[/bold]", *[f"  {command}" for command in self.plan.required_commands]]
+                    [
+                        "[bold]Command equivalents[/bold]",
+                        "  uv run anki-chinese sync --dry-run",
+                        *[f"  uv run {command}" for command in self.plan.required_commands],
+                    ]
                 )
             else:
-                rendered = "[green]No sync steps required[/green]"
+                rendered = "\n".join(
+                    [
+                        "[green]No sync steps required[/green]",
+                        "  uv run anki-chinese sync --dry-run",
+                    ]
+                )
             commands.update(rendered)
             return
 
         if item.commands:
-            rendered = "\n".join(["[bold]Useful commands[/bold]", *[f"  {command}" for command in item.commands]])
+            title = "Command equivalents" if preview else "Advanced command equivalents"
+            rendered = "\n".join([f"[bold]{title}[/bold]", *[f"  {command}" for command in item.commands]])
         else:
             rendered = ""
         commands.update(rendered)
