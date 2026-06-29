@@ -109,6 +109,27 @@ class CardEditView:
     sync_impact: str
 
 
+@dataclass(frozen=True)
+class CredentialView:
+    label: str
+    ready: bool
+    detail: str
+
+
+@dataclass(frozen=True)
+class ContentAudioView:
+    error: str | None
+    note_count: int = 0
+    missing_sentence_count: int = 0
+    missing_translation_count: int = 0
+    notes_needing_audio: int = 0
+    pending_mandarin: int = 0
+    pending_cantonese: int = 0
+    pending_sentence: int = 0
+    orphaned_audio_count: int = 0
+    credentials: tuple[CredentialView, ...] = ()
+
+
 class SongKnowledgeClient(Protocol):
     def find_active_characters(self) -> set[str]: ...
 
@@ -371,6 +392,65 @@ def format_card_edit_view(view: CardEditView) -> str:
     return "\n".join(lines)
 
 
+def build_content_audio_view(runtime: DashboardRuntime) -> ContentAudioView:
+    try:
+        notes = runtime.note_store.load()
+        profiles = audio_generation_profiles(runtime.tts_provider, runtime.sentence_tts_provider)
+        audio_state = build_audio_deck_state(
+            notes,
+            profiles=profiles,
+            generated_audio_dir=runtime.generated_audio_dir,
+            manifest=load_audio_manifest(runtime.audio_manifest_path),
+        )
+    except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+        return ContentAudioView(error=f"Could not inspect content/audio state: {error}")
+
+    pending = audio_state.pending_counts_by_kind()
+    return ContentAudioView(
+        error=None,
+        note_count=len(notes),
+        missing_sentence_count=sum(1 for note in notes if not note.sentence.strip()),
+        missing_translation_count=sum(1 for note in notes if not note.sentence_english.strip()),
+        notes_needing_audio=audio_state.pending_notes,
+        pending_mandarin=pending["mandarin"],
+        pending_cantonese=pending["cantonese"],
+        pending_sentence=pending["sentence"],
+        orphaned_audio_count=len(audio_state.orphaned_files),
+        credentials=_credential_views(),
+    )
+
+
+def format_content_audio_view(view: ContentAudioView) -> str:
+    if view.error is not None:
+        return view.error
+
+    lines = [
+        "[bold]Content/audio tasks[/bold]",
+        f"Loaded notes: {view.note_count}",
+        f"Missing example sentences: {view.missing_sentence_count}",
+        f"Missing sentence translations: {view.missing_translation_count}",
+        f"Notes needing audio updates: {view.notes_needing_audio}",
+        (
+            "Pending audio: "
+            f"Mandarin {view.pending_mandarin}, Cantonese {view.pending_cantonese}, Sentence {view.pending_sentence}"
+        ),
+        f"Orphaned generated audio files: {view.orphaned_audio_count}",
+        "",
+        "[bold]Credential readiness[/bold]",
+    ]
+    for credential in view.credentials:
+        marker = "[green]ready[/green]" if credential.ready else "[yellow]setup needed[/yellow]"
+        lines.append(f"{credential.label}: {marker} · {credential.detail}")
+    lines.extend(
+        [
+            "",
+            "[bold]Next safe action[/bold]",
+            "Review this plan first. Generation uses external providers, so command equivalents stay behind Advanced.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def build_song_browser_view(
     runtime: DashboardRuntime,
     *,
@@ -611,6 +691,27 @@ def _workflow_safety_level(workflow_key: str) -> str:
 
 def _card_candidate(note: CharacterNote, *, reason: str) -> CardCandidateView:
     return CardCandidateView(hanzi=note.hanzi, meaning=note.meaning or "no meaning", reason=reason)
+
+
+def _credential_views() -> tuple[CredentialView, ...]:
+    google_adc = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    return (
+        CredentialView(
+            "Gemini",
+            bool(os.getenv("GEMINI_API_KEY", "").strip()),
+            "GEMINI_API_KEY controls sentence/keyword generation",
+        ),
+        CredentialView(
+            "Google TTS",
+            bool(google_adc),
+            "GOOGLE_APPLICATION_CREDENTIALS set" if google_adc else "set GOOGLE_APPLICATION_CREDENTIALS or use gcloud ADC",
+        ),
+        CredentialView(
+            "MiniMax TTS",
+            bool(os.getenv("MINIMAX_API_KEY", "").strip()),
+            "MINIMAX_API_KEY controls MiniMax sentence TTS",
+        ),
+    )
 
 
 def _rebuild_stage_view(stage: SyncStagePlan) -> RebuildStageView:

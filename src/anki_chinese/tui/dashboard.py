@@ -13,7 +13,6 @@ from textual.app import App, ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, Static
 
-from ..audio.state import audio_generation_profiles, build_audio_deck_state, load_audio_manifest
 from ..notes import CharacterNote, flagged_notes, validation_issues
 from ..workflows.sync import SyncPlan
 from .dashboard_model import (
@@ -23,11 +22,13 @@ from .dashboard_model import (
     WorkflowItem,
     build_card_edit_view,
     build_card_search_view,
+    build_content_audio_view,
     build_rebuild_view,
     build_song_browser_view,
     current_sync_plan,
     format_card_edit_view,
     format_card_search_view,
+    format_content_audio_view,
     format_rebuild_view,
     format_song_browser_view,
     sync_summary,
@@ -373,7 +374,7 @@ class DashboardApp(App[None]):
             action_output.update("[bold]Ready:[/bold] Press x to open the song analysis browser.")
             return
         if item.key == "3":
-            action_output.update("[bold]Ready:[/bold] Press x to inspect generated content and audio state.")
+            action_output.update("[bold]Ready:[/bold] Press x to preview content/audio tasks and credential readiness.")
             return
         action_output.update("[dim]No in-place run action yet for this workflow. Press a for command equivalents.[/dim]")
 
@@ -524,7 +525,7 @@ class DashboardApp(App[None]):
         self._render_sync_stages(show=False)
         action_output = self.query_one("#action-output", Static)
         action_output.display = True
-        action_output.update("\n".join(["[bold]Content/audio state[/bold]", self._content_audio_preview_body()]))
+        action_output.update(format_content_audio_view(build_content_audio_view(self.runtime)))
         self._render_commands(self.items[self._item_index("3")], preview=True)
         self.query_one("#safety", Static).update("Read-only. No Gemini, TTS, or live Anki action was run.")
 
@@ -651,27 +652,7 @@ class DashboardApp(App[None]):
         )
 
     def _content_audio_preview_body(self) -> str:
-        try:
-            notes = self.runtime.note_store.load()
-            profiles = audio_generation_profiles(self.runtime.tts_provider, self.runtime.sentence_tts_provider)
-            audio_state = build_audio_deck_state(
-                notes,
-                profiles=profiles,
-                generated_audio_dir=self.runtime.generated_audio_dir,
-                manifest=load_audio_manifest(self.runtime.audio_manifest_path),
-            )
-        except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
-            return f"Could not inspect content/audio state: {error}"
-
-        pending = audio_state.pending_counts_by_kind()
-        return "\n".join(
-            [
-                f"Loaded {len(notes)} notes.",
-                f"Notes needing audio updates: {audio_state.pending_notes}",
-                f"Pending audio: Mandarin {pending['mandarin']}, Cantonese {pending['cantonese']}, Sentence {pending['sentence']}",
-                f"Orphaned generated audio files: {len(audio_state.orphaned_files)}",
-            ]
-        )
+        return format_content_audio_view(build_content_audio_view(self.runtime))
 
     def _health_preview_body(self) -> str:
         assert self.plan is not None

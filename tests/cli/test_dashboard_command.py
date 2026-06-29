@@ -12,9 +12,11 @@ from anki_chinese.tui.dashboard import DashboardApp
 from anki_chinese.tui.dashboard_model import (
     build_card_edit_view,
     build_card_search_view,
+    build_content_audio_view,
     build_rebuild_view,
     build_song_browser_view,
     format_card_edit_view,
+    format_content_audio_view,
     format_rebuild_view,
     format_song_browser_view,
     recommend_workflow,
@@ -252,6 +254,27 @@ def test_card_search_and_edit_models_show_selection_and_diff(runtime_factory) ->
     assert "Downstream sync: 2 needed" in rendered
 
 
+def test_content_audio_model_reports_tasks_and_credentials(runtime_factory, monkeypatch) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
+    runtime = runtime_factory(
+        saved_notes=[
+            CharacterNote(hanzi="一", meaning="one", sentence="", sentence_english=""),
+            CharacterNote(hanzi="二", meaning="two", sentence="二", sentence_english="two"),
+        ]
+    )
+
+    view = build_content_audio_view(runtime)
+    rendered = format_content_audio_view(view)
+
+    assert view.error is None
+    assert view.missing_sentence_count == 1
+    assert view.missing_translation_count == 1
+    assert "Credential readiness" in rendered
+    assert "Gemini: [green]ready[/green]" in rendered
+    assert "Google TTS: [yellow]setup needed[/yellow]" in rendered
+
+
 def test_song_browser_model_builds_structured_view(runtime_factory) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
     _write_dashboard_song(runtime, title="已会", body="一", file_name="01-known.md")
@@ -302,7 +325,8 @@ async def test_textual_dashboard_runs_content_audio_inspection(runtime_factory) 
     async with app.run_test(size=(70, 28)) as pilot:
         await pilot.press("down", "down", "x")
         assert "Inspect: Generate content/audio" in _content(app, "#detail-title")
-        assert "Content/audio state" in _content(app, "#action-output")
+        assert "Content/audio tasks" in _content(app, "#action-output")
+        assert "Credential readiness" in _content(app, "#action-output")
         assert "Notes needing audio updates" in _content(app, "#action-output")
         assert "No Gemini, TTS, or live Anki action was run" in _content(app, "#safety")
 
