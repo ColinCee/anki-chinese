@@ -11,9 +11,10 @@ from typing import Protocol
 
 from rich.console import Console
 
-from ..activation import AnkiConnectClient, AnkiConnectError
+from ..activation import AnkiConnectClient, AnkiConnectError, list_activation_snapshots
 from ..audio import TTSProvider
 from ..audio.state import audio_generation_profiles, build_audio_deck_state, load_audio_manifest
+from ..config import ANKI_BACKUP_DIR
 from ..notes import CharacterNote, JsonNoteStore, flagged_notes, validation_issues
 from ..songs import (
     SongProgressRow,
@@ -128,6 +129,26 @@ class ContentAudioView:
     pending_sentence: int = 0
     orphaned_audio_count: int = 0
     credentials: tuple[CredentialView, ...] = ()
+
+
+@dataclass(frozen=True)
+class SnapshotView:
+    filename: str
+    operation: str
+    character_count: int
+    note_count: int
+    mutation_card_count: int
+    chars_preview: str
+
+
+@dataclass(frozen=True)
+class HealthUndoView:
+    source_state: str
+    enriched_state: str
+    built_deck_state: str
+    sync_state: str
+    snapshots: tuple[SnapshotView, ...]
+    undo_preview: str
 
 
 class SongKnowledgeClient(Protocol):
@@ -451,6 +472,61 @@ def format_content_audio_view(view: ContentAudioView) -> str:
     return "\n".join(lines)
 
 
+def build_health_undo_view(
+    runtime: DashboardRuntime,
+    plan: SyncPlan,
+    *,
+    snapshot_dir: Path = ANKI_BACKUP_DIR,
+    snapshot_limit: int = 5,
+) -> HealthUndoView:
+    snapshots = tuple(_snapshot_view(snapshot) for snapshot in list_activation_snapshots(snapshot_dir, limit=snapshot_limit))
+    latest = snapshots[0] if snapshots else None
+    undo_preview = (
+        f"Latest restore preview would use {latest.filename}: {latest.mutation_card_count} cards across {latest.note_count} notes."
+        if latest is not None
+        else "No activation snapshots available to restore."
+    )
+    return HealthUndoView(
+        source_state="present" if runtime.source_deck_path.is_file() else "missing",
+        enriched_state="present" if runtime.note_store.exists() else "missing",
+        built_deck_state="present" if runtime.deck_output_path.is_file() else "missing",
+        sync_state=sync_summary(plan),
+        snapshots=snapshots,
+        undo_preview=undo_preview,
+    )
+
+
+def format_health_undo_view(view: HealthUndoView) -> str:
+    lines = [
+        "[bold]Health and undo[/bold]",
+        f"Source deck: {view.source_state}",
+        f"Enriched state: {view.enriched_state}",
+        f"Built deck: {view.built_deck_state}",
+        f"Sync plan: {view.sync_state}",
+        "AnkiConnect: not probed from this preview.",
+        "",
+        "[bold]Recent activation snapshots[/bold]",
+    ]
+    if view.snapshots:
+        for snapshot in view.snapshots:
+            chars = f" · {snapshot.chars_preview}" if snapshot.chars_preview else ""
+            lines.append(
+                f"{snapshot.filename}: {snapshot.operation}, {snapshot.mutation_card_count} cards, "
+                f"{snapshot.note_count} notes{chars}"
+            )
+    else:
+        lines.append("No activation snapshots found.")
+    lines.extend(
+        [
+            "",
+            "[bold]Undo preview[/bold]",
+            view.undo_preview,
+            "Restore remains confirm-gated and writes a safety snapshot before live mutation.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def build_song_browser_view(
     runtime: DashboardRuntime,
     *,
@@ -711,6 +787,21 @@ def _credential_views() -> tuple[CredentialView, ...]:
             bool(os.getenv("MINIMAX_API_KEY", "").strip()),
             "MINIMAX_API_KEY controls MiniMax sentence TTS",
         ),
+    )
+
+
+def _snapshot_view(snapshot) -> SnapshotView:
+    chars = snapshot.found_chars
+    preview = " ".join(chars[:8])
+    if len(chars) > 8:
+        preview += f" +{len(chars) - 8}"
+    return SnapshotView(
+        filename=snapshot.path.name,
+        operation=snapshot.operation,
+        character_count=len(chars),
+        note_count=snapshot.note_count,
+        mutation_card_count=snapshot.mutation_card_count,
+        chars_preview=preview,
     )
 
 

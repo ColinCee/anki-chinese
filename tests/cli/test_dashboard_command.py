@@ -1,3 +1,4 @@
+import json
 import textwrap
 from io import StringIO
 from typing import cast
@@ -13,10 +14,12 @@ from anki_chinese.tui.dashboard_model import (
     build_card_edit_view,
     build_card_search_view,
     build_content_audio_view,
+    build_health_undo_view,
     build_rebuild_view,
     build_song_browser_view,
     format_card_edit_view,
     format_content_audio_view,
+    format_health_undo_view,
     format_rebuild_view,
     format_song_browser_view,
     recommend_workflow,
@@ -275,6 +278,44 @@ def test_content_audio_model_reports_tasks_and_credentials(runtime_factory, monk
     assert "Google TTS: [yellow]setup needed[/yellow]" in rendered
 
 
+def test_health_undo_model_shows_latest_snapshot(runtime_factory, tmp_path) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
+    snapshot_dir = tmp_path / "snapshots"
+    snapshot_dir.mkdir()
+    (snapshot_dir / "activation-test.json").write_text(
+        json.dumps(
+            {
+                "created_at": "2026-01-01T00:00:00Z",
+                "operation": "activate-chars",
+                "found_chars": ["一", "二"],
+                "note_ids": [1, 2],
+                "card_ids": [10, 11, 20, 21],
+                "pre_change_suspended_card_ids": [10, 11],
+            }
+        ),
+        encoding="utf-8",
+    )
+    plan = SyncPlan(
+        stages=[
+            SyncStagePlan(
+                id="init",
+                label="Parse + enrich",
+                status="up_to_date",
+                reason="current",
+                command="anki-chinese init",
+            ),
+        ]
+    )
+
+    view = build_health_undo_view(runtime, plan, snapshot_dir=snapshot_dir)
+    rendered = format_health_undo_view(view)
+
+    assert view.snapshots[0].filename == "activation-test.json"
+    assert view.snapshots[0].mutation_card_count == 2
+    assert "Undo preview" in rendered
+    assert "Restore remains confirm-gated" in rendered
+
+
 def test_song_browser_model_builds_structured_view(runtime_factory) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
     _write_dashboard_song(runtime, title="已会", body="一", file_name="01-known.md")
@@ -455,7 +496,7 @@ async def test_textual_dashboard_runs_health_action(runtime_factory) -> None:
         assert "Run: Health, cleanup, undo" in _content(app, "#detail-title")
         assert "Doctor output" in _content(app, "#action-output")
         assert "Source deck export" in _content(app, "#action-output")
-        assert "Recent snapshots" in _content(app, "#action-output")
+        assert "Recent activation snapshots" in _content(app, "#action-output")
         assert "No live Anki state was changed" in _content(app, "#safety")
 
 

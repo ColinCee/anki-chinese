@@ -23,12 +23,14 @@ from .dashboard_model import (
     build_card_edit_view,
     build_card_search_view,
     build_content_audio_view,
+    build_health_undo_view,
     build_rebuild_view,
     build_song_browser_view,
     current_sync_plan,
     format_card_edit_view,
     format_card_search_view,
     format_content_audio_view,
+    format_health_undo_view,
     format_rebuild_view,
     format_song_browser_view,
     sync_summary,
@@ -441,10 +443,8 @@ class DashboardApp(App[None]):
         self.query_one("#safety", Static).update("No live Anki state was changed.")
 
     def _run_health_action(self) -> None:
-        from ..activation import list_activation_snapshots
         from ..cli.app import AppRuntime
         from ..cli.doctor import run_doctor
-        from ..config import ANKI_BACKUP_DIR
 
         self.query_one("#menu-view", Vertical).display = False
         self.query_one("#detail-view", Vertical).display = True
@@ -458,18 +458,19 @@ class DashboardApp(App[None]):
         output = self._capture_runtime_output(
             lambda: run_doctor(cast(AppRuntime, self.runtime), check_anki=False, strict=False)
         )
-        snapshots = list_activation_snapshots(ANKI_BACKUP_DIR, limit=5)
-        snapshot_lines = ["", "[bold]Recent snapshots[/bold]"]
-        if snapshots:
-            snapshot_lines.extend(
-                f"{snapshot.path.name}: {snapshot.operation}, {snapshot.mutation_card_count} cards, {snapshot.note_count} notes"
-                for snapshot in snapshots
-            )
-        else:
-            snapshot_lines.append("No activation snapshots found.")
         self._refresh_plan()
         self._render_commands(self.items[self._item_index("5")], preview=True)
-        action_output.update("\n".join(["[bold]Doctor output[/bold]", output, *snapshot_lines]))
+        assert self.plan is not None
+        action_output.update(
+            "\n".join(
+                [
+                    format_health_undo_view(build_health_undo_view(self.runtime, self.plan)),
+                    "",
+                    "[bold]Doctor output[/bold]",
+                    output,
+                ]
+            )
+        )
         self.query_one("#safety", Static).update("Read-only. No live Anki state was changed.")
 
     def _run_song_preview_action(self) -> None:
@@ -656,14 +657,7 @@ class DashboardApp(App[None]):
 
     def _health_preview_body(self) -> str:
         assert self.plan is not None
-        lines = [
-            f"Source deck: {'present' if self.runtime.source_deck_path.is_file() else 'missing'}",
-            f"Enriched state: {'present' if self.runtime.note_store.exists() else 'missing'}",
-            f"Built deck: {'present' if self.runtime.deck_output_path.is_file() else 'missing'}",
-            f"Sync plan: {sync_summary(self.plan)}",
-            "AnkiConnect: not probed from this preview; use doctor --check-anki when Anki is open.",
-        ]
-        return "\n".join(lines)
+        return format_health_undo_view(build_health_undo_view(self.runtime, self.plan))
 
     def _render_commands(self, item: WorkflowItem, *, preview: bool = False) -> None:
         commands = self.query_one("#commands", Static)
