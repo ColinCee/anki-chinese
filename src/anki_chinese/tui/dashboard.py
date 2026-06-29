@@ -19,12 +19,13 @@ from ..workflows.sync import SyncPlan
 from .dashboard_model import (
     WORKFLOW_ITEMS,
     DashboardRuntime,
+    TodayView,
     WorkflowItem,
     build_song_browser_view,
     current_sync_plan,
     format_song_browser_view,
-    recommend_workflow,
     sync_summary,
+    today_view,
 )
 
 
@@ -144,7 +145,7 @@ class DashboardApp(App[None]):
         yield Static("", id="summary")
         with Vertical(id="body"):
             with Vertical(id="menu-view"):
-                yield Label("Dashboard cockpit", id="workflow-heading")
+                yield Label("Today", id="workflow-heading")
                 yield Static("", id="primary-action")
                 yield Static("Other workflows: choose one, then press Enter for details. Press a for advanced details.", id="menu-help")
                 yield ListView(
@@ -184,7 +185,7 @@ class DashboardApp(App[None]):
 
     def on_mount(self) -> None:
         self.title = "anki-chinese"
-        self.sub_title = "workflow dashboard"
+        self.sub_title = "workbench"
         self._refresh_plan()
         self._show_menu()
 
@@ -227,16 +228,18 @@ class DashboardApp(App[None]):
 
     def _refresh_plan(self) -> None:
         self.plan = current_sync_plan(self.runtime)
-        recommendation = recommend_workflow(self.runtime, self.plan)
+        today = today_view(self.runtime, self.plan)
+        recommendation = today.recommendation
         summary = self.query_one("#summary", Static)
         summary.update(
             "\n".join(
                 [
-                    "[bold]anki-chinese[/bold]",
-                    f"Sync: [cyan]{sync_summary(self.plan)}[/cyan]",
-                    f"Recommended: [bold]{recommendation.title}[/bold]",
+                    "[bold]Today[/bold]",
+                    f"Deck sync: [cyan]{today.sync_state}[/cyan]",
+                    f"Next: [bold]{recommendation.title}[/bold]",
                     f"Why: {recommendation.reason}",
-                    f"Primary action: [bold]{self.items[self._item_index(recommendation.workflow_key)].primary_action}[/bold]",
+                    f"Safety: {today.safety_level}",
+                    f"Action: [bold]{today.primary_action}[/bold]",
                     "Advanced: press [bold]a[/bold] for command equivalents and raw details.",
                 ]
             )
@@ -244,7 +247,7 @@ class DashboardApp(App[None]):
         self.recommended_key = recommendation.workflow_key
         self.current_index = self._item_index(self.recommended_key)
         self._refresh_menu_labels()
-        self._refresh_primary_action(recommendation.title, recommendation.reason)
+        self._refresh_primary_action(today)
 
     def _item_index(self, key: str) -> int:
         return next((index for index, item in enumerate(self.items) if item.key == key), 0)
@@ -263,13 +266,14 @@ class DashboardApp(App[None]):
             suffix = "  [green]Recommended[/green]" if item.key == self.recommended_key else ""
             label.update(f"{item.key}. {item.label}{suffix}")
 
-    def _refresh_primary_action(self, title: str, reason: str) -> None:
+    def _refresh_primary_action(self, today: TodayView) -> None:
         item = self.items[self._item_index(self.recommended_key)]
         self.query_one("#primary-action", Static).update(
             "\n".join(
                 [
-                    f"[bold]Recommended:[/bold] {title}",
-                    f"[bold]Why:[/bold] {reason}",
+                    f"[bold]Next:[/bold] {today.recommendation.title}",
+                    f"[bold]Why:[/bold] {today.recommendation.reason}",
+                    f"[bold]Safety:[/bold] {today.safety_level}",
                     f"[bold]Action:[/bold] {item.primary_action}",
                     "[dim]Press p to preview, x to run safe actions, Enter for details, a for advanced.[/dim]",
                 ]

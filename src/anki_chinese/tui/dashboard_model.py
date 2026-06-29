@@ -55,6 +55,14 @@ class DashboardRecommendation:
     reason: str
 
 
+@dataclass(frozen=True)
+class TodayView:
+    sync_state: str
+    recommendation: DashboardRecommendation
+    primary_action: str
+    safety_level: str
+
+
 class SongKnowledgeClient(Protocol):
     def find_active_characters(self) -> set[str]: ...
 
@@ -186,6 +194,17 @@ def sync_summary(plan: SyncPlan) -> str:
     if skipped:
         parts.append(f"{skipped} skipped")
     return ", ".join(parts)
+
+
+def today_view(runtime: DashboardRuntime, plan: SyncPlan) -> TodayView:
+    recommendation = recommend_workflow(runtime, plan)
+    item = WORKFLOW_ITEMS[_workflow_index(recommendation.workflow_key)]
+    return TodayView(
+        sync_state=sync_summary(plan),
+        recommendation=recommendation,
+        primary_action=item.primary_action,
+        safety_level=_workflow_safety_level(recommendation.workflow_key),
+    )
 
 
 def build_song_browser_view(
@@ -403,3 +422,21 @@ def recommend_workflow(runtime: DashboardRuntime, plan: SyncPlan) -> DashboardRe
         "Learn songs",
         "Deck rebuild state looks current; choose the next study batch when ready.",
     )
+
+
+def _workflow_index(key: str) -> int:
+    return next((index for index, item in enumerate(WORKFLOW_ITEMS) if item.key == key), 0)
+
+
+def _workflow_safety_level(workflow_key: str) -> str:
+    if workflow_key == "1":
+        return "Safe local rebuild; no live Anki mutation."
+    if workflow_key == "2":
+        return "Local source-deck edit; downstream rebuild preview follows."
+    if workflow_key == "3":
+        return "Read-only inspection until generation is explicitly run."
+    if workflow_key == "4":
+        return "Read-only song analysis; activation stays confirm-gated."
+    if workflow_key == "5":
+        return "Read-only checks by default; restore actions need confirmation."
+    return "Preview first; confirm before mutation."

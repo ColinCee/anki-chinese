@@ -13,6 +13,7 @@ from anki_chinese.tui.dashboard_model import (
     build_song_browser_view,
     format_song_browser_view,
     recommend_workflow,
+    today_view,
 )
 from anki_chinese.workflows.sync import SyncPlan, SyncStagePlan
 
@@ -104,9 +105,10 @@ async def test_textual_dashboard_renders_sync_plan(runtime_factory) -> None:
 
     async with app.run_test(size=(50, 24)) as pilot:
         await pilot.pause()
-        assert "anki-chinese" in _content(app, "#summary")
-        assert "Recommended:" in _content(app, "#summary")
-        assert "Primary action:" in _content(app, "#summary")
+        assert "Today" in _content(app, "#summary")
+        assert "Next:" in _content(app, "#summary")
+        assert "Safety:" in _content(app, "#summary")
+        assert "Action:" in _content(app, "#summary")
         assert "Preview sync plan" in _content(app, "#primary-action")
         assert "Recommended" in _content(app, "#workflow-1 Label")
         assert app.query_one("#menu-view").display is True
@@ -166,6 +168,27 @@ def test_dashboard_recommendation_prefers_review_after_sync_is_current(runtime_f
 
     assert recommendation.workflow_key == "2"
     assert recommendation.title == "Improve cards"
+
+
+def test_today_view_includes_recommendation_action_and_safety(runtime_factory) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
+    current_plan = SyncPlan(
+        stages=[
+            SyncStagePlan(
+                id="init",
+                label="Parse + enrich",
+                status="needed",
+                reason="source changed",
+                command="anki-chinese init",
+            ),
+        ]
+    )
+
+    view = today_view(runtime, current_plan)
+
+    assert view.recommendation.title == "Rebuild deck"
+    assert view.primary_action == "Preview sync plan"
+    assert view.safety_level == "Safe local rebuild; no live Anki mutation."
 
 
 def test_song_browser_model_builds_structured_view(runtime_factory) -> None:
