@@ -28,7 +28,6 @@ def _plan(
 ):
     return plan_sync(
         source_deck_path=tmp_path / "data" / "source" / "deck.apkg",
-        overrides_path=tmp_path / "data" / "manual" / "overrides.json",
         enriched_path=tmp_path / "data" / "state" / "enriched.json",
         deck_output_path=tmp_path / "data" / "build" / "decks" / "deck.apkg",
         generated_audio_dir=tmp_path / "data" / "build" / "audio" / "generated",
@@ -55,21 +54,20 @@ def test_plan_requires_init_when_enriched_state_is_missing(tmp_path: Path) -> No
     assert plan.required_commands == ["anki-chinese init"]
 
 
-def test_plan_requires_init_when_overrides_are_newer_than_state(tmp_path: Path) -> None:
+def test_plan_requires_init_when_source_deck_is_newer_than_state(tmp_path: Path) -> None:
     _touch(tmp_path / "data" / "source" / "deck.apkg", 100)
     save_notes([CharacterNote(hanzi="一", meaning="one")], tmp_path / "data" / "state" / "enriched.json")
     os.utime(tmp_path / "data" / "state" / "enriched.json", (110, 110))
-    _touch(tmp_path / "data" / "manual" / "overrides.json", 120)
+    os.utime(tmp_path / "data" / "source" / "deck.apkg", (120, 120))
 
     plan = _plan(tmp_path)
 
     assert _stage_statuses(plan)["init"] == "needed"
-    assert plan.stages[0].reason == "Source deck or manual overrides changed after enriched state."
+    assert plan.stages[0].reason == "Source deck changed after enriched state."
 
 
 def test_plan_detects_pending_sentence_audio_and_blocks_build_until_audio(tmp_path: Path) -> None:
     _touch(tmp_path / "data" / "source" / "deck.apkg", 100)
-    _touch(tmp_path / "data" / "manual" / "overrides.json", 100)
     note = CharacterNote(
         hanzi="水",
         meaning="water",
@@ -105,7 +103,6 @@ def test_plan_detects_pending_sentence_audio_and_blocks_build_until_audio(tmp_pa
 
 def test_plan_requires_build_when_deck_is_missing_after_state_is_ready(tmp_path: Path) -> None:
     _touch(tmp_path / "data" / "source" / "deck.apkg", 100)
-    _touch(tmp_path / "data" / "manual" / "overrides.json", 100)
     save_notes([CharacterNote(hanzi="一", meaning="one")], tmp_path / "data" / "state" / "enriched.json")
     os.utime(tmp_path / "data" / "state" / "enriched.json", (110, 110))
 
@@ -121,7 +118,6 @@ def test_plan_requires_build_when_deck_is_missing_after_state_is_ready(tmp_path:
 
 def test_plan_reports_up_to_date_when_artifacts_are_current(tmp_path: Path) -> None:
     _touch(tmp_path / "data" / "source" / "deck.apkg", 100)
-    _touch(tmp_path / "data" / "manual" / "overrides.json", 100)
     save_notes([CharacterNote(hanzi="一", meaning="one")], tmp_path / "data" / "state" / "enriched.json")
     os.utime(tmp_path / "data" / "state" / "enriched.json", (110, 110))
     _touch(tmp_path / "data" / "build" / "decks" / "deck.apkg", 120)
@@ -134,13 +130,11 @@ def test_plan_reports_up_to_date_when_artifacts_are_current(tmp_path: Path) -> N
 
 def test_plan_requires_audio_when_manifest_needs_backfill(tmp_path: Path, stub_tts_provider) -> None:
     source = tmp_path / "data" / "source" / "deck.apkg"
-    overrides = tmp_path / "data" / "manual" / "overrides.json"
     enriched = tmp_path / "data" / "state" / "enriched.json"
     deck = tmp_path / "data" / "build" / "decks" / "deck.apkg"
     generated_audio = tmp_path / "data" / "build" / "audio" / "generated"
     manifest_path = tmp_path / "data" / "state" / "audio_manifest.json"
     _touch(source, 100)
-    _touch(overrides, 100)
     note = CharacterNote(
         hanzi="水",
         meaning="water",
@@ -154,7 +148,6 @@ def test_plan_requires_audio_when_manifest_needs_backfill(tmp_path: Path, stub_t
 
     plan = plan_sync(
         source_deck_path=source,
-        overrides_path=overrides,
         enriched_path=enriched,
         deck_output_path=deck,
         generated_audio_dir=generated_audio,
@@ -183,7 +176,6 @@ def test_plan_requires_audio_when_manifest_needs_backfill(tmp_path: Path, stub_t
     )
     current_plan = plan_sync(
         source_deck_path=source,
-        overrides_path=overrides,
         enriched_path=enriched,
         deck_output_path=deck,
         generated_audio_dir=generated_audio,
@@ -196,7 +188,6 @@ def test_plan_requires_audio_when_manifest_needs_backfill(tmp_path: Path, stub_t
 
 def test_plan_can_skip_audio_and_build_when_deck_is_missing(tmp_path: Path) -> None:
     _touch(tmp_path / "data" / "source" / "deck.apkg", 100)
-    _touch(tmp_path / "data" / "manual" / "overrides.json", 100)
     save_notes(
         [CharacterNote(hanzi="一", meaning="one", pinyin="yī")],
         tmp_path / "data" / "state" / "enriched.json",
@@ -214,17 +205,15 @@ def test_plan_can_skip_audio_and_build_when_deck_is_missing(tmp_path: Path) -> N
 
 def test_plan_reports_current_pipeline_fingerprints(tmp_path: Path) -> None:
     source = tmp_path / "data" / "source" / "deck.apkg"
-    overrides = tmp_path / "data" / "manual" / "overrides.json"
     enriched = tmp_path / "data" / "state" / "enriched.json"
     state_path = tmp_path / "data" / "state" / "pipeline.json"
     _touch(source, 100)
-    _touch(overrides, 100)
     save_notes([CharacterNote(hanzi="一", meaning="one")], enriched)
     os.utime(enriched, (110, 110))
     record_stage(
         state_path,
         "init",
-        inputs={"source_deck": source, "overrides": overrides},
+        inputs={"source_deck": source},
         outputs={"enriched": enriched},
     )
 
@@ -238,20 +227,18 @@ def test_plan_reports_current_pipeline_fingerprints(tmp_path: Path) -> None:
 
 def test_plan_reports_stale_pipeline_fingerprints(tmp_path: Path) -> None:
     source = tmp_path / "data" / "source" / "deck.apkg"
-    overrides = tmp_path / "data" / "manual" / "overrides.json"
     enriched = tmp_path / "data" / "state" / "enriched.json"
     state_path = tmp_path / "data" / "state" / "pipeline.json"
     _touch(source, 100)
-    _touch(overrides, 100)
     save_notes([CharacterNote(hanzi="一", meaning="one")], enriched)
     os.utime(enriched, (110, 110))
     record_stage(
         state_path,
         "init",
-        inputs={"source_deck": source, "overrides": overrides},
+        inputs={"source_deck": source},
         outputs={"enriched": enriched},
     )
-    _touch(overrides, 120)
+    os.utime(source, (120, 120))
 
     plan = _plan(tmp_path, pipeline_state_path=state_path)
 

@@ -8,8 +8,10 @@ import io
 import re
 import sqlite3
 import tempfile
+import time
 import zipfile
 from pathlib import Path
+from typing import Any
 
 import zstandard as zstd
 
@@ -17,6 +19,23 @@ from ..config import MODEL_ID
 from .model import CharacterNote
 
 _FIELD_SEP = "\x1f"
+_FIELD_KEYS = (
+    "hanzi",
+    "meaning",
+    "pinyin",
+    "jyutping",
+    "mandarin_audio",
+    "cantonese_audio",
+    "stroke_order",
+    "heisig_num",
+    "lesson",
+    "story",
+    "sentence_audio",
+    "sentence",
+    "sentence_pinyin",
+    "sentence_english",
+)
+_FIELD_INDEX = {field_name: index for index, field_name in enumerate(_FIELD_KEYS)}
 
 
 def _decompress_anki21b(data: bytes) -> bytes:
@@ -25,6 +44,10 @@ def _decompress_anki21b(data: bytes) -> bytes:
     decompressed = reader.read()
     reader.close()
     return decompressed
+
+
+def _compress_anki21b(data: bytes) -> bytes:
+    return zstd.ZstdCompressor().compress(data)
 
 
 def _extract_db(apkg_path: Path, tmp_dir: Path) -> Path:
@@ -69,9 +92,16 @@ def _extract_hanzi(raw: str) -> str:
     return _strip_html(raw)
 
 
+def _split_fields(flds: str) -> list[str]:
+    parts = flds.split(_FIELD_SEP)
+    if len(parts) < len(_FIELD_KEYS):
+        parts.extend([""] * (len(_FIELD_KEYS) - len(parts)))
+    return parts
+
+
 def _note_from_fields(flds: str, tags: str) -> CharacterNote:
     """Build a CharacterNote from the \x1f-separated fields string."""
-    parts = flds.split(_FIELD_SEP)
+    parts = _split_fields(flds)
 
     def _get(idx: int) -> str:
         return parts[idx].strip() if idx < len(parts) else ""
@@ -113,6 +143,84 @@ def parse_apkg(path: Path) -> list[CharacterNote]:
             conn.close()
 
     return notes
+
+
+def update_note_fields_in_apkg(
+    apkg_path: Path,
+    hanzi: str,
+    updates: dict[str, Any],
+) -> CharacterNote:
+    """Update one model note inside a source .apkg and return the updated note."""
+
+    if not apkg_path.exists():
+        raise FileNotFoundError(apkg_path)
+
+    unsupported = sorted(set(updates) - set(_FIELD_INDEX))
+    if unsupported:
+        raise ValueError(f"Unsupported APKG note fields: {', '.join(unsupported)}")
+
+    with tempfile.TemporaryDirectory(dir=apkg_path.parent) as tmp:
+        tmp_dir = Path(tmp)
+        db_path = tmp_dir / "collection.sqlite"
+
+        with zipfile.ZipFile(apkg_path, "r") as zf:
+            names = zf.namelist()
+            if "collection.anki21b" in names:
+                collection_name = "collection.anki21b"
+                db_path.write_bytes(_decompress_anki21b(zf.read(collection_name)))
+                compress_db = True
+            elif "collection.anki2" in names:
+                collection_name = "collection.anki2"
+                db_path.write_bytes(zf.read(collection_name))
+                compress_db = False
+            else:
+                raise FileNotFoundError(
+                    f"No collection database found in {apkg_path}. Contents: {names}"
+                )
+
+        conn = sqlite3.connect(str(db_path))
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT id, flds, tags FROM notes WHERE mid = ?", (MODEL_ID,))
+            matches: list[tuple[int, list[str], str]] = []
+            for note_id, flds, tags in cur.fetchall():
+                parts = _split_fields(flds)
+                if _extract_hanzi(parts[0]) == hanzi:
+                    matches.append((note_id, parts, tags))
+
+            if not matches:
+                raise KeyError(f"{hanzi} is not in {apkg_path}")
+            if len(matches) > 1:
+                raise ValueError(f"{hanzi} matched {len(matches)} notes in {apkg_path}")
+
+            note_id, parts, tags = matches[0]
+            for field_name, value in updates.items():
+                parts[_FIELD_INDEX[field_name]] = str(value)
+
+            updated_fields = _FIELD_SEP.join(parts)
+            cur.execute(
+                "UPDATE notes SET flds = ?, mod = ? WHERE id = ?",
+                (updated_fields, int(time.time()), note_id),
+            )
+            conn.commit()
+            updated_note = _note_from_fields(updated_fields, tags)
+        finally:
+            conn.close()
+
+        db_bytes = db_path.read_bytes()
+        if compress_db:
+            db_bytes = _compress_anki21b(db_bytes)
+
+        rewritten_apkg = tmp_dir / apkg_path.name
+        with zipfile.ZipFile(apkg_path, "r") as src, zipfile.ZipFile(rewritten_apkg, "w") as dst:
+            dst.comment = src.comment
+            for info in src.infolist():
+                data = db_bytes if info.filename == collection_name else src.read(info.filename)
+                dst.writestr(info, data)
+
+        rewritten_apkg.replace(apkg_path)
+
+    return updated_note
 
 
 def load_learned_hanzi_from_apkg(path: Path) -> set[str]:

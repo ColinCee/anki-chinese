@@ -6,12 +6,11 @@ __all__: list[str] = []  # Internal module — import from package instead
 
 from rich.progress import track
 
-from ..config import OVERRIDES_PATH
 from ..data_sources import (
     lookup_jyutping,
     lookup_pinyin,
 )
-from .model import CharacterNote, apply_overrides, load_overrides
+from .model import CharacterNote
 
 
 def _set_usage_review(note: CharacterNote, reason: str) -> None:
@@ -23,7 +22,6 @@ def enrich_notes(
     notes: list[CharacterNote],
 ) -> list[CharacterNote]:
     """Fill in missing pinyin and jyutping for each note."""
-    overrides = load_overrides(OVERRIDES_PATH)
     enriched: list[CharacterNote] = []
 
     for note in track(notes, description="Enriching notes..."):
@@ -43,8 +41,6 @@ def enrich_notes(
                     f"Polyphonic character — no usage-derived reading found, "
                     f"defaulted to '{pinyin}' — verify manually",
                 )
-
-        note = apply_overrides(note, overrides)
 
         enriched.append(note)
 

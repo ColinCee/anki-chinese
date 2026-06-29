@@ -1,3 +1,4 @@
+import textwrap
 from io import StringIO
 from typing import cast
 from unittest.mock import patch
@@ -6,7 +7,7 @@ import pytest
 from textual.widgets import Input, Static
 
 from anki_chinese.cli import AppRuntime, create_app
-from anki_chinese.notes import CharacterNote, load_overrides
+from anki_chinese.notes import CharacterNote
 from anki_chinese.tui.dashboard import DashboardApp
 from anki_chinese.tui.dashboard_model import recommend_workflow
 from anki_chinese.workflows.sync import SyncPlan, SyncStagePlan
@@ -29,6 +30,32 @@ def _console_output(runtime: AppRuntime) -> str:
     output = runtime.console.file
     assert isinstance(output, StringIO)
     return output.getvalue()
+
+
+class StubSongKnowledgeClient:
+    def find_active_characters(self) -> set[str]:
+        return {"一"}
+
+    def find_studied_characters(self) -> set[str]:
+        return {"一"}
+
+    def find_all_deck_info(self) -> tuple[list[str], set[str]]:
+        deck_order = ["一", "二", "三", "四"]
+        return deck_order, set(deck_order)
+
+
+def _write_dashboard_song(runtime: AppRuntime, *, title: str, body: str, file_name: str) -> None:
+    runtime.song_lyrics_dir.mkdir(parents=True, exist_ok=True)
+    (runtime.song_lyrics_dir / file_name).write_text(
+        textwrap.dedent("""\
+            ---
+            title: {title}
+            artist: 测试
+            ---
+            {body}
+        """).format(title=title, body=body),
+        encoding="utf-8",
+    )
 
 
 def test_no_args_shows_help_in_non_interactive_context(runtime_factory, runner) -> None:
@@ -167,31 +194,25 @@ async def test_textual_dashboard_runs_content_audio_inspection(runtime_factory) 
 @pytest.mark.anyio
 async def test_textual_dashboard_runs_song_preview_without_activation(runtime_factory) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
+    _write_dashboard_song(runtime, title="已会", body="一", file_name="01-known.md")
+    _write_dashboard_song(runtime, title="测试歌", body="一二三喵", file_name="02-next.md")
     app = DashboardApp(runtime)
-
-    def fake_next(runtime_arg, song_query, *, lyrics_dir, limit, knowledge_client=None):
-        assert runtime_arg is runtime
-        assert song_query == "测试歌"
-        assert lyrics_dir == runtime.song_lyrics_dir
-        assert limit == 20
-        assert knowledge_client is None
-        runtime_arg.console.print("Song: 测试歌")
-        runtime_arg.console.print("Next chars: 二 三")
 
     async with app.run_test(size=(80, 32)) as pilot:
         await pilot.press("down", "down", "down", "enter")
         _input(app, "#song-query").value = "测试歌"
-        with patch("anki_chinese.cli.songs.run_songs_next", side_effect=fake_next) as run_next:
+        with patch("anki_chinese.tui.dashboard.AnkiConnectClient", return_value=StubSongKnowledgeClient()):
             await pilot.press("x")
 
-        run_next.assert_called_once()
-        assert "Song preview output" in _content(app, "#action-output")
-        assert "Next chars: 二 三" in _content(app, "#action-output")
-        assert "No cards were activated" in _content(app, "#safety")
+        assert "Recommended next song" in _content(app, "#action-output")
+        assert "测试歌" in _content(app, "#action-output")
+        assert "Chars: 二 三" in _content(app, "#action-output")
+        assert "All songs" in _content(app, "#action-output")
+        assert "does not activate cards" in _content(app, "#safety")
 
 
 @pytest.mark.anyio
-async def test_textual_dashboard_card_editor_loads_and_saves_override(runtime_factory) -> None:
+async def test_textual_dashboard_card_editor_loads_and_saves_source_edit(runtime_factory) -> None:
     runtime = runtime_factory(
         saved_notes=[
             CharacterNote(
@@ -219,16 +240,15 @@ async def test_textual_dashboard_card_editor_loads_and_saves_override(runtime_fa
         _input(app, "#card-sentence-english").value = "I like drinking water."
         await pilot.press("s")
 
-        assert "Saved card override" in _content(app, "#action-output")
+        assert "Saved source deck edit" in _content(app, "#action-output")
         assert "No live Anki state was changed" in _content(app, "#safety")
 
-    assert load_overrides(runtime.overrides_path)["水"] == {
-        "meaning": "water; liquid",
-        "sentence": "我喜欢喝水。",
-        "sentence_pinyin": "wǒ xǐ huān hē shuǐ.",
-        "sentence_english": "I like drinking water.",
-        "sentence_audio": "",
-    }
+    [note] = runtime.note_store.load()
+    assert note.meaning == "water; liquid"
+    assert note.sentence == "我喜欢喝水。"
+    assert note.sentence_pinyin == "wǒ xǐ huān hē shuǐ."
+    assert note.sentence_english == "I like drinking water."
+    assert note.sentence_audio == ""
 
 
 @pytest.mark.anyio

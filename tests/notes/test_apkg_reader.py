@@ -1,6 +1,11 @@
 from pathlib import Path
 
-from anki_chinese.notes import load_deck_hanzi_from_apkg, load_learned_hanzi_from_apkg, parse_apkg
+from anki_chinese.notes import (
+    load_deck_hanzi_from_apkg,
+    load_learned_hanzi_from_apkg,
+    parse_apkg,
+    update_note_fields_in_apkg,
+)
 
 
 def test_parse_apkg_extracts_all_fields(tmp_path, build_test_apkg) -> None:
@@ -141,6 +146,42 @@ def test_parse_apkg_uses_tags_for_lesson(tmp_path, build_test_apkg) -> None:
     notes = parse_apkg(apkg)
 
     assert notes[0].lesson == "RSH1-L01"
+
+
+def test_update_note_fields_in_apkg_updates_compressed_source(tmp_path, build_test_apkg) -> None:
+    apkg = build_test_apkg(
+        tmp_path / "test.apkg",
+        [{"hanzi": "水", "meaning": "water", "sentence_audio": "[sound:old.mp3]"}],
+    )
+
+    updated = update_note_fields_in_apkg(
+        apkg,
+        "水",
+        {
+            "meaning": "water; liquid",
+            "sentence": "我喝水。",
+            "sentence_audio": "",
+        },
+    )
+
+    [parsed] = parse_apkg(apkg)
+    assert updated.meaning == "water; liquid"
+    assert parsed.meaning == "water; liquid"
+    assert parsed.sentence == "我喝水。"
+    assert parsed.sentence_audio == ""
+
+
+def test_update_note_fields_in_apkg_updates_uncompressed_source(tmp_path, build_test_apkg) -> None:
+    apkg = build_test_apkg(
+        tmp_path / "test.apkg",
+        [{"hanzi": "水", "meaning": "water"}],
+        use_zstd=False,
+    )
+
+    update_note_fields_in_apkg(apkg, "水", {"meaning": "water; liquid"})
+
+    [parsed] = parse_apkg(apkg)
+    assert parsed.meaning == "water; liquid"
 
 
 # -- Learned hanzi (suspend status) -------------------------------------------

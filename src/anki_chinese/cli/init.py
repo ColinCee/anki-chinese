@@ -39,6 +39,7 @@ def _restore_cached_fields(
         previous = prev_by_hanzi.get(note.hanzi)
         if previous is None:
             continue
+        restored_sentence = False
         for field in _PRESERVE_FIELDS:
             current_value = getattr(note, field)
             previous_value = getattr(previous, field)
@@ -52,13 +53,15 @@ def _restore_cached_fields(
             elif current_value or not previous_value:
                 continue
             setattr(note, field, previous_value)
+            if field == "sentence":
+                restored_sentence = True
             restored += 1
         # If the previous note had a Gemini-generated sentence, its meaning
-        # and pinyin are the contextual values — prefer over parsed defaults.
-        if previous.sentence and previous.meaning:
+        # and pinyin are the contextual values for that restored sentence.
+        if restored_sentence and previous.meaning:
             note.meaning = previous.meaning
             restored += 1
-        if previous.sentence and previous.pinyin:
+        if restored_sentence and previous.pinyin:
             note.pinyin = previous.pinyin
             restored += 1
     return prev_by_hanzi, restored
@@ -143,7 +146,6 @@ def run_init(
         "init",
         inputs={
             "source_deck": input_file,
-            "overrides": runtime.overrides_path,
         },
         outputs={},
     )

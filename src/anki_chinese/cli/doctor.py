@@ -119,12 +119,6 @@ def _check_files(runtime: AppRuntime) -> list[DoctorCheck]:
             "" if runtime.source_deck_path.is_file() else "Export Anki to data/source/All Decks.apkg.",
         ),
         DoctorCheck(
-            "Manual overrides",
-            "ok" if runtime.overrides_path.is_file() else "warn",
-            str(runtime.overrides_path),
-            "" if runtime.overrides_path.is_file() else "This file is optional until you add overrides.",
-        ),
-        DoctorCheck(
             "Built deck output",
             "ok" if runtime.deck_output_path.is_file() else "warn",
             str(runtime.deck_output_path),
@@ -153,7 +147,6 @@ def _check_sync(runtime: AppRuntime) -> DoctorCheck:
     try:
         plan = plan_sync(
             source_deck_path=runtime.source_deck_path,
-            overrides_path=runtime.overrides_path,
             enriched_path=runtime.note_store.path,
             deck_output_path=runtime.deck_output_path,
             generated_audio_dir=runtime.generated_audio_dir,

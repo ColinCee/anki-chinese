@@ -2,10 +2,9 @@ import anki_chinese.notes.enrich as enrich_module
 from anki_chinese.notes import CharacterNote
 
 
-def _patch_defaults(monkeypatch, *, overrides=None):
-    """Patch track (suppress progress bar) and load_overrides with common defaults."""
+def _patch_defaults(monkeypatch):
+    """Patch track to suppress the progress bar."""
     monkeypatch.setattr(enrich_module, "track", lambda seq, **kw: seq)
-    monkeypatch.setattr(enrich_module, "load_overrides", lambda path: overrides or {})
 
 
 # ── Pinyin lookup ───────────────────────────────────────────────────────
@@ -90,21 +89,3 @@ def test_polyphonic_character_gets_review_flag_with_correct_message(
     assert "Polyphonic character" in enriched.review_reason
     assert "defaulted to 'lè'" in enriched.review_reason
 
-
-# ── Override application ────────────────────────────────────────────────
-
-
-def test_override_application_changes_fields(monkeypatch) -> None:
-    note = CharacterNote(hanzi="了", meaning="completed")
-
-    _patch_defaults(
-        monkeypatch,
-        overrides={"了": {"pinyin": "le", "meaning": "particle"}},
-    )
-    monkeypatch.setattr(enrich_module, "lookup_jyutping", lambda hanzi: ("liu5", False))
-    monkeypatch.setattr(enrich_module, "lookup_pinyin", lambda hanzi: ("liǎo", False))
-
-    [enriched] = enrich_module.enrich_notes([note])
-
-    assert enriched.pinyin == "le"
-    assert enriched.meaning == "particle"

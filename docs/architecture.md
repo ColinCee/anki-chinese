@@ -9,7 +9,7 @@ sentences/audio, and writes a regenerated `.apkg`.
 | Lane | Commands | Source of truth | What changes |
 | --- | --- | --- | --- |
 | Human navigation | `dashboard`, `doctor` | Local files, workflow state, optional AnkiConnect probe | Recommendations, safe previews, local actions, readiness checks. |
-| Content rebuild | `sync`, `card`, `sentences`, `keywords`, `audio`, `build` | Exported `.apkg` plus manual overrides | Fields, sentences, audio references, templates, generated package. |
+| Content rebuild | `sync`, `card`, `sentences`, `keywords`, `audio`, `build` | Exported `.apkg` | Fields, sentences, audio references, templates, generated package. |
 | Live activation | `songs learn`, `activate`, `songs activate` | Open Anki collection through AnkiConnect | Suspended state and optional tags. |
 
 Do not treat `data/source/All Decks.apkg` as current live state after

@@ -1,8 +1,13 @@
 """Note-focused modules: model, parsing, enrichment, storage, and reporting."""
 
-from .apkg_reader import load_deck_hanzi_from_apkg, load_learned_hanzi_from_apkg, parse_apkg
+from .apkg_reader import (
+    load_deck_hanzi_from_apkg,
+    load_learned_hanzi_from_apkg,
+    parse_apkg,
+    update_note_fields_in_apkg,
+)
 from .enrich import enrich_notes
-from .model import CharacterNote, apply_overrides, load_overrides, save_overrides
+from .model import CharacterNote
 from .pronunciation import (
     PhoneticConfuser,
     SentencePinyinIssue,
@@ -26,7 +31,6 @@ __all__ = [
     "JsonNoteStore",
     "PhoneticConfuser",
     "SentencePinyinIssue",
-    "apply_overrides",
     "audit_sentence_pinyin",
     "coverage_rows",
     "enrich_notes",
@@ -39,10 +43,9 @@ __all__ = [
     "load_learned_hanzi_from_apkg",
     "load_deck_hanzi_from_apkg",
     "load_notes",
-    "load_overrides",
     "parse_apkg",
     "prioritize_learned",
     "save_notes",
-    "save_overrides",
+    "update_note_fields_in_apkg",
     "validation_issues",
 ]

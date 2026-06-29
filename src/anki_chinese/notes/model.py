@@ -1,14 +1,10 @@
-"""
-+Data models and note-level override helpers.
-"""
+"""Data models for deck notes."""
 
 from __future__ import annotations
 
 __all__: list[str] = []  # Internal module — import from package instead
 
-import json
 from dataclasses import asdict, dataclass, field, fields
-from pathlib import Path
 from typing import Any
 
 
@@ -64,31 +60,3 @@ class CharacterNote:
         if "keyword" in data and "meaning" not in data:
             data = {**data, "meaning": data["keyword"]}
         return cls(**{key: value for key, value in data.items() if key in valid})
-
-
-def load_overrides(path: Path) -> dict[str, dict[str, Any]]:
-    """Load per-character overrides."""
-    if not path.exists():
-        return {}
-    with open(path, encoding="utf-8") as file:
-        return json.load(file)
-
-
-def save_overrides(overrides: dict[str, dict[str, Any]], path: Path) -> None:
-    """Save per-character overrides."""
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(overrides, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-
-
-def apply_overrides(note: CharacterNote, overrides: dict[str, dict[str, Any]]) -> CharacterNote:
-    """Apply manual overrides for a character, if any exist."""
-    if note.hanzi not in overrides:
-        return note
-    for key, value in overrides[note.hanzi].items():
-        if hasattr(note, key):
-            setattr(note, key, value)
-    return note

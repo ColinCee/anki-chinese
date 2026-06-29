@@ -185,7 +185,6 @@ def _with_pipeline_state(
 def plan_sync(
     *,
     source_deck_path: Path,
-    overrides_path: Path,
     enriched_path: Path,
     deck_output_path: Path,
     generated_audio_dir: Path,
@@ -211,14 +210,14 @@ def plan_sync(
         init_needed = True
         init_blocked = False
         init_reason = "Enriched state is missing."
-    elif _is_newer_than_any(enriched_path, [source_deck_path, overrides_path]):
+    elif _is_newer_than_any(enriched_path, [source_deck_path]):
         init_needed = True
         init_blocked = False
-        init_reason = "Source deck or manual overrides changed after enriched state."
+        init_reason = "Source deck changed after enriched state."
     else:
         init_needed = False
         init_blocked = False
-        init_reason = "Enriched state is newer than source deck and overrides."
+        init_reason = "Enriched state is newer than source deck."
 
     if init_blocked:
         stages.append(
@@ -233,7 +232,6 @@ def plan_sync(
                 pipeline_state,
                 inputs={
                     "source_deck": source_deck_path,
-                    "overrides": overrides_path,
                 },
                 outputs={},
             )
@@ -251,7 +249,6 @@ def plan_sync(
                 pipeline_state,
                 inputs={
                     "source_deck": source_deck_path,
-                    "overrides": overrides_path,
                 },
                 outputs={},
             )

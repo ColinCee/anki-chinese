@@ -14,8 +14,8 @@ the authoritative option list.
 | `uv run anki-chinese sync` | Execute needed `init`, `audio`, and `build` stages. |
 | `uv run anki-chinese status` | Show coverage, validation, learned-character, and audio health. |
 | `uv run anki-chinese review` | Inspect notes flagged for manual correction. |
-| `uv run anki-chinese card show 水` | Show saved note state and manual override. |
-| `uv run anki-chinese card set 水 ...` | Write manual override fields. |
+| `uv run anki-chinese card show 水` | Show saved note state. |
+| `uv run anki-chinese card set 水 ...` | Write fields into the source deck export. |
 | `uv run anki-chinese sentences` | Generate missing Gemini example sentences. |
 | `uv run anki-chinese keywords` | Repair contextual meanings with Gemini. |
 | `uv run anki-chinese audio` | Generate missing/stale audio. |
@@ -57,8 +57,7 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 
 | Path | Purpose |
 | --- | --- |
-| `data/source/All Decks.apkg` | Source deck export parsed by `init`/`sync`. |
-| `data/manual/overrides.json` | Per-character manual overrides, usually written by `card set`. |
+| `data/source/All Decks.apkg` | Source deck export parsed by `init`/`sync`; `card set` writes per-character edits here. |
 | `data/manual/example_words.json` | Manual example-word data for enrichment. |
 | `data/reference/` | Compact corpora such as HSK and CEDICT. |
 | `data/songs/lyrics/` | Curated lyric markdown files. |

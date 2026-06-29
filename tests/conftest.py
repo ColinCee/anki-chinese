@@ -186,6 +186,25 @@ def runtime_factory(tmp_path: Path):
             output_path.write_bytes(build_bytes)
             return output_path
 
+        def update_source_note(
+            path: Path,
+            hanzi: str,
+            updates: dict[str, object],
+        ) -> CharacterNote:
+            del path
+            for note in parsed:
+                if note.hanzi == hanzi:
+                    for field_name, value in updates.items():
+                        setattr(note, field_name, str(value))
+                    return deepcopy(note)
+            if note_store.exists():
+                for note in note_store.load():
+                    if note.hanzi == hanzi:
+                        for field_name, value in updates.items():
+                            setattr(note, field_name, str(value))
+                        return note
+            raise KeyError(hanzi)
+
         active_tts_provider = tts_provider or StubTTSProvider()
         generated_audio_dir = tmp_path / "data" / "build" / "audio" / "generated"
         if isinstance(active_tts_provider, StubTTSProvider):
@@ -193,7 +212,6 @@ def runtime_factory(tmp_path: Path):
 
         return AppRuntime(
             source_deck_path=source_deck_path,
-            overrides_path=tmp_path / "data" / "manual" / "overrides.json",
             song_lyrics_dir=tmp_path / "data" / "songs" / "lyrics",
             hsk_vocab_path=tmp_path / "data" / "reference" / "hsk_complete.min.json",
             note_store=note_store,
@@ -207,6 +225,7 @@ def runtime_factory(tmp_path: Path):
             load_deck_hanzi=load_deck_hanzi,
             enrich_notes=enrich_notes,
             build_deck=build_deck,
+            update_source_note=update_source_note,
             tts_provider_factory=lambda generated_audio_dir: active_tts_provider,
             tts_provider=active_tts_provider,
             console=console,

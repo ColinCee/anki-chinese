@@ -17,7 +17,6 @@ from ..workflows.sync import SyncPlan, plan_sync
 
 class DashboardRuntime(Protocol):
     source_deck_path: Path
-    overrides_path: Path
     song_lyrics_dir: Path
     note_store: JsonNoteStore
     generated_audio_dir: Path
@@ -114,7 +113,6 @@ WORKFLOW_ITEMS = (
 def current_sync_plan(runtime: DashboardRuntime) -> SyncPlan:
     return plan_sync(
         source_deck_path=runtime.source_deck_path,
-        overrides_path=runtime.overrides_path,
         enriched_path=runtime.note_store.path,
         deck_output_path=runtime.deck_output_path,
         generated_audio_dir=runtime.generated_audio_dir,

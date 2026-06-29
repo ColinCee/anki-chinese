@@ -110,7 +110,7 @@ def lookup_pinyin(hanzi: str, existing: str = "") -> tuple[str, bool]:
         (pinyin_string, needs_review)
 
     If the character is polyphonic, we still return pypinyin's default
-    but flag it for review.  The override system handles corrections.
+    but flag it for review. Use `card set` to write corrections into source.
     """
     if len(hanzi) != 1:
         result = pinyin(hanzi, style=Style.TONE, errors="ignore")

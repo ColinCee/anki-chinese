@@ -78,7 +78,6 @@ def _build_sync_plan(
 ) -> SyncPlan:
     return plan_sync(
         source_deck_path=runtime.source_deck_path,
-        overrides_path=runtime.overrides_path,
         enriched_path=runtime.note_store.path,
         deck_output_path=runtime.deck_output_path,
         generated_audio_dir=runtime.generated_audio_dir,

@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from importlib import import_module
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -17,7 +18,6 @@ from ..config import (
     ENRICHED_PATH,
     GENERATED_AUDIO_DIR,
     HSK_VOCAB_PATH,
-    OVERRIDES_PATH,
     PIPELINE_STATE_PATH,
     SAMPLE_AUDIO_DIR,
     SONG_LYRICS_DIR,
@@ -31,6 +31,7 @@ from ..notes import (
     load_deck_hanzi_from_apkg,
     load_learned_hanzi_from_apkg,
     parse_apkg,
+    update_note_fields_in_apkg,
 )
 from ..tui.dashboard import run_dashboard
 from .interaction import is_interactive_terminal
@@ -39,7 +40,6 @@ from .interaction import is_interactive_terminal
 @dataclass
 class AppRuntime:
     source_deck_path: Path
-    overrides_path: Path
     song_lyrics_dir: Path
     hsk_vocab_path: Path
     note_store: JsonNoteStore
@@ -53,6 +53,7 @@ class AppRuntime:
     load_deck_hanzi: Callable[[Path], set[str]]
     enrich_notes: Callable[..., list[CharacterNote]]
     build_deck: Callable[[list[CharacterNote]], Path]
+    update_source_note: Callable[[Path, str, dict[str, Any]], CharacterNote]
     tts_provider_factory: Callable[[Path], TTSProvider]
     tts_provider: TTSProvider
     sentence_tts_provider: TTSProvider | None = None
@@ -67,7 +68,6 @@ def _build_sentence_tts_provider(generated_audio_dir: Path) -> TTSProvider:
 def build_runtime() -> AppRuntime:
     return AppRuntime(
         source_deck_path=SOURCE_DECK_PATH,
-        overrides_path=OVERRIDES_PATH,
         song_lyrics_dir=SONG_LYRICS_DIR,
         hsk_vocab_path=HSK_VOCAB_PATH,
         note_store=JsonNoteStore(ENRICHED_PATH),
@@ -81,6 +81,7 @@ def build_runtime() -> AppRuntime:
         load_deck_hanzi=load_deck_hanzi_from_apkg,
         enrich_notes=enrich_notes,
         build_deck=build_deck,
+        update_source_note=update_note_fields_in_apkg,
         tts_provider_factory=lambda generated_audio_dir: build_tts_provider(
             generated_audio_dir=generated_audio_dir
         ),

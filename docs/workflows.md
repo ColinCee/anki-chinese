@@ -35,7 +35,7 @@ uv run anki-chinese card show 编
 uv run anki-chinese card show 编 --json
 ```
 
-Set manual overrides with `card set`:
+Write the source deck with `card set`:
 
 ```bash
 uv run anki-chinese card set 编 \
@@ -46,8 +46,9 @@ uv run anki-chinese card set 编 \
 uv run anki-chinese sync
 ```
 
-`card set` writes `data/manual/overrides.json`. Sentence changes clear the
-sentence-audio override so `sync` can regenerate matching audio.
+`card set` writes the note fields inside `data/source/All Decks.apkg`. Sentence
+changes clear the cached sentence-audio field so `sync` can regenerate matching
+audio.
 
 ## Review deck health
 
@@ -152,7 +153,7 @@ uv run anki-chinese activate undo latest
 
 ## Customize data or templates
 
-- Per-character overrides: prefer `card set`; batch edits can update `data/manual/overrides.json`.
+- Per-character content: prefer `card set`; batch edits should update `data/source/All Decks.apkg`.
 - Example words: edit `data/manual/example_words.json`, then run `sync`.
 - Card templates: edit `src/anki_chinese/cards/`, then run `sync`.
 - Deck/model identity: do not change `MODEL_ID`, `DECK_ID`, field order, or GUID behavior without a migration plan.

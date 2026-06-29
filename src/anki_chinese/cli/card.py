@@ -1,4 +1,4 @@
-"""`anki-chinese card` commands for per-character overrides."""
+"""`anki-chinese card` commands for per-character source-deck edits."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any
 import typer
 from rich.table import Table
 
-from ..notes import CharacterNote, load_overrides, save_overrides
+from ..notes import CharacterNote
 from .app import AppRuntime
 
 _EDITABLE_FIELDS = {
@@ -49,21 +49,8 @@ def _print_card(runtime: AppRuntime, hanzi: str, note: CharacterNote | None) -> 
     runtime.console.print(table)
 
 
-def _print_override(runtime: AppRuntime, hanzi: str, override: dict[str, Any]) -> None:
-    if not override:
-        runtime.console.print(f"[dim]No manual override for {hanzi}.[/dim]")
-        return
-
-    table = Table(title=f"Override · {hanzi}")
-    table.add_column("Field", style="cyan")
-    table.add_column("Value")
-    for field_name, value in override.items():
-        table.add_row(field_name, str(value))
-    runtime.console.print(table)
-
-
 def run_card_show(runtime: AppRuntime, hanzi: str, *, json_output: bool = False) -> None:
-    """Show saved note state and any manual override for a character."""
+    """Show saved note state for a character."""
 
     key = hanzi.strip()
     if not key:
@@ -71,26 +58,34 @@ def run_card_show(runtime: AppRuntime, hanzi: str, *, json_output: bool = False)
         raise typer.Exit(1)
 
     note = _find_note(runtime, key)
-    overrides = load_overrides(runtime.overrides_path)
-    override = overrides.get(key, {})
 
     if json_output:
         runtime.console.print_json(
             data={
                 "hanzi": key,
                 "note": note.to_dict() if note is not None else None,
-                "override": override,
             }
         )
         return
 
     _print_card(runtime, key, note)
-    _print_override(runtime, key, override)
 
 
 def _set_if_present(updates: dict[str, Any], field_name: str, value: str | None) -> None:
     if value is not None:
         updates[field_name] = value
+
+
+def _refresh_cached_note(runtime: AppRuntime, hanzi: str, updates: dict[str, Any]) -> None:
+    if not runtime.note_store.exists():
+        return
+    notes = runtime.note_store.load()
+    note = next((candidate for candidate in notes if candidate.hanzi == hanzi), None)
+    if note is None:
+        return
+    for field_name, value in updates.items():
+        setattr(note, field_name, value)
+    runtime.note_store.save(notes)
 
 
 def run_card_set(
@@ -105,7 +100,7 @@ def run_card_set(
     sentence_english: str | None = None,
     story: str | None = None,
 ) -> dict[str, Any]:
-    """Write manual overrides for a character."""
+    """Write source-deck fields for a character."""
 
     key = hanzi.strip()
     if not key:
@@ -122,34 +117,42 @@ def run_card_set(
     _set_if_present(updates, "story", story)
 
     if not updates:
-        runtime.console.print("[red]✗[/red] No override fields supplied")
+        runtime.console.print("[red]✗[/red] No edit fields supplied")
         raise typer.Exit(1)
 
     unknown = sorted(set(updates) - _EDITABLE_FIELDS)
     if unknown:
-        runtime.console.print(f"[red]✗[/red] Unsupported override fields: {', '.join(unknown)}")
+        runtime.console.print(f"[red]✗[/red] Unsupported edit fields: {', '.join(unknown)}")
         raise typer.Exit(1)
 
     if "sentence" in updates:
         updates["sentence_audio"] = ""
 
-    overrides = load_overrides(runtime.overrides_path)
-    current = dict(overrides.get(key, {}))
-    current.update(updates)
-    overrides[key] = current
-    save_overrides(overrides, runtime.overrides_path)
+    try:
+        runtime.update_source_note(runtime.source_deck_path, key, updates)
+    except FileNotFoundError:
+        runtime.console.print(f"[red]✗[/red] Source deck not found: {runtime.source_deck_path}")
+        raise typer.Exit(1) from None
+    except KeyError:
+        runtime.console.print(f"[red]✗[/red] {key} is not in source deck: {runtime.source_deck_path}")
+        raise typer.Exit(1) from None
+    except ValueError as error:
+        runtime.console.print(f"[red]✗[/red] {error}")
+        raise typer.Exit(1) from None
 
-    runtime.console.print(f"[green]✓[/green] Updated override for {key}")
+    _refresh_cached_note(runtime, key, updates)
+
+    runtime.console.print(f"[green]✓[/green] Updated source deck for {key}")
     for field_name in updates:
         runtime.console.print(f"  {field_name}")
     runtime.console.print("[dim]Run `anki-chinese sync --dry-run` to preview required rebuild steps.[/dim]")
-    return current
+    return dict(updates)
 
 
 def register(app: typer.Typer, runtime: AppRuntime) -> None:
     card_app = typer.Typer(
         name="card",
-        help="Inspect and edit per-character manual overrides.",
+        help="Inspect and edit per-character source-deck fields.",
         no_args_is_help=True,
     )
 
@@ -159,33 +162,33 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
         json_output: bool = typer.Option(
             False,
             "--json",
-            help="Print the card and override as machine-readable JSON.",
+            help="Print the card as machine-readable JSON.",
         ),
     ) -> None:
-        """Show saved note state and manual override."""
+        """Show saved note state."""
 
         run_card_show(runtime, hanzi, json_output=json_output)
 
     @card_app.command("set")
     def set_command(
         hanzi: str = typer.Argument(..., help="Character to edit."),
-        meaning: str | None = typer.Option(None, "--meaning", help="Override meaning."),
-        pinyin: str | None = typer.Option(None, "--pinyin", help="Override Mandarin pinyin."),
-        jyutping: str | None = typer.Option(None, "--jyutping", help="Override Cantonese jyutping."),
-        sentence: str | None = typer.Option(None, "--sentence", help="Override example sentence."),
+        meaning: str | None = typer.Option(None, "--meaning", help="Set meaning."),
+        pinyin: str | None = typer.Option(None, "--pinyin", help="Set Mandarin pinyin."),
+        jyutping: str | None = typer.Option(None, "--jyutping", help="Set Cantonese jyutping."),
+        sentence: str | None = typer.Option(None, "--sentence", help="Set example sentence."),
         sentence_pinyin: str | None = typer.Option(
             None,
             "--sentence-pinyin",
-            help="Override example sentence pinyin.",
+            help="Set example sentence pinyin.",
         ),
         sentence_english: str | None = typer.Option(
             None,
             "--sentence-english",
-            help="Override example sentence English.",
+            help="Set example sentence English.",
         ),
-        story: str | None = typer.Option(None, "--story", help="Override mnemonic story."),
+        story: str | None = typer.Option(None, "--story", help="Set mnemonic story."),
     ) -> None:
-        """Set manual override fields for a character."""
+        """Set source-deck fields for a character."""
 
         run_card_set(
             runtime,

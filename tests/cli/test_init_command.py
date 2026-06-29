@@ -110,8 +110,7 @@ def test_run_init_records_pipeline_state(runtime_factory) -> None:
 # -- Sentence-specific init tests ---------------------------------------------
 
 
-def test_restore_cached_fields_preserves_sentence_fields() -> None:
-    # Current note has Heisig meaning from re-parse; previous has Gemini meaning + pinyin
+def test_restore_cached_fields_preserves_source_meaning_when_sentence_exists() -> None:
     current = [CharacterNote(hanzi="水", meaning="water", pinyin="shuǐ", sentence="我喝水。")]
     previous = [
         CharacterNote(
@@ -132,12 +131,38 @@ def test_restore_cached_fields_preserves_sentence_fields() -> None:
     )
 
     note = current[0]
-    assert note.meaning == "drink"  # Gemini meaning preserved over Heisig
-    assert note.pinyin == "hē"  # Gemini pinyin preserved
+    assert note.meaning == "water"
+    assert note.pinyin == "shuǐ"
     assert note.sentence_pinyin == "wǒ hē shuǐ."
     assert note.sentence_english == "I drink water."
     assert note.sentence_audio == "[sound:cmn_sentence_我喝水。.mp3]"
-    assert restored == 5  # sentence_pinyin, sentence_english, sentence_audio, meaning, pinyin
+    assert restored == 3  # sentence_pinyin, sentence_english, sentence_audio
+
+
+def test_restore_cached_fields_preserves_context_when_sentence_is_restored() -> None:
+    current = [CharacterNote(hanzi="水", meaning="water", pinyin="shuǐ")]
+    previous = [
+        CharacterNote(
+            hanzi="水",
+            meaning="drink",
+            pinyin="hē",
+            sentence="我喝水。",
+            sentence_pinyin="wǒ hē shuǐ.",
+            sentence_english="I drink water.",
+        )
+    ]
+
+    _, restored = _restore_cached_fields(
+        current,
+        previous,
+        is_valid_audio_tag=lambda tag: True,
+    )
+
+    note = current[0]
+    assert note.meaning == "drink"
+    assert note.pinyin == "hē"
+    assert note.sentence == "我喝水。"
+    assert restored == 5
 
 
 def test_restore_cached_fields_does_not_overwrite_existing_sentence_data() -> None:
