@@ -9,7 +9,11 @@ from textual.widgets import Input, Static
 from anki_chinese.cli import AppRuntime, create_app
 from anki_chinese.notes import CharacterNote
 from anki_chinese.tui.dashboard import DashboardApp
-from anki_chinese.tui.dashboard_model import recommend_workflow
+from anki_chinese.tui.dashboard_model import (
+    build_song_browser_view,
+    format_song_browser_view,
+    recommend_workflow,
+)
 from anki_chinese.workflows.sync import SyncPlan, SyncStagePlan
 
 
@@ -160,6 +164,26 @@ def test_dashboard_recommendation_prefers_review_after_sync_is_current(runtime_f
     assert recommendation.title == "Improve cards"
 
 
+def test_song_browser_model_builds_structured_view(runtime_factory) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
+    _write_dashboard_song(runtime, title="已会", body="一", file_name="01-known.md")
+    _write_dashboard_song(runtime, title="测试歌", body="一二三喵", file_name="02-next.md")
+
+    view = build_song_browser_view(
+        runtime,
+        song_query="测试歌",
+        limit=20,
+        pace=20,
+        client_factory=lambda _api_key: StubSongKnowledgeClient(),
+    )
+
+    assert view.error is None
+    assert view.song_label == "测试歌 (测试)"
+    assert view.chars == ("二", "三")
+    assert view.rows[0].title == "已会"
+    assert "Recommended next song" in format_song_browser_view(view)
+
+
 @pytest.mark.anyio
 async def test_textual_dashboard_song_guidance(runtime_factory) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
@@ -201,7 +225,7 @@ async def test_textual_dashboard_runs_song_preview_without_activation(runtime_fa
     async with app.run_test(size=(80, 32)) as pilot:
         await pilot.press("down", "down", "down", "enter")
         _input(app, "#song-query").value = "测试歌"
-        with patch("anki_chinese.tui.dashboard.AnkiConnectClient", return_value=StubSongKnowledgeClient()):
+        with patch("anki_chinese.tui.dashboard_model.AnkiConnectClient", return_value=StubSongKnowledgeClient()):
             await pilot.press("x")
 
         assert "Recommended next song" in _content(app, "#action-output")

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Callable
 from io import StringIO
 from typing import cast
@@ -14,22 +13,16 @@ from textual.app import App, ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, Static
 
-from ..activation import AnkiConnectClient, AnkiConnectError
 from ..audio.state import audio_generation_profiles, build_audio_deck_state, load_audio_manifest
 from ..notes import CharacterNote, flagged_notes, validation_issues
-from ..songs import (
-    SongProgressRow,
-    analyze_song_corpus,
-    find_song,
-    load_songs,
-    plan_song_activation,
-)
 from ..workflows.sync import SyncPlan
 from .dashboard_model import (
     WORKFLOW_ITEMS,
     DashboardRuntime,
     WorkflowItem,
+    build_song_browser_view,
     current_sync_plan,
+    format_song_browser_view,
     recommend_workflow,
     sync_summary,
 )
@@ -475,114 +468,14 @@ class DashboardApp(App[None]):
         action_output.display = True
         action_output.update("[bold]Analyzing songs...[/bold]")
 
-        output = self._song_browser_output(song_query=song_query, limit=20, pace=20)
+        output = format_song_browser_view(
+            build_song_browser_view(self.runtime, song_query=song_query, limit=20, pace=20)
+        )
         self._render_commands(self.items[self._item_index("4")], preview=True)
         action_output.update(output)
         self.query_one("#safety", Static).update(
             "Preview only. This reads local AnkiConnect state but does not activate cards."
         )
-
-    def _song_browser_output(self, *, song_query: str, limit: int, pace: int) -> str:
-        songs = load_songs(self.runtime.song_lyrics_dir)
-        if not songs:
-            return f"[yellow]No lyric files found in {self.runtime.song_lyrics_dir}[/yellow]"
-
-        client = AnkiConnectClient(api_key=os.getenv("ANKICONNECT_API_KEY", "").strip())
-        try:
-            active_chars = client.find_active_characters()
-            studied_chars = client.find_studied_characters()
-            deck_order, deck_chars = client.find_all_deck_info()
-        except AnkiConnectError as error:
-            return "\n".join(
-                [
-                    "[red]Could not read live Anki state.[/red]",
-                    str(error),
-                    "Open Anki with AnkiConnect installed, then retry.",
-                ]
-            )
-
-        analysis = analyze_song_corpus(
-            songs,
-            active_chars=active_chars,
-            learned_chars=studied_chars,
-            deck_chars=deck_chars,
-            pace=pace,
-        )
-        selected_row = self._selected_song_row(analysis.sequence, song_query=song_query)
-        if selected_row is None:
-            return f"[yellow]Song not found or ambiguous:[/yellow] {song_query}"
-
-        activation_plan = plan_song_activation(
-            selected_row.song,
-            active_chars=active_chars,
-            deck_chars=deck_chars,
-            deck_order=deck_order,
-            limit=limit,
-        )
-        return "\n".join(
-            [
-                "[bold]Recommended next song[/bold]",
-                f"{selected_row.song.label}",
-                f"Why: {self._song_reason(selected_row, song_query=song_query)}",
-                "",
-                "[bold]Next batch[/bold]",
-                f"New chars: {len(activation_plan.chars)}",
-                f"Already active: {len(activation_plan.already_active)}",
-                f"Not in deck: {len(activation_plan.non_deck_chars)}",
-                f"Chars: {' '.join(activation_plan.chars) if activation_plan.chars else 'none'}",
-                "",
-                "[bold]Song detail[/bold]",
-                f"Known in song: {selected_row.known}/{selected_row.chars} ({selected_row.known_percent}%)",
-                f"New in deck: {len(selected_row.new_deck_chars)}",
-                f"Would activate: {len(selected_row.activation_deck_chars)} chars before limit",
-                f"Estimated days at pace {pace}: ~{selected_row.days}",
-                "",
-                "[bold]All songs[/bold]",
-                *self._song_browser_rows(analysis.sequence, selected_row=selected_row),
-                "",
-                "[dim]Enter a song title above and press x to inspect a different song. Activation remains a separate confirm-gated step.[/dim]",
-            ]
-        )
-
-    def _selected_song_row(
-        self,
-        rows: list[SongProgressRow],
-        *,
-        song_query: str,
-    ) -> SongProgressRow | None:
-        if song_query:
-            songs = [row.song for row in rows]
-            song = find_song(songs, song_query)
-            if song is None:
-                return None
-            return next(row for row in rows if row.song == song)
-        return next((row for row in rows if row.activation_deck_chars), rows[0] if rows else None)
-
-    def _song_reason(self, row: SongProgressRow, *, song_query: str) -> str:
-        if song_query:
-            return "selected song"
-        if row.activation_deck_chars:
-            return "first song with inactive in-deck characters"
-        return "all songs are already active or outside the deck"
-
-    def _song_browser_rows(
-        self,
-        rows: list[SongProgressRow],
-        *,
-        selected_row: SongProgressRow,
-    ) -> list[str]:
-        rendered = ["Song | Known | New | Activate | Non-deck | Ready"]
-        for row in rows[:12]:
-            marker = ">" if row == selected_row else " "
-            ready = "next" if row == selected_row else ("learned" if not row.activation_deck_chars else "later")
-            rendered.append(
-                f"{marker} {row.song.title} | {row.known_percent}% | "
-                f"{len(row.new_deck_chars)} | {len(row.activation_deck_chars)} | "
-                f"{len(row.non_deck_chars)} | {ready}"
-            )
-        if len(rows) > 12:
-            rendered.append(f"... {len(rows) - 12} more songs")
-        return rendered
 
     def _run_content_audio_action(self) -> None:
         self.query_one("#menu-view", Vertical).display = False

@@ -3,15 +3,25 @@
 from __future__ import annotations
 
 import json
+import os
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
 from rich.console import Console
 
+from ..activation import AnkiConnectClient, AnkiConnectError
 from ..audio import TTSProvider
 from ..audio.state import audio_generation_profiles, build_audio_deck_state, load_audio_manifest
 from ..notes import JsonNoteStore, flagged_notes, validation_issues
+from ..songs import (
+    SongProgressRow,
+    analyze_song_corpus,
+    find_song,
+    load_songs,
+    plan_song_activation,
+)
 from ..workflows.sync import SyncPlan, plan_sync
 
 
@@ -43,6 +53,45 @@ class DashboardRecommendation:
     workflow_key: str
     title: str
     reason: str
+
+
+class SongKnowledgeClient(Protocol):
+    def find_active_characters(self) -> set[str]: ...
+
+    def find_studied_characters(self) -> set[str]: ...
+
+    def find_all_deck_info(self) -> tuple[list[str], set[str]]: ...
+
+
+@dataclass(frozen=True)
+class SongBrowserRowView:
+    title: str
+    known_percent: int
+    new_deck_count: int
+    activation_count: int
+    non_deck_count: int
+    ready: str
+    selected: bool
+
+
+@dataclass(frozen=True)
+class SongBrowserView:
+    error: str | None
+    song_label: str = ""
+    reason: str = ""
+    new_chars_count: int = 0
+    already_active_count: int = 0
+    non_deck_count: int = 0
+    chars: tuple[str, ...] = ()
+    known: int = 0
+    total_chars: int = 0
+    known_percent: int = 0
+    new_deck_count: int = 0
+    activation_count: int = 0
+    pace: int = 0
+    days: int = 0
+    rows: tuple[SongBrowserRowView, ...] = ()
+    hidden_row_count: int = 0
 
 
 WORKFLOW_ITEMS = (
@@ -137,6 +186,162 @@ def sync_summary(plan: SyncPlan) -> str:
     if skipped:
         parts.append(f"{skipped} skipped")
     return ", ".join(parts)
+
+
+def build_song_browser_view(
+    runtime: DashboardRuntime,
+    *,
+    song_query: str,
+    limit: int,
+    pace: int,
+    client_factory: Callable[[str], SongKnowledgeClient] | None = None,
+) -> SongBrowserView:
+    songs = load_songs(runtime.song_lyrics_dir)
+    if not songs:
+        return SongBrowserView(error=f"[yellow]No lyric files found in {runtime.song_lyrics_dir}[/yellow]")
+
+    factory = client_factory or _default_song_client
+    client = factory(os.getenv("ANKICONNECT_API_KEY", "").strip())
+    try:
+        active_chars = client.find_active_characters()
+        studied_chars = client.find_studied_characters()
+        deck_order, deck_chars = client.find_all_deck_info()
+    except AnkiConnectError as error:
+        return SongBrowserView(
+            error="\n".join(
+                [
+                    "[red]Could not read live Anki state.[/red]",
+                    str(error),
+                    "Open Anki with AnkiConnect installed, then retry.",
+                ]
+            )
+        )
+
+    analysis = analyze_song_corpus(
+        songs,
+        active_chars=active_chars,
+        learned_chars=studied_chars,
+        deck_chars=deck_chars,
+        pace=pace,
+    )
+    selected_row = _selected_song_row(analysis.sequence, song_query=song_query)
+    if selected_row is None:
+        return SongBrowserView(error=f"[yellow]Song not found or ambiguous:[/yellow] {song_query}")
+
+    activation_plan = plan_song_activation(
+        selected_row.song,
+        active_chars=active_chars,
+        deck_chars=deck_chars,
+        deck_order=deck_order,
+        limit=limit,
+    )
+    rows = _song_browser_rows(analysis.sequence, selected_row=selected_row)
+    return SongBrowserView(
+        error=None,
+        song_label=selected_row.song.label,
+        reason=_song_reason(selected_row, song_query=song_query),
+        new_chars_count=len(activation_plan.chars),
+        already_active_count=len(activation_plan.already_active),
+        non_deck_count=len(activation_plan.non_deck_chars),
+        chars=activation_plan.chars,
+        known=selected_row.known,
+        total_chars=selected_row.chars,
+        known_percent=selected_row.known_percent,
+        new_deck_count=len(selected_row.new_deck_chars),
+        activation_count=len(selected_row.activation_deck_chars),
+        pace=pace,
+        days=selected_row.days,
+        rows=tuple(rows),
+        hidden_row_count=max(len(analysis.sequence) - len(rows), 0),
+    )
+
+
+def format_song_browser_view(view: SongBrowserView) -> str:
+    if view.error is not None:
+        return view.error
+
+    rows = ["Song | Known | New | Activate | Non-deck | Ready"]
+    for row in view.rows:
+        marker = ">" if row.selected else " "
+        rows.append(
+            f"{marker} {row.title} | {row.known_percent}% | "
+            f"{row.new_deck_count} | {row.activation_count} | {row.non_deck_count} | {row.ready}"
+        )
+    if view.hidden_row_count:
+        rows.append(f"... {view.hidden_row_count} more songs")
+
+    return "\n".join(
+        [
+            "[bold]Recommended next song[/bold]",
+            view.song_label,
+            f"Why: {view.reason}",
+            "",
+            "[bold]Next batch[/bold]",
+            f"New chars: {view.new_chars_count}",
+            f"Already active: {view.already_active_count}",
+            f"Not in deck: {view.non_deck_count}",
+            f"Chars: {' '.join(view.chars) if view.chars else 'none'}",
+            "",
+            "[bold]Song detail[/bold]",
+            f"Known in song: {view.known}/{view.total_chars} ({view.known_percent}%)",
+            f"New in deck: {view.new_deck_count}",
+            f"Would activate: {view.activation_count} chars before limit",
+            f"Estimated days at pace {view.pace}: ~{view.days}",
+            "",
+            "[bold]All songs[/bold]",
+            *rows,
+            "",
+            "[dim]Enter a song title above and press x to inspect a different song. Activation remains a separate confirm-gated step.[/dim]",
+        ]
+    )
+
+
+def _default_song_client(api_key: str) -> SongKnowledgeClient:
+    return AnkiConnectClient(api_key=api_key)
+
+
+def _selected_song_row(
+    rows: list[SongProgressRow],
+    *,
+    song_query: str,
+) -> SongProgressRow | None:
+    if song_query:
+        songs = [row.song for row in rows]
+        song = find_song(songs, song_query)
+        if song is None:
+            return None
+        return next(row for row in rows if row.song == song)
+    return next((row for row in rows if row.activation_deck_chars), rows[0] if rows else None)
+
+
+def _song_reason(row: SongProgressRow, *, song_query: str) -> str:
+    if song_query:
+        return "selected song"
+    if row.activation_deck_chars:
+        return "first song with inactive in-deck characters"
+    return "all songs are already active or outside the deck"
+
+
+def _song_browser_rows(
+    rows: list[SongProgressRow],
+    *,
+    selected_row: SongProgressRow,
+) -> list[SongBrowserRowView]:
+    rendered: list[SongBrowserRowView] = []
+    for row in rows[:12]:
+        ready = "next" if row == selected_row else ("learned" if not row.activation_deck_chars else "later")
+        rendered.append(
+            SongBrowserRowView(
+                title=row.song.title,
+                known_percent=row.known_percent,
+                new_deck_count=len(row.new_deck_chars),
+                activation_count=len(row.activation_deck_chars),
+                non_deck_count=len(row.non_deck_chars),
+                ready=ready,
+                selected=row == selected_row,
+            )
+        )
+    return rendered
 
 
 def recommend_workflow(runtime: DashboardRuntime, plan: SyncPlan) -> DashboardRecommendation:
