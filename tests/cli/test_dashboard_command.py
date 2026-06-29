@@ -240,6 +240,8 @@ def test_song_browser_model_builds_structured_view(runtime_factory) -> None:
 
     assert view.error is None
     assert view.song_label == "测试歌 (测试)"
+    assert view.selected_index == 1
+    assert view.song_titles == ("已会", "测试歌")
     assert view.chars == ("二", "三")
     assert view.rows[0].title == "已会"
     assert "Recommended next song" in format_song_browser_view(view)
@@ -296,6 +298,29 @@ async def test_textual_dashboard_runs_song_preview_without_activation(runtime_fa
         assert "Chars: 二 三" in _content(app, "#action-output")
         assert "All songs" in _content(app, "#action-output")
         assert "does not activate cards" in _content(app, "#safety")
+
+
+@pytest.mark.anyio
+async def test_textual_dashboard_song_browser_moves_between_songs(runtime_factory) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
+    _write_dashboard_song(runtime, title="已会", body="一", file_name="01-known.md")
+    _write_dashboard_song(runtime, title="测试歌", body="一二三", file_name="02-next.md")
+    app = DashboardApp(runtime)
+
+    async with app.run_test(size=(80, 32)) as pilot:
+        await pilot.press("down", "down", "down", "enter")
+        with patch("anki_chinese.tui.dashboard_model.AnkiConnectClient", return_value=StubSongKnowledgeClient()):
+            await pilot.press("x")
+            assert _input(app, "#song-query").value == ""
+            assert "测试歌" in _content(app, "#action-output")
+
+            await pilot.press("n")
+            assert _input(app, "#song-query").value == "已会"
+            assert "已会" in _content(app, "#action-output")
+
+            await pilot.press("b")
+            assert _input(app, "#song-query").value == "测试歌"
+            assert "测试歌" in _content(app, "#action-output")
 
 
 @pytest.mark.anyio

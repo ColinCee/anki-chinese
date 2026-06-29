@@ -131,6 +131,8 @@ class DashboardApp(App[None]):
         ("s", "save_card", "Save card"),
         ("r", "refresh", "Refresh"),
         ("a", "toggle_advanced", "Advanced"),
+        ("n", "next_song", "Next song"),
+        ("b", "previous_song", "Previous song"),
     ]
 
     def __init__(self, runtime: DashboardRuntime) -> None:
@@ -216,6 +218,14 @@ class DashboardApp(App[None]):
         detail_view = self.query_one("#detail-view", Vertical)
         if detail_view.display:
             self._render_commands(self.items[self.current_index])
+
+    def action_next_song(self) -> None:
+        if self._active_item().key == "4":
+            self._cycle_song_selection(1)
+
+    def action_previous_song(self) -> None:
+        if self._active_item().key == "4":
+            self._cycle_song_selection(-1)
 
     def action_go_back(self) -> None:
         self._show_menu()
@@ -471,14 +481,34 @@ class DashboardApp(App[None]):
         action_output.display = True
         action_output.update("[bold]Analyzing songs...[/bold]")
 
-        output = format_song_browser_view(
-            build_song_browser_view(self.runtime, song_query=song_query, limit=20, pace=20)
-        )
+        output = self._render_song_browser(song_query=song_query)
         self._render_commands(self.items[self._item_index("4")], preview=True)
         action_output.update(output)
         self.query_one("#safety", Static).update(
             "Preview only. This reads local AnkiConnect state but does not activate cards."
         )
+
+    def _render_song_browser(self, *, song_query: str) -> str:
+        return format_song_browser_view(build_song_browser_view(self.runtime, song_query=song_query, limit=20, pace=20))
+
+    def _cycle_song_selection(self, offset: int) -> None:
+        action_output = self.query_one("#action-output", Static)
+        if not action_output.display:
+            self._run_song_preview_action()
+            return
+        current = build_song_browser_view(
+            self.runtime,
+            song_query=self._card_input_value("#song-query"),
+            limit=20,
+            pace=20,
+        )
+        if current.error is not None or not current.song_titles:
+            action_output.update(format_song_browser_view(current))
+            return
+        next_index = (current.selected_index + offset) % len(current.song_titles)
+        next_title = current.song_titles[next_index]
+        self._set_card_input_value("#song-query", next_title)
+        action_output.update(self._render_song_browser(song_query=next_title))
 
     def _run_content_audio_action(self) -> None:
         self.query_one("#menu-view", Vertical).display = False

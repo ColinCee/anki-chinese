@@ -103,6 +103,8 @@ class SongBrowserRowView:
 @dataclass(frozen=True)
 class SongBrowserView:
     error: str | None
+    song_titles: tuple[str, ...] = ()
+    selected_index: int = -1
     song_label: str = ""
     reason: str = ""
     new_chars_count: int = 0
@@ -309,8 +311,11 @@ def build_song_browser_view(
         limit=limit,
     )
     rows = _song_browser_rows(analysis.sequence, selected_row=selected_row)
+    selected_index = next(index for index, row in enumerate(analysis.sequence) if row == selected_row)
     return SongBrowserView(
         error=None,
+        song_titles=tuple(row.song.title for row in analysis.sequence),
+        selected_index=selected_index,
         song_label=selected_row.song.label,
         reason=_song_reason(selected_row, song_query=song_query),
         new_chars_count=len(activation_plan.chars),
@@ -364,7 +369,7 @@ def format_song_browser_view(view: SongBrowserView) -> str:
             "[bold]All songs[/bold]",
             *rows,
             "",
-            "[dim]Enter a song title above and press x to inspect a different song. Activation remains a separate confirm-gated step.[/dim]",
+            "[dim]Enter a song title, press x to inspect, or use n/b to move. Activation remains confirm-gated.[/dim]",
         ]
     )
 
