@@ -22,7 +22,7 @@ from ..songs import (
     load_songs,
     plan_song_activation,
 )
-from ..workflows.sync import SyncPlan, plan_sync
+from ..workflows.sync import SyncPlan, SyncStagePlan, plan_sync
 
 
 class DashboardRuntime(Protocol):
@@ -61,6 +61,24 @@ class TodayView:
     recommendation: DashboardRecommendation
     primary_action: str
     safety_level: str
+
+
+@dataclass(frozen=True)
+class RebuildStageView:
+    label: str
+    status: str
+    reason: str
+    action: str
+    marker: str
+
+
+@dataclass(frozen=True)
+class RebuildView:
+    sync_state: str
+    generated_deck: str
+    can_run: bool
+    run_label: str
+    stages: tuple[RebuildStageView, ...]
 
 
 class SongKnowledgeClient(Protocol):
@@ -205,6 +223,42 @@ def today_view(runtime: DashboardRuntime, plan: SyncPlan) -> TodayView:
         primary_action=item.primary_action,
         safety_level=_workflow_safety_level(recommendation.workflow_key),
     )
+
+
+def build_rebuild_view(runtime: DashboardRuntime, plan: SyncPlan) -> RebuildView:
+    stages = tuple(_rebuild_stage_view(stage) for stage in plan.stages)
+    can_run = any(stage.status in {"needed", "skipped"} for stage in plan.stages) and not any(
+        stage.status == "blocked" for stage in plan.stages
+    )
+    deck_state = "present" if runtime.deck_output_path.is_file() else "not built yet"
+    return RebuildView(
+        sync_state=sync_summary(plan),
+        generated_deck=f"{runtime.deck_output_path} ({deck_state})",
+        can_run=can_run,
+        run_label="Run local rebuild" if can_run else "No rebuild can run now",
+        stages=stages,
+    )
+
+
+def format_rebuild_view(view: RebuildView) -> str:
+    lines = [
+        "[bold]Rebuild plan[/bold]",
+        f"State: {view.sync_state}",
+        f"Generated deck: {view.generated_deck}",
+        f"Action: {view.run_label}",
+        "",
+        "[bold]Stages[/bold]",
+    ]
+    for stage in view.stages:
+        lines.extend(
+            [
+                f"{stage.marker} {stage.label}",
+                f"  Status: {stage.status}",
+                f"  Why: {stage.reason}",
+                f"  Next: {stage.action}",
+            ]
+        )
+    return "\n".join(lines)
 
 
 def build_song_browser_view(
@@ -440,3 +494,25 @@ def _workflow_safety_level(workflow_key: str) -> str:
     if workflow_key == "5":
         return "Read-only checks by default; restore actions need confirmation."
     return "Preview first; confirm before mutation."
+
+
+def _rebuild_stage_view(stage: SyncStagePlan) -> RebuildStageView:
+    if stage.status == "up_to_date":
+        marker = "[green]✓[/green]"
+        action = "current"
+    elif stage.status == "needed":
+        marker = "[yellow]→[/yellow]"
+        action = "will run when local rebuild starts"
+    elif stage.status == "blocked":
+        marker = "[red]![/red]"
+        action = "blocked; fix precondition first"
+    else:
+        marker = "[dim]-[/dim]"
+        action = "skipped unless dependency changes"
+    return RebuildStageView(
+        label=stage.label,
+        status=stage.status,
+        reason=stage.reason,
+        action=action,
+        marker=marker,
+    )

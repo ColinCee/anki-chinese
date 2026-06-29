@@ -10,7 +10,9 @@ from anki_chinese.cli import AppRuntime, create_app
 from anki_chinese.notes import CharacterNote
 from anki_chinese.tui.dashboard import DashboardApp
 from anki_chinese.tui.dashboard_model import (
+    build_rebuild_view,
     build_song_browser_view,
+    format_rebuild_view,
     format_song_browser_view,
     recommend_workflow,
     today_view,
@@ -117,8 +119,9 @@ async def test_textual_dashboard_renders_sync_plan(runtime_factory) -> None:
         assert "Inspect cards" not in _content(app, "#workflow-2 Label")
         await pilot.press("enter")
         assert "Preview: Rebuild deck" in _content(app, "#detail-title")
-        assert "Sync plan" in _content(app, "#sync-stages")
-        assert "Reason:" in _content(app, "#sync-stages")
+        assert "Rebuild plan" in _content(app, "#sync-stages")
+        assert "Generated deck:" in _content(app, "#sync-stages")
+        assert "Why:" in _content(app, "#sync-stages")
         assert app.query_one("#commands").display is False
         assert "uv run anki-chinese sync --dry-run" not in _content(app, "#commands")
         await pilot.press("a")
@@ -134,7 +137,8 @@ async def test_textual_dashboard_runs_sync_action(runtime_factory) -> None:
     async with app.run_test(size=(70, 28)) as pilot:
         await pilot.press("x")
         assert "Run: Rebuild deck" in _content(app, "#detail-title")
-        assert "Sync output" in _content(app, "#action-output")
+        assert "Rebuild result" in _content(app, "#action-output")
+        assert "Generated deck:" in _content(app, "#action-output")
         assert "Sync complete" in _content(app, "#action-output")
         assert runtime.deck_output_path.is_file()
         assert "No live Anki state was changed" in _content(app, "#safety")
@@ -189,6 +193,36 @@ def test_today_view_includes_recommendation_action_and_safety(runtime_factory) -
     assert view.recommendation.title == "Rebuild deck"
     assert view.primary_action == "Preview sync plan"
     assert view.safety_level == "Safe local rebuild; no live Anki mutation."
+
+
+def test_rebuild_view_formats_stage_progress(runtime_factory) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
+    plan = SyncPlan(
+        stages=[
+            SyncStagePlan(
+                id="init",
+                label="Parse + enrich",
+                status="needed",
+                reason="source changed",
+                command="anki-chinese init",
+            ),
+            SyncStagePlan(
+                id="build",
+                label="Build deck",
+                status="blocked",
+                reason="parse must run first",
+                command="anki-chinese build",
+            ),
+        ]
+    )
+
+    view = build_rebuild_view(runtime, plan)
+    rendered = format_rebuild_view(view)
+
+    assert view.can_run is False
+    assert "Rebuild plan" in rendered
+    assert "Parse + enrich" in rendered
+    assert "blocked; fix precondition first" in rendered
 
 
 def test_song_browser_model_builds_structured_view(runtime_factory) -> None:

@@ -21,8 +21,10 @@ from .dashboard_model import (
     DashboardRuntime,
     TodayView,
     WorkflowItem,
+    build_rebuild_view,
     build_song_browser_view,
     current_sync_plan,
+    format_rebuild_view,
     format_song_browser_view,
     sync_summary,
     today_view,
@@ -326,17 +328,7 @@ class DashboardApp(App[None]):
         if self.plan is None:
             self._refresh_plan()
         assert self.plan is not None
-        lines = ["[bold]Sync plan[/bold]"]
-        for stage in self.plan.stages:
-            lines.extend(
-                [
-                    "",
-                    f"[cyan]{stage.label}[/cyan]",
-                    f"  Status: {stage.status}",
-                    f"  Reason: {stage.reason}",
-                ]
-            )
-        sync_stages.update("\n".join(lines))
+        sync_stages.update(format_rebuild_view(build_rebuild_view(self.runtime, self.plan)))
 
     def _clear_action_output(self) -> None:
         action_output = self.query_one("#action-output", Static)
@@ -355,7 +347,7 @@ class DashboardApp(App[None]):
         action_output = self.query_one("#action-output", Static)
         action_output.display = True
         if item.key == "1":
-            action_output.update("[bold]Ready:[/bold] Press x to run `uv run anki-chinese sync` in-place.")
+            action_output.update("[bold]Ready:[/bold] Press x to run local rebuild in-place.")
             return
         if item.key == "5":
             action_output.update(
@@ -414,7 +406,7 @@ class DashboardApp(App[None]):
         self.query_one("#menu-view", Vertical).display = False
         self.query_one("#detail-view", Vertical).display = True
         self.query_one("#detail-title", Static).update("Run: Rebuild deck")
-        self.query_one("#detail-body", Static).update("Running `uv run anki-chinese sync` in-place.")
+        self.query_one("#detail-body", Static).update("Running local rebuild workflow in-place.")
         action_output = self.query_one("#action-output", Static)
         action_output.display = True
         action_output.update("[bold]Running sync...[/bold]")
@@ -425,7 +417,12 @@ class DashboardApp(App[None]):
         self._refresh_plan()
         self._render_sync_stages(show=True)
         self._render_commands(self.items[self._item_index("1")], preview=True)
-        action_output.update("\n".join(["[bold]Sync output[/bold]", output]))
+        deck_state = (
+            f"Generated deck: {self.runtime.deck_output_path}"
+            if self.runtime.deck_output_path.is_file()
+            else f"Generated deck missing: {self.runtime.deck_output_path}"
+        )
+        action_output.update("\n".join(["[bold]Rebuild result[/bold]", deck_state, "", output]))
         self.query_one("#safety", Static).update("No live Anki state was changed.")
 
     def _run_health_action(self) -> None:
