@@ -127,6 +127,7 @@ class DashboardApp(App[None]):
         ("l", "load_card", "Load card"),
         ("s", "save_card", "Save card"),
         ("r", "refresh", "Refresh"),
+        ("a", "toggle_advanced", "Advanced"),
     ]
 
     def __init__(self, runtime: DashboardRuntime) -> None:
@@ -136,6 +137,7 @@ class DashboardApp(App[None]):
         self.items = WORKFLOW_ITEMS
         self.current_index = 0
         self.recommended_key = "1"
+        self.show_advanced = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -144,7 +146,7 @@ class DashboardApp(App[None]):
             with Vertical(id="menu-view"):
                 yield Label("Dashboard cockpit", id="workflow-heading")
                 yield Static("", id="primary-action")
-                yield Static("Other workflows: choose one, then press Enter for details.", id="menu-help")
+                yield Static("Other workflows: choose one, then press Enter for details. Press a for advanced details.", id="menu-help")
                 yield ListView(
                     *[
                         ListItem(
@@ -177,7 +179,7 @@ class DashboardApp(App[None]):
                         yield Input(placeholder="Song title or blank for next recommended song", id="song-query")
                     yield Static("", id="commands")
                     yield Static("", id="safety")
-                yield Static("p: preview · x: run safe action · Esc: back · r: refresh · q: quit", id="back-hint")
+                yield Static("p: preview · x: run safe action · a: advanced · Esc: back · r: refresh · q: quit", id="back-hint")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -206,6 +208,12 @@ class DashboardApp(App[None]):
         if self._active_item().key == "2":
             self._save_card_editor()
 
+    def action_toggle_advanced(self) -> None:
+        self.show_advanced = not self.show_advanced
+        detail_view = self.query_one("#detail-view", Vertical)
+        if detail_view.display:
+            self._render_commands(self.items[self.current_index])
+
     def action_go_back(self) -> None:
         self._show_menu()
 
@@ -229,7 +237,7 @@ class DashboardApp(App[None]):
                     f"Recommended: [bold]{recommendation.title}[/bold]",
                     f"Why: {recommendation.reason}",
                     f"Primary action: [bold]{self.items[self._item_index(recommendation.workflow_key)].primary_action}[/bold]",
-                    f"Command equivalent: [bold]{self._primary_command_equivalent(recommendation.workflow_key)}[/bold]",
+                    "Advanced: press [bold]a[/bold] for command equivalents and raw details.",
                 ]
             )
         )
@@ -255,12 +263,6 @@ class DashboardApp(App[None]):
             suffix = "  [green]Recommended[/green]" if item.key == self.recommended_key else ""
             label.update(f"{item.key}. {item.label}{suffix}")
 
-    def _primary_command_equivalent(self, workflow_key: str) -> str:
-        if workflow_key == "1":
-            return "uv run anki-chinese sync --dry-run"
-        item = self.items[self._item_index(workflow_key)]
-        return item.commands[0] if item.commands else "No command equivalent"
-
     def _refresh_primary_action(self, title: str, reason: str) -> None:
         item = self.items[self._item_index(self.recommended_key)]
         self.query_one("#primary-action", Static).update(
@@ -269,7 +271,7 @@ class DashboardApp(App[None]):
                     f"[bold]Recommended:[/bold] {title}",
                     f"[bold]Why:[/bold] {reason}",
                     f"[bold]Action:[/bold] {item.primary_action}",
-                    "[dim]Press p to preview, x to run safe actions, or Enter on a row for details.[/dim]",
+                    "[dim]Press p to preview, x to run safe actions, Enter for details, a for advanced.[/dim]",
                 ]
             )
         )
@@ -363,7 +365,7 @@ class DashboardApp(App[None]):
         if item.key == "3":
             action_output.update("[bold]Ready:[/bold] Press x to inspect generated content and audio state.")
             return
-        action_output.update("[dim]No in-place run action yet for this workflow; use the command equivalents below.[/dim]")
+        action_output.update("[dim]No in-place run action yet for this workflow. Press a for command equivalents.[/dim]")
 
     def _capture_runtime_output(self, action: Callable[[], object]) -> str:
         original_console = self.runtime.console
@@ -398,7 +400,7 @@ class DashboardApp(App[None]):
         action_output.display = True
         action_output.update(
             "[yellow]No safe in-place action is wired for this workflow yet.[/yellow]\n"
-            "Use the command equivalents for now."
+            "Press a for command equivalents."
         )
 
     def _run_sync_action(self) -> None:
@@ -630,12 +632,18 @@ class DashboardApp(App[None]):
 
     def _render_commands(self, item: WorkflowItem, *, preview: bool = False) -> None:
         commands = self.query_one("#commands", Static)
+        if not self.show_advanced:
+            commands.display = False
+            commands.update("")
+            return
+
+        commands.display = True
         if item.key == "1":
             assert self.plan is not None
             if self.plan.required_commands:
                 rendered = "\n".join(
                     [
-                        "[bold]Command equivalents[/bold]",
+                        "[bold]Advanced: command equivalents[/bold]",
                         "  uv run anki-chinese sync --dry-run",
                         *[f"  uv run {command}" for command in self.plan.required_commands],
                     ]
@@ -643,6 +651,7 @@ class DashboardApp(App[None]):
             else:
                 rendered = "\n".join(
                     [
+                        "[bold]Advanced: command equivalents[/bold]",
                         "[green]No sync steps required[/green]",
                         "  uv run anki-chinese sync --dry-run",
                     ]
@@ -651,7 +660,7 @@ class DashboardApp(App[None]):
             return
 
         if item.commands:
-            title = "Command equivalents" if preview else "Advanced command equivalents"
+            title = "Advanced: command equivalents" if preview else "Advanced: command equivalents"
             rendered = "\n".join([f"[bold]{title}[/bold]", *[f"  {command}" for command in item.commands]])
         else:
             rendered = ""

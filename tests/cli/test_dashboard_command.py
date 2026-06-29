@@ -117,6 +117,10 @@ async def test_textual_dashboard_renders_sync_plan(runtime_factory) -> None:
         assert "Preview: Rebuild deck" in _content(app, "#detail-title")
         assert "Sync plan" in _content(app, "#sync-stages")
         assert "Reason:" in _content(app, "#sync-stages")
+        assert app.query_one("#commands").display is False
+        assert "uv run anki-chinese sync --dry-run" not in _content(app, "#commands")
+        await pilot.press("a")
+        assert app.query_one("#commands").display is True
         assert "uv run anki-chinese sync --dry-run" in _content(app, "#commands")
 
 
@@ -192,6 +196,8 @@ async def test_textual_dashboard_song_guidance(runtime_factory) -> None:
     async with app.run_test(size=(50, 24)) as pilot:
         await pilot.press("down", "down", "down", "enter")
         assert "Learn songs" in _content(app, "#detail-title")
+        assert app.query_one("#commands").display is False
+        await pilot.press("a")
         assert "songs learn --limit 20" in _content(app, "#commands")
         assert "songs undo" in _content(app, "#commands")
         assert "Live Anki changes preview by default" in _content(app, "#safety")
@@ -283,6 +289,8 @@ async def test_textual_dashboard_health_guidance_includes_doctor(runtime_factory
     async with app.run_test(size=(50, 24)) as pilot:
         await pilot.press("down", "down", "down", "down", "enter")
         assert "Health, cleanup, undo" in _content(app, "#detail-title")
+        assert app.query_one("#commands").display is False
+        await pilot.press("a")
         assert "doctor" in _content(app, "#commands")
 
 
@@ -308,6 +316,7 @@ async def test_textual_dashboard_health_guidance_includes_activation_recovery(ru
     async with app.run_test(size=(50, 24)) as pilot:
         await pilot.press("down", "down", "down", "down", "enter")
         assert "Health, cleanup, undo" in _content(app, "#detail-title")
+        await pilot.press("a")
         assert "activate chars <chars> --dry-run" in _content(app, "#commands")
         assert "activate undo latest" in _content(app, "#commands")
         assert "undo snapshots" in _content(app, "#safety")
