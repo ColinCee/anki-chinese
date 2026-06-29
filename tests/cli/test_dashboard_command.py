@@ -10,8 +10,11 @@ from anki_chinese.cli import AppRuntime, create_app
 from anki_chinese.notes import CharacterNote
 from anki_chinese.tui.dashboard import DashboardApp
 from anki_chinese.tui.dashboard_model import (
+    build_card_edit_view,
+    build_card_search_view,
     build_rebuild_view,
     build_song_browser_view,
+    format_card_edit_view,
     format_rebuild_view,
     format_song_browser_view,
     recommend_workflow,
@@ -225,6 +228,30 @@ def test_rebuild_view_formats_stage_progress(runtime_factory) -> None:
     assert "blocked; fix precondition first" in rendered
 
 
+def test_card_search_and_edit_models_show_selection_and_diff(runtime_factory) -> None:
+    note = CharacterNote(
+        hanzi="水",
+        meaning="water",
+        sentence="我喝水。",
+        sentence_audio="[sound:old.mp3]",
+    )
+    runtime = runtime_factory(saved_notes=[note])
+
+    search = build_card_search_view(runtime, "water")
+    edit = build_card_edit_view(
+        note,
+        {"meaning": "water; liquid", "sentence": "我喜欢喝水。"},
+        sync_impact="2 needed",
+    )
+
+    assert search.selected is not None
+    assert search.selected.hanzi == "水"
+    rendered = format_card_edit_view(edit)
+    assert "meaning:" in rendered
+    assert "sentence_audio:" in rendered
+    assert "Downstream sync: 2 needed" in rendered
+
+
 def test_song_browser_model_builds_structured_view(runtime_factory) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
     _write_dashboard_song(runtime, title="已会", body="一", file_name="01-known.md")
@@ -344,6 +371,7 @@ async def test_textual_dashboard_card_editor_loads_and_saves_source_edit(runtime
         _input(app, "#card-hanzi").value = "水"
         await pilot.press("l")
         assert _input(app, "#card-meaning").value == "water"
+        assert "Card search" in _content(app, "#action-output")
         assert "Loaded card" in _content(app, "#action-output")
 
         _input(app, "#card-meaning").value = "water; liquid"
@@ -353,6 +381,8 @@ async def test_textual_dashboard_card_editor_loads_and_saves_source_edit(runtime
         await pilot.press("s")
 
         assert "Saved source deck edit" in _content(app, "#action-output")
+        assert "Changed fields" in _content(app, "#action-output")
+        assert "Downstream sync:" in _content(app, "#action-output")
         assert "No live Anki state was changed" in _content(app, "#safety")
 
     [note] = runtime.note_store.load()
@@ -361,6 +391,21 @@ async def test_textual_dashboard_card_editor_loads_and_saves_source_edit(runtime
     assert note.sentence_pinyin == "wǒ xǐ huān hē shuǐ."
     assert note.sentence_english == "I like drinking water."
     assert note.sentence_audio == ""
+
+
+@pytest.mark.anyio
+async def test_textual_dashboard_card_editor_searches_by_meaning(runtime_factory) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="水", meaning="water")])
+    app = DashboardApp(runtime)
+
+    async with app.run_test(size=(80, 32)) as pilot:
+        await pilot.press("down", "enter")
+        _input(app, "#card-hanzi").value = "water"
+        await pilot.press("l")
+
+        assert _input(app, "#card-hanzi").value == "水"
+        assert _input(app, "#card-meaning").value == "water"
+        assert "matched meaning" in _content(app, "#action-output")
 
 
 @pytest.mark.anyio

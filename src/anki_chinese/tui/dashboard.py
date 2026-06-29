@@ -21,9 +21,13 @@ from .dashboard_model import (
     DashboardRuntime,
     TodayView,
     WorkflowItem,
+    build_card_edit_view,
+    build_card_search_view,
     build_rebuild_view,
     build_song_browser_view,
     current_sync_plan,
+    format_card_edit_view,
+    format_card_search_view,
     format_rebuild_view,
     format_song_browser_view,
     sync_summary,
@@ -544,7 +548,13 @@ class DashboardApp(App[None]):
         if not key:
             action_output.update("[yellow]Enter a character to load.[/yellow]")
             return
-        note = self._find_note(key)
+        search = build_card_search_view(self.runtime, key)
+        if search.error is not None or search.selected is None:
+            action_output.update(format_card_search_view(search))
+            return
+
+        key = search.selected.hanzi
+        self._set_card_input_value("#card-hanzi", key)
         note = self._find_note(key)
         if note is None:
             action_output.update(f"[yellow]{key} is not in saved enriched state.[/yellow]")
@@ -557,6 +567,8 @@ class DashboardApp(App[None]):
         action_output.update(
             "\n".join(
                 [
+                    format_card_search_view(search),
+                    "",
                     f"[bold]Loaded card:[/bold] {key}",
                     "Edit fields and press s to save the source deck.",
                 ]
@@ -584,13 +596,24 @@ class DashboardApp(App[None]):
             action_output.update("[yellow]Enter at least one field before saving.[/yellow]")
             return
 
+        original = self._find_note(key)
+        if original is None:
+            action_output.update(f"[yellow]{key} is not in saved enriched state.[/yellow]")
+            return
+
+        pending_view = build_card_edit_view(original, updates, sync_impact="pending")
+        if not pending_view.changes:
+            action_output.update(format_card_edit_view(pending_view))
+            return
+
         output = self._capture_runtime_output(
             lambda: run_card_set(cast(AppRuntime, self.runtime), key, **updates)
         )
         self._refresh_plan()
         self._render_sync_stages(show=False)
         self._render_commands(self.items[self._item_index("2")], preview=True)
-        action_output.update("\n".join(["[bold]Saved source deck edit[/bold]", output]))
+        saved_view = build_card_edit_view(original, updates, sync_impact=sync_summary(self.plan) if self.plan else "unknown")
+        action_output.update("\n".join([format_card_edit_view(saved_view), "", output]))
         self.query_one("#safety", Static).update("Source deck updated locally. No live Anki state was changed.")
 
     def _preview_body(self, item: WorkflowItem) -> str:

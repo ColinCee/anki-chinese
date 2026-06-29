@@ -14,7 +14,7 @@ from rich.console import Console
 from ..activation import AnkiConnectClient, AnkiConnectError
 from ..audio import TTSProvider
 from ..audio.state import audio_generation_profiles, build_audio_deck_state, load_audio_manifest
-from ..notes import JsonNoteStore, flagged_notes, validation_issues
+from ..notes import CharacterNote, JsonNoteStore, flagged_notes, validation_issues
 from ..songs import (
     SongProgressRow,
     analyze_song_corpus,
@@ -79,6 +79,34 @@ class RebuildView:
     can_run: bool
     run_label: str
     stages: tuple[RebuildStageView, ...]
+
+
+@dataclass(frozen=True)
+class CardCandidateView:
+    hanzi: str
+    meaning: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class CardSearchView:
+    error: str | None
+    selected: CardCandidateView | None = None
+    candidates: tuple[CardCandidateView, ...] = ()
+
+
+@dataclass(frozen=True)
+class CardFieldChange:
+    field: str
+    before: str
+    after: str
+
+
+@dataclass(frozen=True)
+class CardEditView:
+    hanzi: str
+    changes: tuple[CardFieldChange, ...]
+    sync_impact: str
 
 
 class SongKnowledgeClient(Protocol):
@@ -260,6 +288,86 @@ def format_rebuild_view(view: RebuildView) -> str:
                 f"  Next: {stage.action}",
             ]
         )
+    return "\n".join(lines)
+
+
+def build_card_search_view(runtime: DashboardRuntime, query: str, *, limit: int = 8) -> CardSearchView:
+    try:
+        notes = runtime.note_store.load()
+    except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+        return CardSearchView(error=f"Could not load cards: {error}")
+
+    term = query.strip()
+    if not term:
+        flagged = flagged_notes(notes)
+        candidates = tuple(_card_candidate(note, reason="flagged for review") for note in flagged[:limit])
+        return CardSearchView(error=None, selected=candidates[0] if candidates else None, candidates=candidates)
+
+    exact = next((note for note in notes if note.hanzi == term), None)
+    if exact is not None:
+        candidate = _card_candidate(exact, reason="exact character match")
+        return CardSearchView(error=None, selected=candidate, candidates=(candidate,))
+
+    matches: list[CardCandidateView] = []
+    for note in notes:
+        haystacks = {
+            "meaning": note.meaning,
+            "pinyin": note.pinyin,
+            "sentence": note.sentence,
+            "english": note.sentence_english,
+        }
+        reason = next((name for name, value in haystacks.items() if term.lower() in value.lower()), "")
+        if reason:
+            matches.append(_card_candidate(note, reason=f"matched {reason}"))
+        if len(matches) >= limit:
+            break
+    return CardSearchView(error=None, selected=matches[0] if matches else None, candidates=tuple(matches))
+
+
+def format_card_search_view(view: CardSearchView) -> str:
+    if view.error is not None:
+        return view.error
+    if not view.candidates:
+        return "[yellow]No matching cards found.[/yellow]"
+
+    lines = ["[bold]Card search[/bold]"]
+    for candidate in view.candidates:
+        marker = ">" if candidate == view.selected else " "
+        lines.append(f"{marker} {candidate.hanzi} · {candidate.meaning} · {candidate.reason}")
+    lines.append("")
+    lines.append("[dim]Selected card loaded into the form. Edit fields, then press s to save.[/dim]")
+    return "\n".join(lines)
+
+
+def build_card_edit_view(note: CharacterNote, updates: dict[str, str | None], sync_impact: str) -> CardEditView:
+    changes: list[CardFieldChange] = []
+    for field_name, after in updates.items():
+        if after is None:
+            continue
+        before = str(getattr(note, field_name))
+        if before != after:
+            changes.append(CardFieldChange(field=field_name, before=before, after=after))
+    if "sentence" in {change.field for change in changes} and note.sentence_audio:
+        changes.append(CardFieldChange(field="sentence_audio", before=note.sentence_audio, after=""))
+    return CardEditView(hanzi=note.hanzi, changes=tuple(changes), sync_impact=sync_impact)
+
+
+def format_card_edit_view(view: CardEditView) -> str:
+    if not view.changes:
+        return f"[yellow]No field changes for {view.hanzi}.[/yellow]"
+    lines = [
+        f"[bold]Saved source deck edit[/bold] {view.hanzi}",
+        "[bold]Changed fields[/bold]",
+    ]
+    for change in view.changes:
+        lines.extend(
+            [
+                f"{change.field}:",
+                f"  before: {change.before or 'empty'}",
+                f"  after: {change.after or 'empty'}",
+            ]
+        )
+    lines.extend(["", f"Downstream sync: {view.sync_impact}"])
     return "\n".join(lines)
 
 
@@ -499,6 +607,10 @@ def _workflow_safety_level(workflow_key: str) -> str:
     if workflow_key == "5":
         return "Read-only checks by default; restore actions need confirmation."
     return "Preview first; confirm before mutation."
+
+
+def _card_candidate(note: CharacterNote, *, reason: str) -> CardCandidateView:
+    return CardCandidateView(hanzi=note.hanzi, meaning=note.meaning or "no meaning", reason=reason)
 
 
 def _rebuild_stage_view(stage: SyncStagePlan) -> RebuildStageView:
