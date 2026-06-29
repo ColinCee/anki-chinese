@@ -25,10 +25,10 @@ uv run anki-chinese doctor
 uv run anki-chinese
 ```
 
-The dashboard is the human entrypoint: it inspects local state, recommends one
+The workbench is the human entrypoint: it inspects local state, recommends one
 next action, previews safe workflows in-place, can run sync/doctor/card-edit
-and song-preview actions, and still shows equivalent CLI commands. `doctor` is
-read-only and checks local readiness.
+and song-preview actions, and hides equivalent CLI commands behind Advanced.
+`doctor` is read-only and checks local readiness.
 
 Prerequisites and setup details are in [Start](docs/start.md).
 

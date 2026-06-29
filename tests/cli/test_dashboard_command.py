@@ -81,6 +81,7 @@ def test_no_args_shows_help_in_non_interactive_context(runtime_factory, runner) 
 
     assert result.exit_code == 0
     assert "Usage:" in result.output
+    assert "workbench" in result.output
     assert "dashboard" in result.output
 
 
@@ -103,6 +104,17 @@ def test_dashboard_command_runs_textual_app_when_forced(runtime_factory, runner)
 
     with patch("anki_chinese.cli.dashboard.run_dashboard") as run_dashboard:
         result = runner.invoke(app, ["dashboard", "--force"])
+
+    assert result.exit_code == 0
+    run_dashboard.assert_called_once_with(runtime)
+
+
+def test_workbench_command_runs_textual_app_when_forced(runtime_factory, runner) -> None:
+    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
+    app = create_app(runtime)
+
+    with patch("anki_chinese.cli.dashboard.run_dashboard") as run_dashboard:
+        result = runner.invoke(app, ["workbench", "--force"])
 
     assert result.exit_code == 0
     run_dashboard.assert_called_once_with(runtime)

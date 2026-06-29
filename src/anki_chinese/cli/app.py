@@ -100,7 +100,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
 
     @app.callback(invoke_without_command=True)
     def main(ctx: typer.Context) -> None:
-        """Open the dashboard in a terminal, or show help in non-interactive contexts."""
+        """Open the workbench in a terminal, or show help in non-interactive contexts."""
         if ctx.invoked_subcommand is not None:
             return
         if is_interactive_terminal():

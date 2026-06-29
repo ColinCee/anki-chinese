@@ -8,7 +8,7 @@ sentences/audio, and writes a regenerated `.apkg`.
 
 | Lane | Commands | Source of truth | What changes |
 | --- | --- | --- | --- |
-| Human navigation | `dashboard`, `doctor` | Local files, workflow state, optional AnkiConnect probe | Recommendations, safe previews, local actions, readiness checks. |
+| Human navigation | `workbench`, `doctor` | Local files, workflow state, optional AnkiConnect probe | Recommendations, safe previews, local actions, readiness checks. |
 | Content rebuild | `sync`, `card`, `sentences`, `keywords`, `audio`, `build` | Exported `.apkg` | Fields, sentences, audio references, templates, generated package. |
 | Live activation | `songs learn`, `activate`, `songs activate` | Open Anki collection through AnkiConnect | Suspended state and optional tags. |
 
@@ -19,7 +19,7 @@ AnkiConnect mutations unless it was exported immediately beforehand.
 
 ```text
 data/source/All Decks.apkg
-  -> dashboard / doctor
+  -> workbench / doctor
   -> sync / init
   -> data/state/enriched.json
   -> optional card / sentences / keywords / audio
@@ -38,7 +38,7 @@ existing Anki notes instead of duplicating them.
 | Pipeline fingerprints | `data/state/pipeline.json` | Local record of successful stages and their inputs/outputs. |
 | Audio provenance | `data/state/audio_manifest.json` | Local record of provider/model/voice/settings used for valid generated audio. |
 
-`sync`, `status`, `doctor`, `build`, and the dashboard use the same state model
+`sync`, `status`, `doctor`, `build`, and the workbench use the same state model
 to explain what is stale and why.
 
 ## Live activation flow
@@ -59,7 +59,7 @@ changing live cards or tags.
 | Path | Purpose |
 | --- | --- |
 | `src/anki_chinese/cli/` | Typer commands and Rich output. |
-| `src/anki_chinese/tui/` | Textual dashboard and recommendation/guidance model. |
+| `src/anki_chinese/tui/` | Textual workbench and recommendation/guidance model. |
 | `src/anki_chinese/workflows/` | Shared sync planning and pipeline fingerprints. |
 | `src/anki_chinese/notes/` | Note model, `.apkg` parsing, enrichment, reporting, JSON persistence. |
 | `src/anki_chinese/audio/` | TTS provider protocol, Google/MiniMax implementations, state, retry/rate limits. |
@@ -73,7 +73,7 @@ changing live cards or tags.
 ## Boundaries
 
 - CLI/TUI present choices; workflow/domain code decides what should happen.
-- Agents and scripts use deterministic CLI commands, not the dashboard.
+- Agents and scripts use deterministic CLI commands, not the workbench.
 - Provider-specific TTS behavior stays behind `TTSProvider`.
 - AnkiConnect behavior stays behind `activation/`.
 - Runtime song planning stays deterministic: no LLM calls, network translation,

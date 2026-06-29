@@ -1,4 +1,4 @@
-"""Textual dashboard for human workflows."""
+"""Textual workbench for human workflows."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ from .dashboard_model import (
 
 
 class DashboardApp(App[None]):
-    """Terminal app that guides humans through the main workflows."""
+    """Terminal workbench that guides humans through the main workflows."""
 
     CSS = """
     Screen {
@@ -627,9 +627,8 @@ class DashboardApp(App[None]):
             return self._content_audio_preview_body()
         if item.key == "4":
             return (
-                "Song planning needs current live Anki state. The first cockpit slice keeps this "
-                "as a preview-only handoff; the next slice should run the existing songs planner "
-                "inside the dashboard and require confirmation before activation."
+                "Song planning uses current live Anki state for read-only analysis. Activation "
+                "remains a separate confirm-gated workflow."
             )
         if item.key == "5":
             return self._health_preview_body()
@@ -697,6 +696,6 @@ class DashboardApp(App[None]):
 
 
 def run_dashboard(runtime: DashboardRuntime) -> None:
-    """Run the interactive Textual dashboard."""
+    """Run the interactive Textual workbench."""
 
     DashboardApp(runtime).run()

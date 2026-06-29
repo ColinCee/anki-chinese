@@ -7,8 +7,9 @@ the authoritative option list.
 
 | Command | Purpose |
 | --- | --- |
-| `uv run anki-chinese` | Open the dashboard in an interactive terminal; show help otherwise. |
-| `uv run anki-chinese dashboard` | Open the Textual dashboard explicitly. |
+| `uv run anki-chinese` | Open the workbench in an interactive terminal; show help otherwise. |
+| `uv run anki-chinese workbench` | Open the Textual workbench explicitly. |
+| `uv run anki-chinese dashboard` | Compatibility alias for `workbench`. |
 | `uv run anki-chinese doctor` | Read-only local readiness checks. |
 | `uv run anki-chinese sync --dry-run` | Preview stale rebuild stages. |
 | `uv run anki-chinese sync` | Execute needed `init`, `audio`, and `build` stages. |
@@ -26,7 +27,7 @@ the authoritative option list.
 
 Legacy/primitives such as `init`, `build --full`, `songs activate`, and
 top-level sentence audit aliases remain for compatibility, but day-to-day use
-should start with dashboard, `doctor`, `sync`, `card`, and `songs learn`.
+should start with the workbench, `doctor`, `sync`, `card`, and `songs learn`.
 
 ## Environment variables
 
@@ -62,7 +63,7 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 | `data/reference/` | Compact corpora such as HSK and CEDICT. |
 | `data/songs/lyrics/` | Curated lyric markdown files. |
 | `data/state/enriched.json` | Ignored generated note state used by status/generation/audio/build. |
-| `data/state/pipeline.json` | Ignored local stage fingerprints used by `sync`, dashboard, and `doctor`. |
+| `data/state/pipeline.json` | Ignored local stage fingerprints used by `sync`, the workbench, and `doctor`. |
 | `data/state/audio_manifest.json` | Ignored local audio provenance used for freshness checks. |
 | `data/build/decks/chinese_rsh.apkg` | Generated deck package. |
 | `data/build/audio/` | Generated and sample audio. |

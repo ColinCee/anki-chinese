@@ -1,13 +1,14 @@
 # Workflows
 
-Use the dashboard for human navigation:
+Use the workbench for human navigation:
 
 ```bash
 uv run anki-chinese
 ```
 
 It recommends one next action from local state, previews safe workflows
-in-place, and can run sync/doctor/card-edit and song-preview actions. Examples:
+in-place, and can run sync/doctor/card-edit and song-preview actions without
+making command lists the main UI. Examples:
 
 - setup/health when required files or credentials are missing
 - sync when generated artifacts are stale

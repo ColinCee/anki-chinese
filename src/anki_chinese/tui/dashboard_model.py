@@ -1,4 +1,4 @@
-"""Dashboard workflow data and sync-plan helpers."""
+"""Workbench workflow data and sync-plan helpers."""
 
 from __future__ import annotations
 

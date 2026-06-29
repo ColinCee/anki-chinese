@@ -58,18 +58,19 @@ uv run anki-chinese doctor --check-anki
 
 That performs an AnkiConnect version probe only; it does not mutate Anki.
 
-## Open the dashboard
+## Open the workbench
 
 ```bash
 uv run anki-chinese
 # or
-uv run anki-chinese dashboard
+uv run anki-chinese workbench
 ```
 
-The dashboard is the human entrypoint. It inspects local state, recommends one
+The workbench is the human entrypoint. It inspects local state, recommends one
 next action, previews safe workflows in-place, can run sync/doctor/card-edit
-and song-preview actions, and shows equivalent CLI commands. Agents and scripts
-should use deterministic commands directly.
+and song-preview actions, and keeps equivalent CLI commands behind Advanced.
+`dashboard` remains a compatibility alias. Agents and scripts should use
+deterministic commands directly.
 
 ## First rebuild
 
