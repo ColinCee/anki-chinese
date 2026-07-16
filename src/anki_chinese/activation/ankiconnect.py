@@ -194,14 +194,29 @@ class AnkiConnectClient:
     def find_studied_characters(self) -> set[str]:
         """Return characters that have actually been studied (at least one review).
 
-        Uses ``-is:new -is:suspended`` to find cards the user has seen.
-        A character counts as studied if *any* of its cards match.
+        Uses card review counts rather than suspension state. A character counts
+        as studied if any of its cards has at least one recorded review.
         """
-        query = f'note:"{self.model_name}" -is:new -is:suspended'
-        note_ids = self._invoke("findNotes", {"query": query})
-        if not isinstance(note_ids, list) or not note_ids:
+        card_ids = self._invoke("findCards", {"query": f'note:"{self.model_name}"'})
+        if not isinstance(card_ids, list) or not card_ids:
             return set()
-        infos = self._notes_info(note_ids)
+        cards_info = self._invoke("cardsInfo", {"cards": [int(card_id) for card_id in card_ids]})
+        if not isinstance(cards_info, list):
+            raise AnkiConnectError("cardsInfo returned an unexpected response shape.")
+        studied_note_ids: set[int] = set()
+        for info in cards_info:
+            if not isinstance(info, dict):
+                raise AnkiConnectError("cardsInfo returned an unexpected response shape.")
+            try:
+                if int(info["reps"]) > 0:
+                    studied_note_ids.add(int(info["note"]))
+            except (KeyError, TypeError, ValueError) as error:
+                raise AnkiConnectError(
+                    "cardsInfo returned a card without valid note/review fields."
+                ) from error
+        if not studied_note_ids:
+            return set()
+        infos = self._notes_info(sorted(studied_note_ids))
         return {self._info_character(info) for info in infos} - {""}
 
     def find_active_characters(self) -> set[str]:

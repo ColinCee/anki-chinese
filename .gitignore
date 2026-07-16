@@ -19,3 +19,4 @@ data/build/
 data/state/enriched.json
 data/state/pipeline.json
 data/state/audio_manifest.json
+data/state/character_frequency.json

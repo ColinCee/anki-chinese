@@ -148,6 +148,48 @@ def test_find_active_characters_uses_any_unsuspended_card(
     assert requests[0]["params"]["query"] == 'note:"Chinese RSH"'
 
 
+def test_find_studied_characters_uses_review_counts_not_suspension(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[dict[str, Any]] = []
+
+    def fake_urlopen(request, timeout: int = 10):  # noqa: ANN001, ARG001
+        payload = json.loads(request.data.decode("utf-8"))
+        requests.append(payload)
+        if payload["action"] == "findCards":
+            return FakeResponse({"result": [10, 20, 30], "error": None})
+        if payload["action"] == "cardsInfo":
+            return FakeResponse(
+                {
+                    "result": [
+                        {"cardId": 10, "note": 1, "reps": 3},
+                        {"cardId": 20, "note": 2, "reps": 0},
+                        {"cardId": 30, "note": 3, "reps": 2},
+                    ],
+                    "error": None,
+                }
+            )
+        if payload["action"] == "notesInfo":
+            return FakeResponse(
+                {
+                    "result": [
+                        {"noteId": 1, "fields": {"Hanzi": {"value": "水"}}},
+                        {"noteId": 3, "fields": {"Hanzi": {"value": "山"}}},
+                    ],
+                    "error": None,
+                }
+            )
+        raise AssertionError(payload["action"])
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    client = AnkiConnectClient(url="http://anki.test", model_name="Chinese RSH")
+
+    result = client.find_studied_characters()
+
+    assert result == {"水", "山"}
+    assert requests[0]["params"]["query"] == 'note:"Chinese RSH"'
+
+
 def test_ankiconnect_error_is_raised_for_api_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_urlopen(request, timeout: int = 10):  # noqa: ANN001, ARG001
         return FakeResponse({"result": None, "error": "bad query"})

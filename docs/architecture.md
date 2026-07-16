@@ -11,6 +11,7 @@ sentences/audio, and writes a regenerated `.apkg`.
 | Human navigation | `workbench`, `doctor` | Local files, workflow state, optional AnkiConnect probe | Recommendations, safe previews, local actions, readiness checks. |
 | Content rebuild | `sync`, `card`, `sentences`, `keywords`, `audio`, `build` | Exported `.apkg` | Fields, sentences, audio references, templates, generated package. |
 | Live activation | `songs learn`, `activate`, `songs activate` | Open Anki collection through AnkiConnect | Suspended state and optional tags. |
+| Frequency analysis | `frequency refresh`, `frequency report` | Cached Jun Da corpus plus current AnkiConnect review state | Reading-coverage estimates and ranked deck gaps. |
 
 Do not treat `data/source/All Decks.apkg` as current live state after
 AnkiConnect mutations unless it was exported immediately beforehand.
@@ -37,6 +38,7 @@ existing Anki notes instead of duplicating them.
 | Enriched notes | `data/state/enriched.json` | Ignored rebuildable note content and generated field references. |
 | Pipeline fingerprints | `data/state/pipeline.json` | Local record of successful stages and their inputs/outputs. |
 | Audio provenance | `data/state/audio_manifest.json` | Local record of provider/model/voice/settings used for valid generated audio. |
+| Character frequency | `data/state/character_frequency.json` | Explicitly refreshed local corpus snapshot used by frequency reports. |
 
 `sync`, `status`, `doctor`, `build`, and the workbench use the same state model
 to explain what is stale and why.
