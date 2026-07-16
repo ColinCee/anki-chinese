@@ -89,6 +89,16 @@
     letter-spacing: 0.5px;
 }
 
+.context-pinyin-toggle {
+    font-size: 14px;
+    color: #95a5a6;
+}
+
+.context-pinyin-toggle summary {
+    cursor: pointer;
+    user-select: none;
+}
+
 .context-chars {
     font-size: 24px;
     font-weight: 600;

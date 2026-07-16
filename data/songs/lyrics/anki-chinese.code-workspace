@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../../../../../../../mnt/d/repos/obsidian-notes"
+		},
+		{
+			"path": "../../../../astro-blog"
 		}
 	],
 	"settings": {}
