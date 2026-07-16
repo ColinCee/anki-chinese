@@ -14,8 +14,8 @@ the authoritative option list.
 | `uv run anki-chinese sync --dry-run` | Preview stale rebuild stages. |
 | `uv run anki-chinese sync` | Execute needed `init`, `audio`, and `build` stages. |
 | `uv run anki-chinese status` | Show coverage, validation, learned-character, and audio health. |
-| `uv run anki-chinese frequency report` | Compare reviewed characters with the cached corpus and show high-frequency deck gaps. |
-| `uv run anki-chinese frequency refresh` | Explicitly fetch and cache the character-frequency source. |
+| `uv run anki-chinese frequency report` | Compare reviewed characters with the cached frequency list and show high-frequency deck gaps. |
+| `uv run anki-chinese frequency refresh` | Explicitly build and cache the wordfreq-derived character list. |
 | `uv run anki-chinese review` | Inspect notes flagged for manual correction. |
 | `uv run anki-chinese card show 水` | Show saved note state. |
 | `uv run anki-chinese card set 水 ...` | Write fields into the source deck export. |
@@ -67,7 +67,7 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 | `data/state/enriched.json` | Ignored generated note state used by status/generation/audio/build. |
 | `data/state/pipeline.json` | Ignored local stage fingerprints used by `sync`, the workbench, and `doctor`. |
 | `data/state/audio_manifest.json` | Ignored local audio provenance used for freshness checks. |
-| `data/state/character_frequency.json` | Ignored local snapshot of the Jun Da character-frequency source. |
+| `data/state/character_frequency.json` | Ignored local snapshot of the wordfreq-derived character-frequency list. |
 | `data/build/decks/chinese_rsh.apkg` | Generated deck package. |
 | `data/build/audio/` | Generated and sample audio. |
 | `data/build/anki_backups/` | Live Anki activation/undo safety snapshots. |
@@ -76,10 +76,11 @@ Generated files under `data/build/` and derived state under `data/state/` are
 ignored. Use `card set` or manual files under `data/manual/` for reviewable
 content changes, then run `sync` to regenerate state.
 
-The frequency snapshot is sourced from Jun Da's Chinese Character Frequency List
-(source data dated 2004-03-30, 65,348,624 corpus characters). Reports never
-refetch it automatically; use `frequency refresh` explicitly when you want a
-new snapshot.
+The frequency snapshot is derived from `wordfreq`'s large Chinese word list,
+which combines multiple sources and represents usage through approximately
+2021. The snapshot scores each Hanzi occurrence in the top 100,000 Chinese
+words. Reports never rebuild it automatically; use `frequency refresh`
+explicitly when you want to regenerate it.
 
 ## Anki model
 

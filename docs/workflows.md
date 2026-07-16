@@ -65,14 +65,14 @@ AnkiConnect reachability.
 
 ## Compare character frequency coverage
 
-Refresh the local frequency snapshot only when you want to update the external
-source:
+Rebuild the local frequency snapshot only when you want to regenerate the
+derived list:
 
 ```bash
 uv run anki-chinese frequency refresh
 ```
 
-Then report current live Anki progress without refetching the corpus:
+Then report current live Anki progress without rebuilding the list:
 
 ```bash
 uv run anki-chinese frequency report
@@ -81,9 +81,12 @@ uv run anki-chinese frequency report --json
 
 The report counts a character as covered only when at least one live Anki card
 has a recorded review. It lists the highest-frequency uncovered characters that
-are already in the deck and reports corpus-weighted reading coverage. The
+are already in the deck and reports frequency-weighted reading coverage. The
 HSK-style band is only a rough character-recognition comparison; it is not an
-overall proficiency measure.
+overall proficiency measure. The human report also shows reviewed/unreviewed
+counts at top-rank milestones, cumulative source share for each gap, and the
+potential coverage gain from the next displayed batch. JSON output retains the
+underlying scores for machine-readable analysis.
 
 ## Generate sentences and meanings
 

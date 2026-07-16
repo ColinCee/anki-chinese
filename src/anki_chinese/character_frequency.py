@@ -1,32 +1,29 @@
-"""Cached Mandarin character-frequency data and study coverage analysis."""
+"""Cached Mandarin word-frequency-derived character coverage analysis."""
 
 from __future__ import annotations
 
 import json
-import re
-from dataclasses import dataclass
+import math
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from html import unescape
 from pathlib import Path
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
-FREQUENCY_SOURCE_URL = (
-    "https://lingua.mtsu.edu/chinese-computing/statistics/char/list.php?Which=frequency"
-)
-FREQUENCY_SOURCE_NAME = "Jun Da Chinese Character Frequency List"
-FREQUENCY_SCHEMA_VERSION = 1
+FREQUENCY_SOURCE_URL = "https://github.com/rspeer/wordfreq"
+FREQUENCY_SOURCE_NAME = "wordfreq Chinese large word list"
+FREQUENCY_SCHEMA_VERSION = 2
+FREQUENCY_WORD_LIMIT = 100_000
 
 
 class FrequencyDataError(RuntimeError):
-    """Raised when frequency data cannot be fetched, parsed, or loaded."""
+    """Raised when frequency data cannot be built or loaded."""
 
 
 @dataclass(frozen=True)
 class FrequencyEntry:
     character: str
     rank: int
-    frequency: int
+    frequency: float
     cumulative_percent: float
     pinyin: str
 
@@ -46,8 +43,9 @@ class FrequencySnapshot:
     source_url: str
     source_last_updated: str
     retrieved_at: str
-    corpus_characters: int
+    corpus_characters: int | None
     entries: tuple[FrequencyEntry, ...]
+    parameters: dict[str, object] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -59,6 +57,7 @@ class FrequencySnapshot:
                 "retrieved_at": self.retrieved_at,
             },
             "corpus_characters": self.corpus_characters,
+            "parameters": self.parameters,
             "entries": [entry.to_dict() for entry in self.entries],
         }
 
@@ -72,10 +71,11 @@ class FrequencyReport:
     gap_entries: tuple[FrequencyEntry, ...]
     unranked_gap_count: int
     studied_unranked_count: int
-    corpus_coverage_frequency: int
+    corpus_coverage_frequency: float
     deck_covered_count: int
     estimated_band: str
     top_rank_coverage: tuple[tuple[int, float], ...]
+    top_rank_deck_counts: tuple[tuple[int, int, int, int], ...] = ()
 
     @property
     def studied_count(self) -> int:
@@ -83,9 +83,14 @@ class FrequencyReport:
 
     @property
     def corpus_coverage_percent(self) -> float:
-        if not self.snapshot.corpus_characters:
+        total_frequency = (
+            self.snapshot.corpus_characters
+            if self.snapshot.corpus_characters is not None
+            else sum(entry.frequency for entry in self.snapshot.entries)
+        )
+        if not total_frequency:
             return 0.0
-        return 100 * self.corpus_coverage_frequency / self.snapshot.corpus_characters
+        return 100 * self.corpus_coverage_frequency / total_frequency
 
     @property
     def deck_coverage_percent(self) -> float:
@@ -98,6 +103,7 @@ class FrequencyReport:
             "cache_path": str(cache_path),
             "source": self.snapshot.to_dict()["source"],
             "corpus_characters": self.snapshot.corpus_characters,
+            "source_parameters": self.snapshot.parameters,
             "studied_characters": list(self.studied_characters),
             "studied_count": self.studied_count,
             "deck_character_count": self.deck_character_count,
@@ -111,17 +117,17 @@ class FrequencyReport:
             "top_rank_coverage": {
                 str(rank): percent for rank, percent in self.top_rank_coverage
             },
+            "top_rank_deck_counts": {
+                str(rank): {
+                    "reviewed": reviewed,
+                    "unreviewed": unreviewed,
+                    "in_deck": in_deck,
+                }
+                for rank, reviewed, unreviewed, in_deck in self.top_rank_deck_counts
+            },
             "covered_characters": [entry.to_dict() for entry in self.covered_entries],
             "top_frequency_gaps": [entry.to_dict() for entry in self.gap_entries],
         }
-
-
-_ROW_RE = re.compile(
-    r"(?P<rank>\d+)\t(?P<character>[^\t])\t(?P<frequency>\d+)\t"
-    r"(?P<cumulative>[0-9.]+)\t(?P<pinyin>[^\t<]*)\t"
-)
-_DATE_RE = re.compile(r"Data last updated.*?(?P<date>\d{4}-\d{2}-\d{2})", re.DOTALL)
-_CORPUS_RE = re.compile(r"Total number of characters in the corpus:\s*([\d,]+)")
 
 
 def _is_hanzi(character: str) -> bool:
@@ -131,70 +137,85 @@ def _is_hanzi(character: str) -> bool:
     return (0x3400 <= codepoint <= 0x4DBF) or (0x4E00 <= codepoint <= 0x9FFF)
 
 
-def parse_frequency_page(
-    payload: bytes,
+def build_wordfreq_snapshot(
     *,
-    source_url: str = FREQUENCY_SOURCE_URL,
+    word_limit: int = FREQUENCY_WORD_LIMIT,
     retrieved_at: str | None = None,
+    words: Iterable[str] | None = None,
+    frequency_lookup: Callable[[str], float] | None = None,
 ) -> FrequencySnapshot:
-    """Parse the Jun Da HTML page into a compact, JSON-serializable snapshot."""
-    try:
-        text = payload.decode("gb18030")
-    except UnicodeDecodeError as error:
-        raise FrequencyDataError("The frequency source was not valid GB18030 text.") from error
+    """Build a compact character ranking from wordfreq's precomputed word list."""
+    if word_limit < 1:
+        raise ValueError("word_limit must be at least 1")
 
-    pre_match = re.search(r"<pre>(?P<body>.*?)</pre>", text, re.DOTALL | re.IGNORECASE)
-    if pre_match is None:
-        raise FrequencyDataError("The frequency source did not contain a character list.")
+    if words is None or frequency_lookup is None:
+        try:
+            import jieba  # noqa: F401
+            from wordfreq import iter_wordlist, word_frequency
+        except ImportError as error:
+            raise FrequencyDataError(
+                "wordfreq and jieba are required to build the frequency snapshot."
+            ) from error
+        words = iter_wordlist("zh", wordlist="large")
 
-    entries: list[FrequencyEntry] = []
-    for match in _ROW_RE.finditer(pre_match.group("body")):
-        character = unescape(match.group("character"))
-        if not _is_hanzi(character):
+        def lookup_wordfreq(word: str) -> float:
+            return word_frequency(word, "zh", wordlist="large")
+
+        frequency_lookup = lookup_wordfreq
+
+    assert words is not None
+    assert frequency_lookup is not None
+    scores: dict[str, float] = {}
+    words_seen = 0
+    hanzi_words_used = 0
+    for word in words:
+        if words_seen >= word_limit:
+            break
+        words_seen += 1
+        if not word or not all(_is_hanzi(char) for char in word):
             continue
+        frequency = frequency_lookup(word)
+        if frequency <= 0:
+            continue
+        hanzi_words_used += 1
+        for char in word:
+            scores[char] = scores.get(char, 0.0) + frequency
+
+    if not scores:
+        raise FrequencyDataError("wordfreq produced no usable Hanzi frequency records.")
+
+    ranked = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
+    total_frequency = sum(frequency for _, frequency in ranked)
+    cumulative_frequency = 0.0
+    entries: list[FrequencyEntry] = []
+    for rank, (character, frequency) in enumerate(ranked, start=1):
+        cumulative_frequency += frequency
         entries.append(
             FrequencyEntry(
                 character=character,
-                rank=int(match.group("rank")),
-                frequency=int(match.group("frequency")),
-                cumulative_percent=float(match.group("cumulative")),
-                pinyin=unescape(match.group("pinyin")).strip(),
+                rank=rank,
+                frequency=frequency,
+                cumulative_percent=100 * cumulative_frequency / total_frequency,
+                pinyin="",
             )
         )
 
-    if not entries:
-        raise FrequencyDataError("The frequency source contained no Hanzi records.")
-
-    corpus_match = _CORPUS_RE.search(text)
-    if corpus_match is None:
-        raise FrequencyDataError("The frequency source did not report corpus size.")
-
-    date_match = _DATE_RE.search(text)
-    source_last_updated = date_match.group("date") if date_match else "unknown"
     retrieved = retrieved_at or datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     return FrequencySnapshot(
         source_name=FREQUENCY_SOURCE_NAME,
-        source_url=source_url,
-        source_last_updated=source_last_updated,
+        source_url=FREQUENCY_SOURCE_URL,
+        source_last_updated="approximately 2021",
         retrieved_at=retrieved,
-        corpus_characters=int(corpus_match.group(1).replace(",", "")),
+        corpus_characters=None,
         entries=tuple(entries),
+        parameters={
+            "word_list": "large",
+            "word_limit": word_limit,
+            "words_seen": words_seen,
+            "hanzi_words_used": hanzi_words_used,
+            "character_score": "sum word frequency for each Hanzi occurrence",
+        },
     )
-
-
-def fetch_frequency_snapshot(
-    *,
-    url: str = FREQUENCY_SOURCE_URL,
-    timeout_seconds: float = 30.0,
-) -> FrequencySnapshot:
-    """Fetch the frequency source once; callers decide where to cache it."""
-    request = Request(url, headers={"User-Agent": "anki-chinese character-frequency"})
-    try:
-        with urlopen(request, timeout=timeout_seconds) as response:
-            payload = response.read()
-    except (HTTPError, URLError, TimeoutError, OSError) as error:
-        raise FrequencyDataError(f"Could not fetch the frequency source: {error}") from error
-    return parse_frequency_page(payload, source_url=url)
 
 
 def load_frequency_snapshot(path: Path) -> FrequencySnapshot:
@@ -210,12 +231,17 @@ def load_frequency_snapshot(path: Path) -> FrequencySnapshot:
         raise FrequencyDataError(f"Could not read frequency snapshot {path}: {error}") from error
 
     try:
+        if raw["schema_version"] != FREQUENCY_SCHEMA_VERSION:
+            raise FrequencyDataError(
+                f"Frequency snapshot {path} uses an older schema. "
+                "Run `uv run anki-chinese frequency refresh`."
+            )
         source = raw["source"]
         entries = tuple(
             FrequencyEntry(
                 character=str(item["character"]),
                 rank=int(item["rank"]),
-                frequency=int(item["frequency"]),
+                frequency=float(item["frequency"]),
                 cumulative_percent=float(item["cumulative_percent"]),
                 pinyin=str(item.get("pinyin", "")),
             )
@@ -226,14 +252,33 @@ def load_frequency_snapshot(path: Path) -> FrequencySnapshot:
             source_url=str(source["url"]),
             source_last_updated=str(source["last_updated"]),
             retrieved_at=str(source["retrieved_at"]),
-            corpus_characters=int(raw["corpus_characters"]),
+            corpus_characters=(
+                int(raw["corpus_characters"])
+                if raw.get("corpus_characters") is not None
+                else None
+            ),
             entries=entries,
+            parameters=dict(raw.get("parameters", {})),
         )
+    except FrequencyDataError:
+        raise
     except (KeyError, TypeError, ValueError) as error:
         raise FrequencyDataError(f"Invalid frequency snapshot {path}: {error}") from error
 
-    if not snapshot.entries or snapshot.corpus_characters <= 0:
+    if not snapshot.entries or (
+        snapshot.corpus_characters is not None and snapshot.corpus_characters <= 0
+    ):
         raise FrequencyDataError(f"Invalid frequency snapshot {path}: no usable records.")
+    if any(
+        entry.rank < 1
+        or not _is_hanzi(entry.character)
+        or not math.isfinite(entry.frequency)
+        or entry.frequency <= 0
+        or not math.isfinite(entry.cumulative_percent)
+        or not 0 <= entry.cumulative_percent <= 100
+        for entry in snapshot.entries
+    ):
+        raise FrequencyDataError(f"Invalid frequency snapshot {path}: invalid entry values.")
     return snapshot
 
 
@@ -297,12 +342,26 @@ def build_frequency_report(
     )
     corpus_coverage_frequency = sum(entry.frequency for entry in covered)
     top_rank_coverage: list[tuple[int, float]] = []
+    top_rank_deck_counts: list[tuple[int, int, int, int]] = []
     for rank_limit in (100, 500, 1000, 2000):
         top_entries = [entry for entry in snapshot.entries if entry.rank <= rank_limit]
+        top_characters = {entry.character for entry in top_entries}
+        top_deck_characters = top_characters & deck
+        top_reviewed_characters = top_deck_characters & studied
         top_total = sum(entry.frequency for entry in top_entries)
-        top_covered = sum(entry.frequency for entry in top_entries if entry.character in studied)
+        top_covered = sum(
+            entry.frequency for entry in top_entries if entry.character in top_reviewed_characters
+        )
         top_rank_coverage.append(
             (rank_limit, 100 * top_covered / top_total if top_total else 0.0)
+        )
+        top_rank_deck_counts.append(
+            (
+                rank_limit,
+                len(top_reviewed_characters),
+                len(top_deck_characters - studied),
+                len(top_deck_characters),
+            )
         )
 
     return FrequencyReport(
@@ -317,4 +376,5 @@ def build_frequency_report(
         deck_covered_count=len(deck & studied),
         estimated_band=_estimated_band(len(covered)),
         top_rank_coverage=tuple(top_rank_coverage),
+        top_rank_deck_counts=tuple(top_rank_deck_counts),
     )
