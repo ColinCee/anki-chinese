@@ -4,9 +4,13 @@ import json
 import os
 from io import StringIO
 
+import pytest
+import typer
+
 from anki_chinese.cli import create_app
-from anki_chinese.cli.card import run_card_set
+from anki_chinese.cli.card import run_card_add, run_card_set
 from anki_chinese.notes import CharacterNote
+from anki_chinese.notes.source import CharacterSourceStore
 
 
 def test_card_show_json_includes_note(runtime_factory, runner) -> None:
@@ -115,3 +119,46 @@ def test_card_set_refuses_empty_update(runtime_factory, runner) -> None:
     assert result.exit_code == 1
     output = runtime.console.file.getvalue()  # type: ignore[union-attr]
     assert "No edit fields supplied" in output
+
+
+def test_card_add_writes_custom_canonical_record(runtime_factory) -> None:
+    runtime = runtime_factory(parsed_notes=[CharacterNote(hanzi="一", meaning="one")])
+    runtime.source_records_path = runtime.source_deck_path.parent / "characters.json"
+
+    run_card_add(
+        runtime,
+        "账",
+        meaning="account; bill; debt",
+        sentence="我们吃完饭后去结账。",
+        sentence_pinyin="wǒmen chī wán fàn hòu qù jiézhàng",
+        sentence_english="After we finish eating, we'll pay the bill.",
+        collection="restaurant-vocabulary",
+    )
+
+    notes = CharacterSourceStore(runtime.source_records_path).load()
+    added = next(note for note in notes if note.hanzi == "账")
+    assert added.curriculum.track == "custom"
+    assert added.curriculum.rsh_number is None
+    assert added.curriculum.collection == "restaurant-vocabulary"
+    assert added.stroke_order == '<img src="8d26.gif" />'
+
+
+def test_card_add_requires_complete_example(runtime_factory) -> None:
+    runtime = runtime_factory()
+    runtime.source_records_path = runtime.source_deck_path.parent / "characters.json"
+
+    with pytest.raises(typer.Exit):
+        run_card_add(runtime, "账", meaning="account", sentence="结账。")
+
+
+def test_card_add_reports_invalid_legacy_migration(runtime_factory) -> None:
+    runtime = runtime_factory(
+        parsed_notes=[CharacterNote(hanzi="一"), CharacterNote(hanzi="一")]
+    )
+    runtime.source_records_path = runtime.source_deck_path.parent / "characters.json"
+
+    with pytest.raises(typer.Exit):
+        run_card_add(runtime, "账", meaning="account")
+
+    assert not runtime.source_records_path.exists()
+    assert "Duplicate canonical character" in runtime.console.file.getvalue()  # type: ignore[union-attr]

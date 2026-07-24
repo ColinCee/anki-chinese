@@ -7,7 +7,8 @@ Use this when setting up the project or rebuilding a deck for the first time.
 - Python 3.13+
 - [uv](https://docs.astral.sh/uv/)
 - Anki desktop
-- A native Anki export at `data/source/All Decks.apkg`
+- The canonical source records at `data/source/characters.json`
+- A native Anki export at `data/source/All Decks.apkg` for bootstrap/migration
 
 Optional features need credentials or local services:
 
@@ -40,8 +41,15 @@ In Anki, use **File -> Export**, choose a native `.apkg`, and save it as:
 data/source/All Decks.apkg
 ```
 
-This export is the source for rebuildable note content. It is not reliable as
-current live suspended state after AnkiConnect changes.
+Import a new export into the canonical source explicitly:
+
+```bash
+uv run anki-chinese source import --input "data/source/All Decks.apkg" --replace
+```
+
+The export is retained as a legacy/bootstrap input for rebuildable note content;
+The canonical source after migration is `data/source/characters.json`; neither
+file is reliable as current live suspended state after AnkiConnect changes.
 
 ## Check readiness
 

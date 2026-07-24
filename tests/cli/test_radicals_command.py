@@ -60,6 +60,7 @@ def test_radicals_command_can_scope_to_learned_characters(runtime_factory, runne
         encoding="utf-8",
     )
     runtime.load_learned_hanzi = lambda path: {"河", "清"}
+    runtime.learned_state_path = runtime.source_deck_path
     app = create_app(runtime)
 
     result = runner.invoke(app, ["radicals", "--scope", "learned"])

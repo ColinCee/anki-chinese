@@ -213,11 +213,11 @@ def plan_sync(
     elif _is_newer_than_any(enriched_path, [source_deck_path]):
         init_needed = True
         init_blocked = False
-        init_reason = "Source deck changed after enriched state."
+        init_reason = "Canonical source changed after enriched state."
     else:
         init_needed = False
         init_blocked = False
-        init_reason = "Enriched state is newer than source deck."
+        init_reason = "Enriched state is newer than canonical source."
 
     if init_blocked:
         stages.append(

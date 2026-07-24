@@ -63,12 +63,11 @@ def build_deck(notes: list[CharacterNote]) -> Path:
     deck = genanki.Deck(DECK_ID, DECK_NAME)
 
     for note in notes:
-        tag = note.lesson.replace(" ", "_") if note.lesson else ""
         anki_note = _StableNote(
             hanzi=note.hanzi,
             model=model,
             fields=note.to_fields_list(),
-            tags=[tag] if tag else [],
+            tags=note.apkg_tags(),
         )
         deck.add_note(anki_note)
 

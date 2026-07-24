@@ -69,6 +69,32 @@ def test_restore_cached_fields_overwrites_invalid_current_audio() -> None:
     assert note.cantonese_audio == "[sound:yue_行_haang4.mp3]"
 
 
+def test_restore_cached_fields_does_not_restore_authored_fields_for_canonical_source() -> None:
+    current = [CharacterNote(hanzi="水", meaning="water")]
+    previous = [
+        CharacterNote(
+            hanzi="水",
+            meaning="drink",
+            sentence="我喝水。",
+            sentence_pinyin="wǒ hē shuǐ.",
+            sentence_english="I drink water.",
+            story="old story",
+        )
+    ]
+
+    _restore_cached_fields(
+        current,
+        previous,
+        is_valid_audio_tag=lambda tag: True,
+        preserve_authored=False,
+    )
+
+    assert current[0].sentence == ""
+    assert current[0].sentence_pinyin == ""
+    assert current[0].sentence_english == ""
+    assert current[0].story == ""
+
+
 def test_clear_stale_audio_removes_files_and_clears_tags(tmp_path: Path) -> None:
     audio_dir = tmp_path / "generated"
     audio_dir.mkdir()

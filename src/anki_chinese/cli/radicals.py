@@ -27,10 +27,16 @@ def run_radicals(
     scope_chars: set[str] | None = None
 
     if scope == RadicalScope.learned:
-        scope_chars = runtime.load_learned_hanzi(runtime.source_deck_path)
+        scope_chars = runtime.current_learned_hanzi()
+        if scope_chars is None:
+            runtime.console.print(
+                "[yellow]⚠[/yellow] Learned scope is unavailable: canonical source has no "
+                "live scheduling state."
+            )
+            return
         if not scope_chars:
             runtime.console.print(
-                "[yellow]⚠[/yellow] No learned characters found in the source deck export."
+                "[yellow]⚠[/yellow] No learned characters found in the scheduling snapshot."
             )
             return
 

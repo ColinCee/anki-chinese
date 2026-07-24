@@ -11,7 +11,7 @@ from ..audio import (
     expected_mandarin_audio_tag,
     expected_sentence_audio_tag,
 )
-from ..notes import CharacterNote
+from ..notes import CharacterNote, CharacterSourceStore
 from ..workflows.pipeline_state import record_stage
 from .app import AppRuntime
 from .ui import report_init_summary, report_review_items
@@ -25,6 +25,7 @@ _PRESERVE_FIELDS = (
     "sentence_audio",
     "story",
 )
+_PRESERVE_AUDIO_FIELDS = ("mandarin_audio", "cantonese_audio", "sentence_audio")
 
 
 def _restore_cached_fields(
@@ -32,15 +33,19 @@ def _restore_cached_fields(
     previous_notes: list[CharacterNote],
     *,
     is_valid_audio_tag,
+    preserve_authored: bool = True,
 ) -> tuple[dict[str, CharacterNote], int]:
     prev_by_hanzi = {note.hanzi: note for note in previous_notes}
     restored = 0
+    fields_to_preserve = _PRESERVE_FIELDS if preserve_authored else _PRESERVE_AUDIO_FIELDS
     for note in notes:
         previous = prev_by_hanzi.get(note.hanzi)
         if previous is None:
             continue
         restored_sentence = False
-        for field in _PRESERVE_FIELDS:
+        for field in fields_to_preserve:
+            if field == "sentence_audio" and not note.sentence:
+                continue
             current_value = getattr(note, field)
             previous_value = getattr(previous, field)
             if field.endswith("_audio") and not is_valid_audio_tag(previous_value):
@@ -58,10 +63,10 @@ def _restore_cached_fields(
             restored += 1
         # If the previous note had a Gemini-generated sentence, its meaning
         # and pinyin are the contextual values for that restored sentence.
-        if restored_sentence and previous.meaning:
+        if preserve_authored and restored_sentence and previous.meaning:
             note.meaning = previous.meaning
             restored += 1
-        if restored_sentence and previous.pinyin:
+        if preserve_authored and restored_sentence and previous.pinyin:
             note.pinyin = previous.pinyin
             restored += 1
     return prev_by_hanzi, restored
@@ -105,8 +110,19 @@ def run_init(
     runtime: AppRuntime,
     input_file: Path,
 ) -> list[CharacterNote]:
-    runtime.console.print(f"[blue]Parsing[/blue] {input_file} ...")
-    notes = runtime.parse_deck_export(input_file)
+    use_canonical_source = (
+        runtime.source_records_path is not None
+        and runtime.source_records_path.exists()
+        and input_file.resolve() == runtime.source_records_path.resolve()
+    )
+    if use_canonical_source:
+        assert runtime.source_records_path is not None
+        source_path = runtime.source_records_path
+        notes = CharacterSourceStore(source_path).load()
+    else:
+        source_path = input_file
+        notes = runtime.parse_deck_export(input_file)
+    runtime.console.print(f"[blue]Parsing[/blue] {source_path} ...")
     runtime.console.print(f"  [green]✓[/green] {len(notes)} notes parsed")
 
     previous_notes = runtime.note_store.load() if runtime.note_store.exists() else []
@@ -114,6 +130,7 @@ def run_init(
         notes,
         previous_notes,
         is_valid_audio_tag=runtime.tts_provider.is_valid_audio_tag,
+        preserve_authored=not use_canonical_source,
     )
     if restored:
         runtime.console.print(f"  [green]✓[/green] Restored {restored} fields from previous data")
@@ -145,7 +162,7 @@ def run_init(
         runtime.pipeline_state_path,
         "init",
         inputs={
-            "source_deck": input_file,
+            "source_deck": source_path,
         },
         outputs={},
     )
@@ -157,10 +174,10 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
     @app.command()
     def init(
         input_file: Path = typer.Option(
-            runtime.source_deck_path,
+            runtime.source_content_path,
             "--input",
             "-i",
-            help="Anki .apkg export to parse.",
+            help="Canonical source or legacy Anki .apkg import override.",
         ),
     ) -> None:
         """Parse source .apkg deck export and enrich with pinyin and jyutping."""

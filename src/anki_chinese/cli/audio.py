@@ -165,7 +165,7 @@ def run_audio(
             runtime.console.print(f"[red]✗[/red] No notes found at or after RSH #{start_rsh}")
             raise typer.Exit(1)
 
-    learned = runtime.load_learned_hanzi(runtime.source_deck_path)
+    learned = runtime.current_learned_hanzi() or set()
     audio_state = load_current_audio_deck_state(runtime, targets)
     pending = _collect_pending_audio(
         targets,

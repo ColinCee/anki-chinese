@@ -9,17 +9,18 @@ sentences/audio, and writes a regenerated `.apkg`.
 | Lane | Commands | Source of truth | What changes |
 | --- | --- | --- | --- |
 | Human navigation | `workbench`, `doctor` | Local files, workflow state, optional AnkiConnect probe | Recommendations, safe previews, local actions, readiness checks. |
-| Content rebuild | `sync`, `card`, `sentences`, `keywords`, `audio`, `build` | Exported `.apkg` | Fields, sentences, audio references, templates, generated package. |
+| Content rebuild | `sync`, `card`, `sentences`, `keywords`, `audio`, `build` | Canonical structured character records | Fields, curriculum provenance, sentences, audio references, templates, generated package. |
 | Live activation | `songs learn`, `activate`, `songs activate` | Open Anki collection through AnkiConnect | Suspended state and optional tags. |
 | Frequency analysis | `frequency refresh`, `frequency report` | Cached wordfreq-derived list plus current AnkiConnect review state | Reading-coverage estimates and ranked deck gaps. |
 
-Do not treat `data/source/All Decks.apkg` as current live state after
-AnkiConnect mutations unless it was exported immediately beforehand.
+`data/source/characters.json` is the canonical character source. The tracked
+`data/source/All Decks.apkg` is retained as a legacy import/bootstrap snapshot;
+neither file is current live scheduling state after AnkiConnect mutations.
 
 ## Rebuild flow
 
 ```text
-data/source/All Decks.apkg
+data/source/characters.json
   -> workbench / doctor
   -> sync / init
   -> data/state/enriched.json
@@ -35,6 +36,8 @@ existing Anki notes instead of duplicating them.
 
 | State | Path | Purpose |
 | --- | --- | --- |
+| Canonical records | `data/source/characters.json` | Structured RSH/custom character content and curriculum provenance. |
+| Legacy source snapshot | `data/source/All Decks.apkg` | Bootstrap/import input retained for compatibility. |
 | Enriched notes | `data/state/enriched.json` | Ignored rebuildable note content and generated field references. |
 | Pipeline fingerprints | `data/state/pipeline.json` | Local record of successful stages and their inputs/outputs. |
 | Audio provenance | `data/state/audio_manifest.json` | Local record of provider/model/voice/settings used for valid generated audio. |

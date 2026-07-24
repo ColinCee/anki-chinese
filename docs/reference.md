@@ -18,7 +18,9 @@ the authoritative option list.
 | `uv run anki-chinese frequency refresh` | Explicitly build and cache the wordfreq-derived character list. |
 | `uv run anki-chinese review` | Inspect notes flagged for manual correction. |
 | `uv run anki-chinese card show 水` | Show saved note state. |
-| `uv run anki-chinese card set 水 ...` | Write fields into the source deck export. |
+| `uv run anki-chinese card set 水 ...` | Write authored fields into the canonical character source. |
+| `uv run anki-chinese card add 账 ...` | Add a RSH or custom character to the canonical source. |
+| `uv run anki-chinese source import --replace` | Replace canonical records from a legacy APKG export. |
 | `uv run anki-chinese sentences` | Generate missing Gemini example sentences. |
 | `uv run anki-chinese keywords` | Repair contextual meanings with Gemini. |
 | `uv run anki-chinese audio` | Generate missing/stale audio. |
@@ -60,7 +62,8 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 
 | Path | Purpose |
 | --- | --- |
-| `data/source/All Decks.apkg` | Source deck export parsed by `init`/`sync`; `card set` writes per-character edits here. |
+| `data/source/characters.json` | Canonical structured RSH/custom character records used by `init`/`sync` and `card set`/`card add`. |
+| `data/source/All Decks.apkg` | Legacy/bootstrap source export accepted for migration and compatibility. |
 | `data/manual/example_words.json` | Manual example-word data for enrichment. |
 | `data/reference/` | Compact corpora such as HSK and CEDICT. |
 | `data/songs/lyrics/` | Curated lyric markdown files. |
@@ -73,8 +76,11 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 | `data/build/anki_backups/` | Live Anki activation/undo safety snapshots. |
 
 Generated files under `data/build/` and derived state under `data/state/` are
-ignored. Use `card set` or manual files under `data/manual/` for reviewable
-content changes, then run `sync` to regenerate state.
+ignored. Use `card set` or `card add` to make reviewable changes in the
+canonical source, then run `sync` to regenerate state and the APKG.
+The canonical source does not contain live Anki scheduling state; learned
+progress and learned-scope reports require a current live query or an explicitly
+fresh scheduling snapshot and are not inferred from the legacy APKG.
 
 The frequency snapshot is derived from `wordfreq`'s large Chinese word list,
 which combines multiple sources and represents usage through approximately

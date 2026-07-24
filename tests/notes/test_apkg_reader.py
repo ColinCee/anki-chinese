@@ -148,6 +148,66 @@ def test_parse_apkg_uses_tags_for_lesson(tmp_path, build_test_apkg) -> None:
     assert notes[0].lesson == "RSH1-L01"
 
 
+def test_parse_apkg_ignores_leech_and_activation_tags_for_lesson(
+    tmp_path,
+    build_test_apkg,
+) -> None:
+    apkg = build_test_apkg(
+        tmp_path / "test.apkg",
+        [
+            {
+                "hanzi": "切",
+                "meaning": "cut",
+                "lesson": "leech",
+                "tags": "leech RSH1-L05",
+            },
+            {
+                "hanzi": "合",
+                "meaning": "fit",
+                "lesson": "",
+                "tags": "activated::song::学猫叫_RSH1-L12",
+            },
+        ],
+    )
+
+    notes = parse_apkg(apkg)
+
+    assert [note.lesson for note in notes] == ["RSH1-L05", "RSH1-L12"]
+
+
+def test_parse_apkg_preserves_non_lesson_rsh_labels(tmp_path, build_test_apkg) -> None:
+    apkg = build_test_apkg(
+        tmp_path / "test.apkg",
+        [{"hanzi": "蝴", "meaning": "butterfly", "lesson": "RSH2-Compounds"}],
+    )
+
+    [note] = parse_apkg(apkg)
+
+    assert note.lesson == "RSH2-Compounds"
+
+
+def test_parse_apkg_preserves_explicit_custom_lesson(tmp_path, build_test_apkg) -> None:
+    apkg = build_test_apkg(
+        tmp_path / "test.apkg",
+        [
+            {
+                "hanzi": "账",
+                "meaning": "bill",
+                "tags": (
+                    "curriculum::custom lesson::restaurant origin::manual "
+                    "activated::song::学猫叫_RSH1-L12"
+                ),
+            }
+        ],
+    )
+
+    [note] = parse_apkg(apkg)
+
+    assert note.curriculum.track == "custom"
+    assert note.curriculum.lesson == "restaurant"
+    assert note.curriculum.collection == ""
+
+
 def test_update_note_fields_in_apkg_updates_compressed_source(tmp_path, build_test_apkg) -> None:
     apkg = build_test_apkg(
         tmp_path / "test.apkg",

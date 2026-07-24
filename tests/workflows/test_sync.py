@@ -63,7 +63,7 @@ def test_plan_requires_init_when_source_deck_is_newer_than_state(tmp_path: Path)
     plan = _plan(tmp_path)
 
     assert _stage_statuses(plan)["init"] == "needed"
-    assert plan.stages[0].reason == "Source deck changed after enriched state."
+    assert plan.stages[0].reason == "Canonical source changed after enriched state."
 
 
 def test_plan_detects_pending_sentence_audio_and_blocks_build_until_audio(tmp_path: Path) -> None:

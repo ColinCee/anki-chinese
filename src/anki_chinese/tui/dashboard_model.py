@@ -38,6 +38,10 @@ class DashboardRuntime(Protocol):
     sentence_tts_provider: TTSProvider | None
     console: Console
 
+    @property
+    def source_content_path(self) -> Path:
+        ...
+
 
 @dataclass(frozen=True)
 class WorkflowItem:
@@ -259,7 +263,7 @@ WORKFLOW_ITEMS = (
 
 def current_sync_plan(runtime: DashboardRuntime) -> SyncPlan:
     return plan_sync(
-        source_deck_path=runtime.source_deck_path,
+        source_deck_path=runtime.source_content_path,
         enriched_path=runtime.note_store.path,
         deck_output_path=runtime.deck_output_path,
         generated_audio_dir=runtime.generated_audio_dir,
@@ -487,7 +491,7 @@ def build_health_undo_view(
         else "No activation snapshots available to restore."
     )
     return HealthUndoView(
-        source_state="present" if runtime.source_deck_path.is_file() else "missing",
+        source_state="present" if runtime.source_content_path.is_file() else "missing",
         enriched_state="present" if runtime.note_store.exists() else "missing",
         built_deck_state="present" if runtime.deck_output_path.is_file() else "missing",
         sync_state=sync_summary(plan),
@@ -689,7 +693,7 @@ def _song_browser_rows(
 def recommend_workflow(runtime: DashboardRuntime, plan: SyncPlan) -> DashboardRecommendation:
     """Choose one helpful next workflow without taking over workflow execution."""
 
-    if not runtime.source_deck_path.is_file() or not runtime.note_store.exists():
+    if not runtime.source_content_path.is_file() or not runtime.note_store.exists():
         return DashboardRecommendation(
             "5",
             "Health, cleanup, undo",

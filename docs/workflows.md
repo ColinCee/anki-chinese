@@ -36,7 +36,7 @@ uv run anki-chinese card show 编
 uv run anki-chinese card show 编 --json
 ```
 
-Write the source deck with `card set`:
+Write the canonical source record with `card set`:
 
 ```bash
 uv run anki-chinese card set 编 \
@@ -47,9 +47,42 @@ uv run anki-chinese card set 编 \
 uv run anki-chinese sync
 ```
 
-`card set` writes the note fields inside `data/source/All Decks.apkg`. Sentence
-changes clear the cached sentence-audio field so `sync` can regenerate matching
-audio.
+`card set` writes authored fields into `data/source/characters.json`. Sentence
+changes require `--sentence`, `--sentence-pinyin`, and `--sentence-english`
+together; they clear the cached sentence-audio field in generated state so
+`sync` can regenerate matching audio.
+
+## Add a character
+
+New characters use the same two-card Anki projection but carry explicit
+curriculum provenance. Custom characters do not receive synthetic RSH numbers:
+
+```bash
+uv run anki-chinese card add 账 \
+  --meaning "account; bill/check; debt; in 结账: to pay the bill" \
+  --sentence "我们吃完饭后去结账。" \
+  --sentence-pinyin "wǒmen chī wán fàn hòu qù jiézhàng" \
+  --sentence-english "After we finish eating, we'll pay the bill." \
+  --collection restaurant-vocabulary
+uv run anki-chinese sync --dry-run
+uv run anki-chinese sync
+```
+
+Meanings should be compact but sense-aware: list the important core senses and
+explain the relevant compound or sentence usage instead of using only a broad
+one-word gloss. `card add` defaults to a custom record and requires `--meaning`;
+if an example sentence is supplied, all three sentence fields are required.
+
+Use `--track rsh --rsh-number N` only for a real RSH entry. `card add` never
+creates a live Anki note; import the rebuilt APKG separately, then use the
+backup-gated activation workflow if the character should be unsuspended.
+
+To replace canonical records from a newly exported legacy APKG:
+
+```bash
+uv run anki-chinese source import --input "data/source/All Decks.apkg" --replace
+uv run anki-chinese sync
+```
 
 ## Review deck health
 
@@ -179,7 +212,8 @@ uv run anki-chinese activate undo latest
 
 ## Customize data or templates
 
-- Per-character content: prefer `card set`; batch edits should update `data/source/All Decks.apkg`.
+- Per-character content: prefer `card set` or `card add`; canonical records live
+  in `data/source/characters.json`.
 - Example words: edit `data/manual/example_words.json`, then run `sync`.
 - Card templates: edit `src/anki_chinese/cards/`, then run `sync`.
 - Deck/model identity: do not change `MODEL_ID`, `DECK_ID`, field order, or GUID behavior without a migration plan.

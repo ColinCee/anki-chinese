@@ -42,7 +42,7 @@ def test_init_parses_real_apkg(e2e_runtime, runner: CliRunner) -> None:
     assert len(saved) > 2000
 
 
-def test_status_reports_learned_characters(e2e_runtime, runner: CliRunner) -> None:
+def test_status_reports_missing_live_learning_state(e2e_runtime, runner: CliRunner) -> None:
     app = create_app(e2e_runtime)
     # Seed state so status has something to report.
     runner.invoke(app, ["init", "--input", str(REAL_APKG)])
@@ -50,7 +50,8 @@ def test_status_reports_learned_characters(e2e_runtime, runner: CliRunner) -> No
     result = runner.invoke(app, ["status"])
 
     assert result.exit_code == 0, result.output
-    assert "Learned characters" in result.output
+    assert "Learned-character progress unavailable" in result.output
+    assert "live scheduling" in result.output
 
 
 def test_build_produces_output_deck(e2e_runtime, runner: CliRunner) -> None:

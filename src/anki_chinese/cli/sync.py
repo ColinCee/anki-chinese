@@ -77,7 +77,7 @@ def _build_sync_plan(
     skip_audio: bool,
 ) -> SyncPlan:
     return plan_sync(
-        source_deck_path=runtime.source_deck_path,
+        source_deck_path=runtime.source_content_path,
         enriched_path=runtime.note_store.path,
         deck_output_path=runtime.deck_output_path,
         generated_audio_dir=runtime.generated_audio_dir,
@@ -93,7 +93,7 @@ def _execute_stage(runtime: AppRuntime, stage_id: str) -> str:
     if stage_id == "init":
         from .init import run_init
 
-        run_init(runtime, runtime.source_deck_path)
+        run_init(runtime, runtime.source_content_path)
         return "anki-chinese init"
     if stage_id == "audio":
         from .audio import run_audio

@@ -397,7 +397,7 @@ def run_sentences(
         if not force and not pick:
             targets = [n for n in targets if not n.sentence]
         # Prioritize learned characters before applying limit
-        learned = runtime.load_learned_hanzi(runtime.source_deck_path)
+        learned = runtime.current_learned_hanzi() or set()
         if learned:
             targets = prioritize_learned(targets, learned)
         if limit > 0:
