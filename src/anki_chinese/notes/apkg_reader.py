@@ -16,7 +16,7 @@ from typing import Any
 import zstandard as zstd
 
 from ..config import MODEL_ID
-from .model import CharacterNote
+from .model import CharacterNote, Curriculum
 
 _FIELD_SEP = "\x1f"
 _FIELD_KEYS = (
@@ -36,6 +36,8 @@ _FIELD_KEYS = (
     "sentence_english",
 )
 _FIELD_INDEX = {field_name: index for index, field_name in enumerate(_FIELD_KEYS)}
+_RSH_LESSON_RE = re.compile(r"(RSH\d+-L\d+)(?![A-Za-z0-9])", re.IGNORECASE)
+_RSH_LABEL_RE = re.compile(r"RSH\d+-[A-Za-z0-9_]+$", re.IGNORECASE)
 
 
 def _decompress_anki21b(data: bytes) -> bytes:
@@ -99,6 +101,77 @@ def _split_fields(flds: str) -> list[str]:
     return parts
 
 
+def _curriculum_from_apkg(
+    *,
+    heisig_num: str,
+    lesson_field: str,
+    tags: str,
+) -> Curriculum:
+    tokens = tags.split()
+    values: dict[str, str] = {}
+    for token in tokens:
+        if "::" in token:
+            key, value = token.split("::", 1)
+            values[key] = value
+
+    explicit_lesson = values.get("lesson", "").strip()
+    legacy_lesson = lesson_field.strip()
+    custom = (
+        values.get("curriculum") == "custom"
+        or values.get("origin") == "manual"
+        or explicit_lesson.startswith("Manual-Missing-")
+        or legacy_lesson.startswith("Manual-Missing-")
+    )
+    if custom:
+        custom_collection = values.get("collection", "").strip()
+        if not custom_collection:
+            for candidate in (explicit_lesson, legacy_lesson):
+                if candidate.startswith("Manual-Missing-"):
+                    custom_collection = candidate
+                    break
+        custom_lesson = (
+            explicit_lesson
+            if explicit_lesson and not explicit_lesson.startswith("Manual-Missing-")
+            else ""
+        )
+        return Curriculum(
+            track="custom",
+            rsh_number=None,
+            lesson=custom_lesson,
+            origin=values.get("origin", "manual"),
+            collection=custom_collection,
+        )
+
+    lesson_candidates = [explicit_lesson, legacy_lesson, *tokens]
+    lesson = ""
+    for candidate in lesson_candidates:
+        match = _RSH_LESSON_RE.search(candidate)
+        if match:
+            lesson = match.group(1)
+            break
+    if not lesson:
+        for candidate in lesson_candidates:
+            stripped = candidate.strip()
+            if stripped.startswith("Manual-Missing-"):
+                lesson = stripped
+                break
+            if _RSH_LABEL_RE.fullmatch(stripped):
+                lesson = stripped
+                break
+    if not lesson:
+        fallback = explicit_lesson or legacy_lesson
+        if fallback and not fallback.lower().startswith("leech"):
+            lesson = fallback
+    raw_number = values.get("rsh") or "".join(character for character in heisig_num if character.isdigit())
+    return Curriculum(
+        track="rsh",
+        rsh_number=int(raw_number) if raw_number else None,
+        lesson=lesson,
+        origin=values.get("origin", "rsh"),
+        collection=values.get("collection", ""),
+    )
+
+
 def _note_from_fields(flds: str, tags: str) -> CharacterNote:
     """Build a CharacterNote from the \x1f-separated fields string."""
     parts = _split_fields(flds)
@@ -106,6 +179,11 @@ def _note_from_fields(flds: str, tags: str) -> CharacterNote:
     def _get(idx: int) -> str:
         return parts[idx].strip() if idx < len(parts) else ""
 
+    curriculum = _curriculum_from_apkg(
+        heisig_num=_get(7),
+        lesson_field=_get(8),
+        tags=tags,
+    )
     return CharacterNote(
         hanzi=_extract_hanzi(_get(0)),
         meaning=_strip_html(_get(1)),
@@ -115,12 +193,13 @@ def _note_from_fields(flds: str, tags: str) -> CharacterNote:
         cantonese_audio=_get(5),
         stroke_order=_get(6),
         heisig_num=_get(7),
-        lesson=tags.strip() if tags.strip() else _get(8),
+        lesson=curriculum.lesson,
         story=_get(9),
         sentence_audio=_get(10),
         sentence=_get(11),
         sentence_pinyin=_get(12),
         sentence_english=_get(13),
+        curriculum=curriculum,
     )
 
 

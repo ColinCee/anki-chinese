@@ -14,6 +14,7 @@ from rich.console import Console
 from ..audio import TTSProvider, build_tts_provider
 from ..config import (
     AUDIO_MANIFEST_PATH,
+    CANONICAL_SOURCE_PATH,
     DECK_OUTPUT_DIR,
     ENRICHED_PATH,
     GENERATED_AUDIO_DIR,
@@ -57,7 +58,24 @@ class AppRuntime:
     tts_provider_factory: Callable[[Path], TTSProvider]
     tts_provider: TTSProvider
     sentence_tts_provider: TTSProvider | None = None
+    source_records_path: Path | None = None
+    learned_state_path: Path | None = None
     console: Console = field(default_factory=Console)
+
+    @property
+    def source_content_path(self) -> Path:
+        """Return the canonical source, falling back to the legacy APKG."""
+
+        if self.source_records_path is not None and self.source_records_path.exists():
+            return self.source_records_path
+        return self.source_deck_path
+
+    def current_learned_hanzi(self) -> set[str] | None:
+        """Return learned Hanzi only when a current scheduling snapshot exists."""
+
+        if self.learned_state_path is None:
+            return None
+        return self.load_learned_hanzi(self.learned_state_path)
 
 
 def _build_sentence_tts_provider(generated_audio_dir: Path) -> TTSProvider:
@@ -68,6 +86,7 @@ def _build_sentence_tts_provider(generated_audio_dir: Path) -> TTSProvider:
 def build_runtime() -> AppRuntime:
     return AppRuntime(
         source_deck_path=SOURCE_DECK_PATH,
+        source_records_path=CANONICAL_SOURCE_PATH,
         song_lyrics_dir=SONG_LYRICS_DIR,
         hsk_vocab_path=HSK_VOCAB_PATH,
         note_store=JsonNoteStore(ENRICHED_PATH),
@@ -121,6 +140,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     sentences_command = import_module(".sentences", __package__)
     songs_command = import_module(".songs", __package__)
     status_command = import_module(".status", __package__)
+    source_command = import_module(".source", __package__)
     sync_command = import_module(".sync", __package__)
     test_tts_command = import_module(".test_tts", __package__)
 
@@ -137,6 +157,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     audio_command.register(app, runtime)
     build_command.register(app, runtime)
     status_command.register(app, runtime)
+    source_command.register(app, runtime)
     sync_command.register(app, runtime)
     test_tts_command.register(app, runtime)
     return app

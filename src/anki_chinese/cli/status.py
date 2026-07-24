@@ -27,8 +27,12 @@ def run_status(runtime: AppRuntime) -> None:
     runtime.console.print(table)
 
     # Learned characters progress
-    learned = runtime.load_learned_hanzi(runtime.source_deck_path)
-    if learned:
+    learned = runtime.current_learned_hanzi()
+    if learned is None:
+        runtime.console.print(
+            "\n[dim]Learned-character progress unavailable: canonical source has no live scheduling state.[/dim]"
+        )
+    elif learned:
         learned_notes = [n for n in notes if n.hanzi in learned]
         total = len(learned_notes)
         with_sentence = sum(1 for n in learned_notes if n.sentence)

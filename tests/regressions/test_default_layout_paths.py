@@ -6,6 +6,7 @@ def test_default_layout_paths_match_the_documented_repo_structure() -> None:
 
     assert project_root / "src" / "anki_chinese" / "cards" == config.CARDS_DIR
     assert project_root / "data" / "source" / "All Decks.apkg" == config.SOURCE_DECK_PATH
+    assert project_root / "data" / "source" / "characters.json" == config.CANONICAL_SOURCE_PATH
     assert (
         project_root / "data" / "reference" / "cedict_1_0_ts_utf-8_mdbg.txt" == config.CEDICT_PATH
     )

@@ -114,9 +114,11 @@ def _check_files(runtime: AppRuntime) -> list[DoctorCheck]:
     checks = [
         DoctorCheck(
             "Source deck export",
-            "ok" if runtime.source_deck_path.is_file() else "error",
-            str(runtime.source_deck_path),
-            "" if runtime.source_deck_path.is_file() else "Export Anki to data/source/All Decks.apkg.",
+            "ok" if runtime.source_content_path.is_file() else "error",
+            str(runtime.source_content_path),
+            ""
+            if runtime.source_content_path.is_file()
+            else "Run `uv run anki-chinese init` or restore the source data.",
         ),
         DoctorCheck(
             "Built deck output",
@@ -146,7 +148,7 @@ def _check_files(runtime: AppRuntime) -> list[DoctorCheck]:
 def _check_sync(runtime: AppRuntime) -> DoctorCheck:
     try:
         plan = plan_sync(
-            source_deck_path=runtime.source_deck_path,
+            source_deck_path=runtime.source_content_path,
             enriched_path=runtime.note_store.path,
             deck_output_path=runtime.deck_output_path,
             generated_audio_dir=runtime.generated_audio_dir,

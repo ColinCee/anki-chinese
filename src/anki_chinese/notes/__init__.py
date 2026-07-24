@@ -7,7 +7,7 @@ from .apkg_reader import (
     update_note_fields_in_apkg,
 )
 from .enrich import enrich_notes
-from .model import CharacterNote
+from .model import CharacterNote, Curriculum
 from .pronunciation import (
     PhoneticConfuser,
     SentencePinyinIssue,
@@ -24,10 +24,18 @@ from .report import (
     prioritize_learned,
     validation_issues,
 )
+from .source import (
+    CharacterSourceStore,
+    add_source_record,
+    migrate_notes_to_source,
+    update_source_record,
+)
 from .store import JsonNoteStore, load_notes, save_notes
 
 __all__ = [
     "CharacterNote",
+    "CharacterSourceStore",
+    "Curriculum",
     "JsonNoteStore",
     "PhoneticConfuser",
     "SentencePinyinIssue",
@@ -43,9 +51,12 @@ __all__ = [
     "load_learned_hanzi_from_apkg",
     "load_deck_hanzi_from_apkg",
     "load_notes",
+    "add_source_record",
+    "migrate_notes_to_source",
     "parse_apkg",
     "prioritize_learned",
     "save_notes",
     "update_note_fields_in_apkg",
+    "update_source_record",
     "validation_issues",
 ]

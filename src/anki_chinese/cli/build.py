@@ -40,7 +40,7 @@ def run_build(
         runtime.console.print("\n[bold]Step 1/3 · Parse + Enrich[/bold]")
         notes = run_init(
             runtime,
-            runtime.source_deck_path,
+            runtime.source_content_path,
         )
 
         if not skip_audio:
