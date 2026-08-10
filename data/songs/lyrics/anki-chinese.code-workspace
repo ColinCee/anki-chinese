@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../../../../astro-blog"
+		},
+		{
+			"path": "../../../../notes"
 		}
 	],
 	"settings": {}
