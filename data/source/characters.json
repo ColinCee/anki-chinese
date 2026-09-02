@@ -60420,6 +60420,26 @@
         "origin": "manual",
         "collection": "Manual-Missing-2026-07-02"
       }
+    },
+    {
+      "hanzi": "茉",
+      "content": {
+        "meaning": "jasmine; bound form of 茉莉 (jasmine); as in 茉莉花",
+        "pinyin": "mò",
+        "jyutping": "mut6",
+        "sentence": "我喜欢喝茉莉花茶。",
+        "sentence_pinyin": "wǒ xǐ huān hē mò lì huā chá.",
+        "sentence_english": "I like to drink jasmine tea.",
+        "stroke_order": "<img src=\"8309.gif\" />",
+        "story": ""
+      },
+      "curriculum": {
+        "track": "custom",
+        "rsh_number": null,
+        "lesson": "",
+        "origin": "manual",
+        "collection": "Manual-Missing-2026-08-29"
+      }
     }
   ]
 }
