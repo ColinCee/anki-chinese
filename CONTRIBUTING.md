@@ -38,14 +38,38 @@ uv run anki-chinese songs verify
 - Do not change `MODEL_ID`, `DECK_ID`, note fields, or card template field references without an explicit migration plan.
 - For live Anki activation changes, preserve dry-run behavior, undo snapshots before real mutations, and clear affected note/card counts.
 
-## Documentation structure
+## Documentation ownership
 
-- README: public overview and shortest successful path.
-- `docs/start.md`: first setup and first rebuild.
-- `docs/workflows.md`: common day-to-day tasks.
-- `docs/reference.md`: commands, config, data layout, model facts, and development commands.
-- `docs/architecture.md`: system overview.
-- `docs/decisions/`: durable decisions and tradeoffs.
+Each kind of information has one canonical home:
+
+| Location | Owns |
+| --- | --- |
+| `README.md` | Public overview and links to the shortest successful path. |
+| `docs/start.md` | First setup and first rebuild. |
+| `docs/workflows.md` | Goal-oriented, day-to-day procedures. |
+| `docs/reference.md` | Stable command, configuration, data-layout, and model facts. CLI `--help` remains authoritative for options. |
+| `docs/architecture.md` | Current system boundaries, data flow, and package responsibilities. |
+| `docs/decisions/` | The context and consequences of durable decisions. Supersede old decisions rather than silently rewriting their history. |
+| `CONTRIBUTING.md` | Contributor workflow and documentation policy. |
+| `SECURITY.md` | Security reporting and repository-specific secret handling. |
+| `.github/copilot-instructions.md` | Only non-obvious repository invariants and pointers needed on most agent tasks. |
+| `.agents/skills/` | Task-specific procedures loaded on demand; they must not duplicate general project documentation. |
+
+Before adding documentation, search these locations for the concept and edit its
+canonical home. Prefer replacing, consolidating, or deleting stale text over
+appending another explanation. Add a new document only when it has a distinct
+purpose or records a durable decision that does not fit an existing page.
+
+Documentation changes should keep the repository's knowledge model coherent:
+
+- Link to canonical detail instead of copying it into README, contributor, agent,
+  and skill files.
+- Document behavior in code, tests, schemas, or CLI help when those can be the
+  executable source of truth.
+- In the same change, remove instructions made obsolete by the new behavior.
+- Review the complete affected section, not only the paragraph being added.
+- Keep temporary plans and implementation notes in issues or pull requests, not
+  as permanent repository documents.
 
 ## Secrets and generated files
 
