@@ -18,18 +18,10 @@ Use a hybrid TTS setup behind the `TTSProvider` protocol:
 Google uses Application Default Credentials or a service-account JSON file, not
 a Google TTS API-key environment variable.
 
-## Current behavior
+## Operational guidance
 
-```bash
-uv run anki-chinese doctor
-uv run anki-chinese test-tts --char 早 --provider google
-uv run anki-chinese test-tts --word 早上 --provider minimax
-uv run anki-chinese audio
-uv run anki-chinese sync
-```
-
-Generated audio provenance is stored locally so provider/model/voice changes can
-mark existing files stale even when filenames still exist.
+[Workflows](../workflows.md#generate-audio) owns generation procedures;
+[Reference](../reference.md) owns configuration and audio provenance paths.
 
 ## Consequences
 

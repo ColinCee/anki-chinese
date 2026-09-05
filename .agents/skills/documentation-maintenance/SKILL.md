@@ -1,34 +1,23 @@
 ---
 name: documentation-maintenance
-description: Use when adding, rewriting, reorganizing, or reviewing anki-chinese documentation or agent instructions. Prevents append-only documentation by requiring canonical placement, consolidation, and deletion of stale material.
-when_to_use: Trigger on changes to README.md, CONTRIBUTING.md, SECURITY.md, docs/, .github/copilot-instructions.md, pull request documentation, or another project skill.
-argument-hint: "[topic-or-files]"
+description: Use when changing or auditing repository docs, agent instructions, or local skills, or when a task exposes misleading or hard-to-find guidance. Consolidate at the canonical owner; do not create documentation as a ritual.
 ---
 
-# Documentation Maintenance
+# Documentation maintenance
 
-Keep the repository's knowledge base coherent rather than merely adding text.
+Follow [ownership and the maintenance loop](../../../CONTRIBUTING.md#documentation-ownership).
+That policy also governs changes to this skill; do not copy it into other skills.
 
-1. Read the documentation ownership table in `CONTRIBUTING.md`.
-2. Search all canonical locations for the concept before editing.
-3. Choose one canonical home based on audience and purpose.
-4. Edit that source in place. Replace, merge, move, or delete stale material in
-   the same change.
-5. Link to canonical detail from other surfaces instead of copying it.
-6. Add a file only for a genuinely distinct purpose or a durable decision that
-   cannot fit an existing page.
-7. Keep command options in Typer help and code-derived facts in code, tests, or
-   schemas; documentation should explain tasks, stable facts, boundaries, and
-   rationale.
-8. Before finishing, review the full affected sections and search again for
-   contradictions or obsolete instructions.
+For a full audit, inventory repository guides, decision records, local skills,
+and contributor templates. Distinguish application data and generated artifacts
+from guidance. Installed third-party skills are outside repository-edit scope.
+For a task-local correction, read only the affected owner and competing copies.
 
-Preserve historical decision records. If a decision changes, add or clearly
-mark a superseding decision instead of rewriting the original rationale as
-though the old decision never existed.
+Verify consequential claims against implementation and CLI help before rewriting.
+Keep supported behavior, desired policy, and known limitations distinct.
+If evidence is unavailable, report the gap rather than asserting accuracy.
 
-For agent guidance, retain only non-inferable invariants, safety rules, and
-pointers needed for its trigger. Remove architecture summaries, command
-catalogues, and workflows already owned by canonical docs or CLI help.
-
-Report which source became canonical and what was consolidated or removed.
+Finish with the corrected traps, canonical homes, and removed duplication.
+Measure overall size for broad consolidation, but never cut safety to hit a
+number. Stop after one bounded follow-up pass; no new audit/report file,
+maintenance quota, or automatic skill invocation chain is required.

@@ -1,56 +1,28 @@
 # Reference
 
-Run `uv run anki-chinese --help` and `uv run anki-chinese <command> --help` for
-the authoritative option list.
-
-## Core commands
-
-| Command | Purpose |
-| --- | --- |
-| `uv run anki-chinese` | Open the workbench in an interactive terminal; show help otherwise. |
-| `uv run anki-chinese workbench` | Open the Textual workbench explicitly. |
-| `uv run anki-chinese dashboard` | Compatibility alias for `workbench`. |
-| `uv run anki-chinese doctor` | Read-only local readiness checks. |
-| `uv run anki-chinese sync --dry-run` | Preview stale rebuild stages. |
-| `uv run anki-chinese sync` | Execute needed `init`, `audio`, and `build` stages. |
-| `uv run anki-chinese status` | Show coverage, validation, learned-character, and audio health. |
-| `uv run anki-chinese frequency report` | Compare reviewed characters with the cached frequency list and show high-frequency deck gaps. |
-| `uv run anki-chinese frequency refresh` | Explicitly build and cache the wordfreq-derived character list. |
-| `uv run anki-chinese review` | Inspect notes flagged for manual correction. |
-| `uv run anki-chinese card show 水` | Show saved note state. |
-| `uv run anki-chinese card set 水 ...` | Write authored fields into the canonical character source. |
-| `uv run anki-chinese card add 账 ...` | Add a RSH or custom character to the canonical source. |
-| `uv run anki-chinese source import --replace` | Replace canonical records from a legacy APKG export. |
-| `uv run anki-chinese sentences` | Generate missing Gemini example sentences. |
-| `uv run anki-chinese keywords` | Repair contextual meanings with Gemini. |
-| `uv run anki-chinese audio` | Generate missing/stale audio. |
-| `uv run anki-chinese audio-clean` | Preview orphaned generated audio cleanup. |
-| `uv run anki-chinese build` | Primitive deck package build from enriched state. |
-| `uv run anki-chinese songs learn` | Preferred human song-learning activation workflow. |
-| `uv run anki-chinese activate chars ...` | Lower-level explicit live card activation. |
-
-Legacy/primitives such as `init`, `build --full`, `songs activate`, and
-top-level sentence audit aliases remain for compatibility, but day-to-day use
-should start with the workbench, `doctor`, `sync`, `card`, and `songs learn`.
+`uv run anki-chinese <command> --help` owns commands and options;
+[Workflows](workflows.md) owns task examples. `workbench` is the human entrypoint;
+`dashboard` is its compatibility alias.
 
 ## Environment variables
 
-| Variable | Required for | Purpose |
-| --- | --- | --- |
-| `GEMINI_API_KEY` | `sentences`, `keywords`, `sentences repair-confusers --apply` | Gemini API key. |
-| `MINIMAX_API_KEY` | MiniMax audio | Sentence/audio API key. |
-| `MINIMAX_API_HOST` | Optional MiniMax override | Use `https://api.minimaxi.com` for mainland-region keys. |
-| `MINIMAX_TTS_MODEL` | Optional MiniMax override | Override the speech model. |
-| `MINIMAX_MANDARIN_VOICE_ID` | Optional MiniMax override | Override Mandarin voice. |
-| `MINIMAX_CANTONESE_VOICE_ID` | Optional MiniMax override | Override Cantonese voice. |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Google audio with service account | Path to service-account JSON. |
-| `GOOGLE_TTS_ENDPOINT` | Optional Google override | Override REST endpoint. |
-| `GOOGLE_TTS_MANDARIN_VOICE` | Optional Google override | Override Mandarin voice. |
-| `GOOGLE_TTS_CANTONESE_VOICE` | Optional Google override | Override Cantonese voice. |
-| `ANKICONNECT_API_KEY` | Optional AnkiConnect auth | Only if your local add-on requires a key. |
+| Variable | Purpose |
+| --- | --- |
+| `GEMINI_API_KEY` | Sentence generation, meaning repair, and applied sentence repairs. |
+| `MINIMAX_API_KEY` | MiniMax audio authentication. |
+| `MINIMAX_API_HOST` | MiniMax endpoint override; use the endpoint matching your key's region. |
+| `MINIMAX_TTS_MODEL` | Speech model override. |
+| `MINIMAX_MANDARIN_VOICE_ID` | Mandarin voice override. |
+| `MINIMAX_CANTONESE_VOICE_ID` | Cantonese voice override. |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Service-account JSON path, as an alternative to local ADC. |
+| `GOOGLE_TTS_ENDPOINT` | Google TTS endpoint override. |
+| `GOOGLE_TTS_MANDARIN_VOICE` | Mandarin voice override. |
+| `GOOGLE_TTS_CANTONESE_VOICE` | Cantonese voice override. |
+| `ANKICONNECT_API_KEY` | Local AnkiConnect key, when the add-on requires one. |
 
-Google TTS uses Application Default Credentials, not an API-key environment
-variable:
+Provider defaults live in `src/anki_chinese/audio/google_tts.py` and `minimax.py`.
+Google TTS uses Application Default Credentials or service-account authentication,
+not a TTS API key:
 
 ```bash
 gcloud auth application-default login
@@ -58,78 +30,53 @@ gcloud auth application-default login
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 ```
 
+The [provider decision](decisions/tts-provider-strategy.md) explains the default
+Google-character/MiniMax-sentence split. Keep credentials private; see
+[Security](../SECURITY.md).
+
 ## Data layout
 
-| Path | Purpose |
+Paths are defined in `src/anki_chinese/config.py`.
+
+| Path | Owner / lifecycle |
 | --- | --- |
-| `data/source/characters.json` | Canonical structured RSH/custom character records used by `init`/`sync` and `card set`/`card add`. |
-| `data/source/All Decks.apkg` | Legacy/bootstrap source export accepted for migration and compatibility. |
-| `data/manual/example_words.json` | Manual example-word data for enrichment. |
-| `data/reference/` | Compact corpora such as HSK and CEDICT. |
-| `data/songs/lyrics/` | Curated lyric markdown files. |
-| `data/state/enriched.json` | Ignored generated note state used by status/generation/audio/build. |
-| `data/state/pipeline.json` | Ignored local stage fingerprints used by `sync`, the workbench, and `doctor`. |
-| `data/state/audio_manifest.json` | Ignored local audio provenance used for freshness checks. |
-| `data/state/character_frequency.json` | Ignored local snapshot of the wordfreq-derived character-frequency list. |
-| `data/build/decks/chinese_rsh.apkg` | Generated deck package. |
+| `data/source/characters.json` | Canonical authored RSH/custom records; edit with `card set` / `card add`. |
+| `data/source/All Decks.apkg` | Legacy bootstrap/import input, not current live scheduling state. |
+| `data/reference/` | Dictionary and vocabulary corpora. |
+| `data/songs/lyrics/` | Curated lyric data, not repository documentation. |
+| `data/state/enriched.json` | Working generated notes for generation/audio/build; not the canonical source. |
+| `data/state/pipeline.json` | Local stage fingerprints. |
+| `data/state/audio_manifest.json` | Audio provider/model/voice provenance. |
+| `data/state/character_frequency.json` | Explicitly refreshed wordfreq-derived cache. |
+| `data/build/decks/chinese_rsh.apkg` | Rebuilt package for manual Anki import. |
 | `data/build/audio/` | Generated and sample audio. |
-| `data/build/anki_backups/` | Live Anki activation/undo safety snapshots. |
+| `data/build/anki_backups/` | Live mutation/undo safety snapshots. |
 
-Generated files under `data/build/` and derived state under `data/state/` are
-ignored. Use `card set` or `card add` to make reviewable changes in the
-canonical source, then run `sync` to regenerate state and the APKG.
-The canonical source does not contain live Anki scheduling state; learned
-progress and learned-scope reports require a current live query or an explicitly
-fresh scheduling snapshot and are not inferred from the legacy APKG.
+Generated output and the listed state files are gitignored. Do not confuse
+"generated" with "safe to discard": accepted generated text needs
+[promotion into canonical records](workflows.md#generate-sentences-and-meanings),
+and live undo snapshots may still be needed for recovery.
 
-The frequency snapshot is derived from `wordfreq`'s large Chinese word list,
-which combines multiple sources and represents usage through approximately
-2021. The snapshot scores each Hanzi occurrence in the top 100,000 Chinese
-words. Reports never rebuild it automatically; use `frequency refresh`
-explicitly when you want to regenerate it.
+Frequency reports use cached wordfreq estimates plus current live review state,
+not APKG suspension flags. `frequency refresh` rebuilds the cache explicitly;
+reports do not refresh it implicitly. This is an estimate, not a proficiency score.
 
 ## Anki model
 
-Stable identity lives in `src/anki_chinese/config.py`:
+`src/anki_chinese/config.py` owns `DECK_ID`, `MODEL_ID`, and `FIELDS`;
+`notes/model.py` projects records into that order, and `deck.py` owns note GUIDs
+and template assembly. **Do not change IDs, GUID behavior, or field order without
+an explicit migration.** This is what lets imports update rather than duplicate.
 
-| Setting | Purpose |
-| --- | --- |
-| `DECK_ID` | Stable genanki deck ID. |
-| `MODEL_ID` | Stable genanki note type/model ID. |
-| `DECK_NAME` | Display name in Anki. |
-| `MODEL_NAME` | Anki note type name. |
-| `FIELDS` | Field order used by genanki and card templates. |
+Each note produces Recognition and Listening cards. Recognition presents the
+character and an optional unaided reading sentence. Listening withholds written
+Chinese until the answer. Both backs prioritize the character followed by the
+reading sentence. Meaning and usage sit below it, collapsed by default alongside
+the other optional aids: sentence pinyin/translation, story, and stroke order.
+Revealed vocabulary examples stay enlarged. Vocabulary and sentence practice
+remain within these two cards, not separately scheduled notes.
 
-Do not change `DECK_ID`, `MODEL_ID`, note GUID behavior, or field order without
-an explicit migration plan. Anki uses these to update existing notes instead of
-creating duplicates.
-
-Fields:
-
-```text
-Hanzi, Meaning, Pinyin, Jyutping,
-MandarinAudio, CantoneseAudio, StrokeOrder, HeisigNum,
-Lesson, Story, SentenceAudio, Sentence, SentencePinyin, SentenceEnglish
-```
-
-Card templates live in `src/anki_chinese/cards/`.
-
-## Development
-
-```bash
-uv sync --group dev
-uv run ruff check
-uv run pyright
-uv run pytest
-uv run anki-chinese --help
-uv run python -m anki_chinese.cli --help
-```
-
-If lyrics change, also run:
-
-```bash
-uv run anki-chinese songs verify
-```
-
-Keep provider-specific behavior behind `audio/provider.py` and
-`audio/factory.py`; keep AnkiConnect behavior behind `activation/`.
+Templates use authored content, not inferred word segmentation or generated
+compound pronunciations. See [Customize card templates](workflows.md#customize-card-templates)
+for the rebuild path and [Contributor code map](../CONTRIBUTING.md#where-to-make-a-change)
+for code and test entry points.

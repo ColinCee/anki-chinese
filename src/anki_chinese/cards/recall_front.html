@@ -1,19 +1,37 @@
-<div class="listen-prompt">🎧</div>
-<div class="listen-audio">{{MandarinAudio}}</div>
+<main class="study-card study-front">
+    <header class="hero listen-hero">
+        <h1 class="study-prompt">Listen &amp; recall</h1>
+        {{#MandarinAudio}}
+        <div class="listen-audio">{{MandarinAudio}}</div>
+        <p class="study-instruction">Say the meaning. Picture the character.</p>
+        {{/MandarinAudio}}
+        {{^MandarinAudio}}
+        <p class="study-instruction">No character recording yet. Try recalling from the hint.</p>
+        {{/MandarinAudio}}
+        {{#Pinyin}}
+        <details class="reveal">
+            <summary>Hint: character pinyin</summary>
+            <div class="hint-text">{{Pinyin}}</div>
+        </details>
+        {{/Pinyin}}
+        {{^MandarinAudio}}{{^Pinyin}}
+        <p class="study-instruction">No pinyin hint available. Turn over to review the character.</p>
+        {{/Pinyin}}{{/MandarinAudio}}
+    </header>
 
-{{#Sentence}}
-<div class="listen-example">
-	{{SentenceAudio}}
-	{{#SentenceEnglish}}
-	<details class="hint-box">
-		<summary>Show meaning</summary>
-		<div class="hint-text">{{SentenceEnglish}}</div>
-	</details>
-	{{/SentenceEnglish}}
-</div>
-{{/Sentence}}
-
-<details class="hint-box">
-	<summary>Show pinyin</summary>
-	<div class="hint-text">{{Pinyin}}</div>
-</details>
+    {{#SentenceAudio}}
+    <section class="reading-section">
+        <div class="section-heading">
+            <h2 class="section-title">Listen in context</h2>
+            <div class="context-audio">{{SentenceAudio}}</div>
+        </div>
+        <p class="study-instruction">Catch the words, then repeat the whole sentence.</p>
+        {{#SentenceEnglish}}
+        <details class="reveal">
+            <summary>Hint: sentence meaning</summary>
+            <div class="hint-text">{{SentenceEnglish}}</div>
+        </details>
+        {{/SentenceEnglish}}
+    </section>
+    {{/SentenceAudio}}
+</main>

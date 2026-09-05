@@ -1,21 +1,15 @@
 # anki-chinese
 
-Build a regenerable Anki deck for Mandarin study with Cantonese support, AI-generated example sentences, controlled pronunciation audio, and song-driven card activation.
+Maintain a Mandarin Anki deck with Cantonese support: character recognition,
+vocabulary in context, example sentences, pronunciation audio, and song-driven
+study. Anki handles reviews; this project handles rebuildable content and
+separate, preview-first live card activation.
 
-The project is optimized for a mainland Mandarin learner using simplified characters while still keeping Cantonese readings and traditional-script song exposure useful as support.
+## Start
 
-## Why this exists
-
-Anki is excellent at scheduling reviews, but maintaining a high-quality Chinese deck by hand is slow. `anki-chinese` keeps Anki as the review engine and automates the rebuildable parts:
-
-- parse an existing Anki `.apkg` export
-- enrich each character with Mandarin pinyin, Cantonese jyutping, meanings, and metadata
-- generate short, common Mandarin example sentences with Gemini
-- generate single-character and sentence audio with provider-specific TTS
-- rebuild a clean `.apkg` with stable IDs so imports update notes instead of duplicating them
-- use AnkiConnect to unsuspend/tag specific live cards, manually or from song lyric plans
-
-## Quick start
+You need Python 3.13+, [uv](https://docs.astral.sh/uv/), and Anki desktop for
+import/review. Canonical character records are included; no Anki export or
+source replacement is needed for a normal first rebuild.
 
 ```bash
 git clone https://github.com/ColinCee/anki-chinese.git
@@ -25,54 +19,35 @@ uv run anki-chinese doctor
 uv run anki-chinese
 ```
 
-The workbench is the human entrypoint: it inspects local state, recommends one
-next action, previews safe workflows in-place, can run sync/doctor/card-edit
-and song-preview actions, and hides equivalent CLI commands behind Advanced.
-`doctor` is read-only and checks local readiness.
+The terminal workbench guides human workflows. Agents and scripts use
+`uv run anki-chinese <command> --help` and deterministic commands directly.
+`doctor` is read-only: it checks readiness and credential presence, not provider
+authentication. `doctor --check-anki` adds only a local AnkiConnect version probe.
 
-Prerequisites and setup details are in [Start](docs/start.md).
+## First rebuild
 
-## Core workflow
+Without paid generation or audio credentials:
 
 ```bash
 uv run anki-chinese sync --dry-run
-uv run anki-chinese sync
+uv run anki-chinese sync --skip-audio
 ```
 
-`sync` is the state-aware rebuild planner. It decides whether parsing,
-enrichment, audio, and deck building are needed, then writes the generated deck
-to `data/build/decks/chinese_rsh.apkg`.
+Import `data/build/decks/chinese_rsh.apkg` into Anki. Existing audio may be
+included, but missing audio is not generated. For full audio, configure
+[credentials](docs/reference.md#environment-variables) and run `sync`.
+Sentence generation is [separate](docs/workflows.md#generate-sentences-and-meanings).
 
-Use `card set` for one-card fixes, `sentences`/`keywords` for Gemini-backed
-content generation, `audio` for TTS, and `songs learn` for preview-first
-song-driven activation. See [Workflows](docs/workflows.md) for examples.
+Stable [Anki identity](docs/reference.md#anki-model) lets imports update notes
+instead of duplicating them. Rebuilding alone does not change the open collection.
+AnkiConnect is needed for live-state workflows, not APKG rebuilding.
+To use a different dataset, follow [Replace the source](docs/workflows.md#replace-the-source).
 
-## Safety notes
+## Find the right guide
 
-- Do not change `MODEL_ID` or `DECK_ID` after first import; Anki will treat the next import as a different model/deck.
-- `.apkg` rebuilds update note content. They are not the source of truth for live suspended state after AnkiConnect changes.
-- `activate`, `songs learn`, `songs activate`, `songs resuspend`, and undo commands mutate the open Anki collection only with `--confirm`. Preview first; confirmed live mutations write safety snapshots under `data/build/anki_backups/`.
-- Keep `.env`, API keys, Google service-account files, generated audio, and generated deck outputs out of commits.
-
-## Documentation
-
-Start with:
-
-- [Start](docs/start.md)
-- [Workflows](docs/workflows.md)
-- [Reference](docs/reference.md)
-- [Architecture](docs/architecture.md)
-- [Decisions](docs/decisions/)
-
-## Development
-
-```bash
-uv sync --group dev
-uv run pyright
-uv run pytest
-uv run ruff check
-uv run anki-chinese --help
-uv run python -m anki_chinese.cli --help
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contributor setup and PR expectations.
+- [Workflows](docs/workflows.md): edit content, generate audio, rebuild templates,
+  and learn from songs.
+- [Reference](docs/reference.md): configuration, data ownership, and Anki model.
+- [Decisions](docs/decisions/): why the study target and providers were chosen.
+- [Contributing](CONTRIBUTING.md): code map, development, and documentation maintenance.
+- [Security](SECURITY.md): private data and vulnerability reporting.

@@ -20,19 +20,10 @@ Generated sentences should:
 The implementation combines deterministic checks with model validation. Repair
 commands and audits exist for confusing or unnatural sentences.
 
-## Current behavior
+## Operational guidance
 
-```bash
-uv run anki-chinese sentences
-uv run anki-chinese sentences --char 早 --pick 3
-uv run anki-chinese keywords
-uv run anki-chinese sentences audit
-uv run anki-chinese sentences repair-confusers
-uv run anki-chinese sentences repair-confusers --apply
-```
-
-Commands that call Gemini require `GEMINI_API_KEY`. Interactive candidate
-picking requires a terminal.
+Current commands, credentials, and generated-content persistence are maintained
+in [Workflows](../workflows.md#generate-sentences-and-meanings), not this decision.
 
 ## Consequences
 

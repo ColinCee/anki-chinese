@@ -28,6 +28,8 @@ assignees: ""
 
 ## Logs or output
 
+Redact credentials and private study data before posting.
+
 ```text
 
 ```

@@ -1,0 +1,47 @@
+<script>
+(function() {
+    function wrapText(root, pattern, className, tagName) {
+        var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        var nodes = [];
+        while (walker.nextNode()) {
+            var node = walker.currentNode;
+            if (!node.parentElement.closest('script, style, rt, .vocab-word, .target-character')) {
+                nodes.push(node);
+            }
+        }
+        nodes.forEach(function(node) {
+            var text = node.textContent;
+            var fragment = document.createDocumentFragment();
+            var last = 0;
+            pattern.lastIndex = 0;
+            var match;
+            while ((match = pattern.exec(text)) !== null) {
+                fragment.appendChild(document.createTextNode(text.slice(last, match.index)));
+                var span = document.createElement(tagName);
+                span.className = className;
+                span.lang = 'zh-Hans';
+                span.textContent = match[0];
+                fragment.appendChild(span);
+                last = pattern.lastIndex;
+            }
+            if (last) {
+                fragment.appendChild(document.createTextNode(text.slice(last)));
+                node.parentNode.replaceChild(fragment, node);
+            }
+        });
+    }
+
+    document.querySelectorAll('.study-card').forEach(function(card) {
+        // Enlarge authored Chinese usage examples, without guessing word boundaries.
+        card.querySelectorAll('.meaning').forEach(function(meaning) {
+            wrapText(meaning, /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+/g, 'vocab-word', 'span');
+        });
+        var hanzi = card.querySelector('.hanzi');
+        if (!hanzi || !hanzi.textContent.trim()) return;
+        var target = hanzi.textContent.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        card.querySelectorAll('.context-chars').forEach(function(sentence) {
+            wrapText(sentence, new RegExp(target, 'g'), 'target-character', 'mark');
+        });
+    });
+})();
+</script>

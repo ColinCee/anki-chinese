@@ -4,14 +4,13 @@
 
 ## Validation
 
-- [ ] `uv run ruff check`
-- [ ] `uv run pyright`
-- [ ] `uv run pytest`
-- [ ] `uv run anki-chinese --help`
-- [ ] `uv run python -m anki_chinese.cli --help`
+Commands and outcomes, or why checks were not applicable:
 
-## Notes
+Follow [Contributing](../CONTRIBUTING.md#development) for the relevant checks.
 
-- [ ] Docs updated in their canonical location if setup, CLI behavior, env vars, data layout, architecture, or safety expectations changed.
-- [ ] New documentation replaces or links to existing material rather than duplicating it; stale instructions were removed.
-- [ ] No generated build files, secrets, audio, built decks, local Anki backups, or unintended generated-state churn committed.
+## Guidance impact
+
+Which canonical doc/skill changed, what stale material was removed, or why no
+guidance change was needed? Justify any new page or net growth.
+
+- [ ] No secrets, private data, or unintended generated artifacts included.

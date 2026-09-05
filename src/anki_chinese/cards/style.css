@@ -1,283 +1,307 @@
-/* ── Chinese RSH Card Styles ─────────────────────────────────────── */
-
 .card {
-    font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+    --paper: #f8f6f0;
+    --ink: #242e2b;
+    --muted: #59645f;
+    --rule: #cdd3cb;
+    --accent: #256854;
+    --wash: #e6ece3;
+    --tone1: #b82e38;
+    --tone2: #975000;
+    --tone3: #237440;
+    --tone4: #236caa;
+    --tone5: #626762;
+    font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
     font-size: 20px;
-    text-align: center;
-    color: #2c3e50;
-    background-color: #fafafa;
-    padding: 24px 20px;
     line-height: 1.6;
+    text-align: left;
+    color: var(--ink);
+    background: var(--paper);
+    margin: 0;
+    padding: 28px 24px 48px;
+    -webkit-text-size-adjust: 100%;
 }
 
-/* ── Tone colors (Pleco standard) ─────────────────────────────── */
+.study-card,
+.study-card * {
+    box-sizing: border-box;
+}
 
-.tone1 { color: #e74c3c; }   /* red */
-.tone2 { color: #e67e22; }   /* orange */
-.tone3 { color: #27ae60; }   /* green */
-.tone4 { color: #2980b9; }   /* blue */
-.tone5 { color: #999999; }   /* grey — neutral tone */
+.study-card {
+    max-width: 680px;
+    margin: 0 auto;
+    overflow-wrap: anywhere;
+}
 
-/* ── Hero section (character + meaning + pronunciations) ──────── */
+.study-card ::selection {
+    color: var(--ink);
+    background: var(--wash);
+}
 
 .hero {
-    margin-bottom: 20px;
+    text-align: center;
+    padding: 8px 0 28px;
 }
 
 .hanzi {
-    font-size: 96px;
-    font-weight: bold;
-    margin: 10px 0 4px;
-    line-height: 1.1;
+    font-size: 112px;
+    font-size: clamp(88px, 18vw, 128px);
+    font-weight: 500;
+    line-height: 1.25;
+    margin: 0 0 16px;
+    color: var(--ink);
 }
 
-.meaning {
-    font-size: 24px;
-    font-weight: 500;
-    color: #5a6c7d;
-    margin: 0 0 10px;
+.study-prompt {
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin: 0 0 20px;
+}
+
+.study-instruction {
+    font-size: 16px;
+    color: var(--muted);
+    margin: 8px 0 0;
 }
 
 .pronunciations {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
     gap: 8px;
-    margin: 8px 0;
-    font-size: 22px;
+}
+
+.pronunciation {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px 12px;
+}
+
+.pinyin {
+    font-size: 28px;
     font-weight: 500;
 }
 
-.pronunciations .sep {
-    color: #bdc3c7;
-    font-weight: 300;
+.jyutping {
+    font-size: 20px;
 }
 
-/* ── Recognition front ────────────────────────────────────────── */
-
-.front-example {
-    font-size: 32px;
-    font-weight: 600;
-    color: #34495e;
-    margin: -4px 0 4px;
+.language-label {
+    font-size: 14px;
+    color: var(--muted);
 }
 
-/* ── Context panels (example word + sentence) ────────────────── */
+.tone1 { color: var(--tone1); }
+.tone2 { color: var(--tone2); }
+.tone3 { color: var(--tone3); }
+.tone4 { color: var(--tone4); }
+.tone5 { color: var(--tone5); }
 
-.context-panel {
+.reading-section {
+    border-top: 1px solid var(--rule);
+    padding: 24px 0;
+}
+
+.section-heading {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
-    background: #eef6ee;
-    border-radius: 10px;
-    padding: 12px 16px;
-    margin: 0 0 12px;
+    margin-bottom: 12px;
 }
 
-.context-text {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    flex: 1;
-    min-width: 0;
+.section-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 0;
 }
 
-.context-pinyin {
-    font-size: 14px;
-    color: #95a5a6;
-    letter-spacing: 0.5px;
+.meaning {
+    font-size: 20px;
+    line-height: 1.85;
 }
 
-.context-pinyin-toggle {
-    font-size: 14px;
-    color: #95a5a6;
-}
-
-.context-pinyin-toggle summary {
-    cursor: pointer;
-    user-select: none;
+.vocab-word {
+    display: inline-block;
+    max-width: 100%;
+    font-size: 36px;
+    font-size: clamp(32px, 5vw, 40px);
+    line-height: 1.5;
+    font-weight: 500;
+    color: var(--ink);
 }
 
 .context-chars {
-    font-size: 24px;
-    font-weight: 600;
-    color: #2c3e50;
+    font-size: 40px;
+    font-size: clamp(32px, 5.5vw, 44px);
+    font-weight: 500;
+    line-height: 1.75;
+    line-break: strict;
+    margin: 0 0 16px;
+    color: var(--ink);
 }
 
-.context-meaning {
-    font-size: 15px;
-    color: #7f8c8d;
-    font-style: italic;
+.target-character {
+    color: inherit;
+    background: none;
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.15em;
 }
 
-.context-keyword {
-    font-size: 12px;
-    color: #27ae60;
-    background: #d5f5e3;
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-top: 2px;
+.reading-help {
+    border-top: 1px solid var(--rule);
 }
 
-.context-audio {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
+.reveal {
+    font-size: 16px;
+    color: var(--muted);
 }
 
-/* ── Stroke order ─────────────────────────────────────────────── */
+.reveal summary {
+    cursor: pointer;
+    padding: 10px 0;
+    min-height: 44px;
+    color: var(--accent);
+}
+
+.reveal summary:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+.reveal summary:focus-visible,
+.play-cantonese:focus-visible,
+.study-card .replay-button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+}
+
+.reveal[open] {
+    padding-bottom: 12px;
+}
+
+.context-pinyin,
+.context-meaning,
+.hint-text {
+    font-size: 20px;
+    line-height: 1.7;
+    color: var(--ink);
+}
+
+.memory-section {
+    border-top: 1px solid var(--rule);
+    padding-top: 12px;
+}
+
+.story {
+    font-size: 18px;
+    line-height: 1.8;
+    color: var(--ink);
+}
 
 .stroke-order {
-    margin: 12px 0;
+    padding: 12px 0;
+    text-align: center;
 }
 
 .stroke-order img {
-    max-width: 120px;
-    max-height: 120px;
+    max-width: 100%;
+    max-height: 240px;
+    height: auto;
 }
 
-/* ── Story ─────────────────────────────────────────────────────── */
+.study-card img {
+    max-width: 100%;
+}
 
-.story {
+.study-card .replay-button,
+.study-card .soundLink {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    vertical-align: middle;
+    min-width: 44px;
+    min-height: 44px;
+    margin: 0;
+}
+
+.study-card .replay-button svg {
+    width: 40px;
+    height: 40px;
+}
+
+.study-card .replay-button svg circle {
+    fill: var(--wash);
+    stroke: var(--rule);
+}
+
+.study-card .replay-button svg path {
+    fill: var(--accent);
+}
+
+.play-cantonese {
+    font: inherit;
     font-size: 14px;
-    color: #8e44ad;
-    font-style: italic;
-    margin: 12px 0 0;
-    padding: 10px 14px;
-    background: #f5f0f8;
-    border-radius: 8px;
-    text-align: center;
-    line-height: 1.5;
+    color: var(--accent);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    min-height: 44px;
+    padding: 8px 12px;
+    cursor: pointer;
 }
 
-/* ── Listening card front ─────────────────────────────────────── */
+.play-cantonese:hover,
+.play-cantonese:active {
+    background: var(--wash);
+}
 
-.listen-prompt {
-    font-size: 48px;
-    margin: 20px 0 8px;
+.listen-hero {
+    padding: 28px 0 36px;
 }
 
 .listen-audio {
-    margin: 8px 0 16px;
+    margin: 24px 0;
 }
 
-.listen-example {
-    margin-top: 10px;
+.listen-audio .replay-button svg {
+    width: 72px;
+    height: 72px;
 }
 
-.hint-box {
-    margin-top: 16px;
-    font-size: 15px;
-    color: #95a5a6;
-}
-
-.hint-box summary {
-    cursor: pointer;
-    user-select: none;
-}
-
-.hint-text {
-    margin-top: 6px;
-    font-size: 20px;
-    color: #2c3e50;
-}
-
-/* ── Play Cantonese button ────────────────────────────────────── */
-
-.play-cantonese {
-    background: none;
-    border: 1px solid #cfd8dc;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    font-size: 14px;
-    line-height: 30px;
-    padding: 0;
-    cursor: pointer;
-    color: #90a4ae;
-    transition: background 0.15s, color 0.15s;
-}
-
-.play-cantonese:hover {
-    background: #eceff1;
-    color: #2c3e50;
-}
-
-.play-cantonese:active {
-    background: #cfd8dc;
-}
-
-/* ── Night mode ───────────────────────────────────────────────── */
-
+.night_mode.card,
+.nightMode.card,
 .night_mode .card,
 .nightMode .card {
-    background-color: #1a1a2e;
-    color: #e0e0e0;
+    --paper: #1b2421;
+    --ink: #eef1e9;
+    --muted: #b3beb6;
+    --rule: #45564c;
+    --accent: #96cfb3;
+    --wash: #2c4035;
+    --tone1: #ff929b;
+    --tone2: #f1b566;
+    --tone3: #88ce9b;
+    --tone4: #8bc5f0;
+    --tone5: #bbc2ba;
+    color-scheme: dark;
 }
 
-.night_mode .meaning,
-.nightMode .meaning {
-    color: #a0aec0;
-}
+@media (max-width: 420px) {
+    .card {
+        padding: 20px 16px 32px;
+    }
 
-.night_mode .front-example,
-.nightMode .front-example {
-    color: #dfe6ee;
-}
+    .hero {
+        padding-bottom: 20px;
+    }
 
-.night_mode .pronunciations .sep,
-.nightMode .pronunciations .sep {
-    color: #4a5568;
-}
-
-.night_mode .context-panel,
-.nightMode .context-panel {
-    background: #1a2e1a;
-}
-
-.night_mode .context-chars,
-.nightMode .context-chars {
-    color: #f2f5f8;
-}
-
-.night_mode .context-pinyin,
-.nightMode .context-pinyin,
-.night_mode .context-meaning,
-.nightMode .context-meaning {
-    color: #8899aa;
-}
-
-.night_mode .context-keyword,
-.nightMode .context-keyword {
-    background: #1a3a1a;
-    color: #6ddb6d;
-}
-
-.night_mode .story,
-.nightMode .story {
-    background: #2a2040;
-    color: #c39bd3;
-}
-
-.night_mode .hint-box,
-.nightMode .hint-box {
-    color: #6b7b8d;
-}
-
-.night_mode .hint-text,
-.nightMode .hint-text {
-    color: #e0e0e0;
-}
-
-.night_mode .play-cantonese,
-.nightMode .play-cantonese {
-    border-color: #4a5568;
-    color: #8899aa;
-}
-
-.night_mode .play-cantonese:hover,
-.nightMode .play-cantonese:hover {
-    background: #2a2a4a;
-    color: #e0e0e0;
+    .reading-section {
+        padding: 20px 0;
+    }
 }

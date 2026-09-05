@@ -16,13 +16,10 @@ Use environment variables documented in [Reference](docs/reference.md).
 
 AnkiConnect is a local HTTP API for the open Anki collection. Keep it bound to `127.0.0.1` unless you intentionally expose it beyond localhost and have configured firewall/API-key protections.
 
-If you enable an AnkiConnect API key, set:
-
-```bash
-export ANKICONNECT_API_KEY=your-key
-```
-
-Live activation commands mutate the open Anki collection. Always dry-run first and keep an Anki backup or undo path.
+If you enable an AnkiConnect API key, configure it as described in
+[Reference](docs/reference.md#environment-variables).
+For live mutations, follow the preview, backup, and undo procedure in
+[Workflows](docs/workflows.md#learn-characters-from-songs).
 
 ## Reporting issues
 

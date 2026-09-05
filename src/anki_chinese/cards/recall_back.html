@@ -1,33 +1,64 @@
-<div class="hero">
-    <div class="hanzi">{{Hanzi}}</div>
-    <div class="meaning">{{Meaning}}</div>
-    <div class="pronunciations">
-        <span class="pinyin" data-tone-type="pinyin">{{Pinyin}}</span>
-        {{MandarinAudio}}
-        <span class="sep">·</span>
-        <span class="jyutping" data-tone-type="jyutping">{{Jyutping}}</span>
-        <button class="play-cantonese" onclick="return false;" aria-label="Play Cantonese">🔊</button>
-    </div>
-</div>
+<main class="study-card study-back">
+    <header class="hero">
+        <div class="hanzi" lang="zh-Hans">{{Hanzi}}</div>
+        <div class="pronunciations">
+            <div class="pronunciation">
+                {{#Pinyin}}<span class="pinyin" data-tone-type="pinyin">{{Pinyin}}</span>{{/Pinyin}}
+                {{MandarinAudio}}
+            </div>
+            {{#Jyutping}}
+            <div class="pronunciation">
+                <span class="language-label">Cantonese</span>
+                <span class="jyutping" data-tone-type="jyutping">{{Jyutping}}</span>
+                {{#CantoneseAudio}}<button type="button" class="play-cantonese">Play Cantonese</button>{{/CantoneseAudio}}
+            </div>
+            {{/Jyutping}}
+        </div>
+    </header>
 
-{{#Sentence}}
-<div class="context-panel">
-    <div class="context-text">
-        {{#SentencePinyin}}<details class="context-pinyin-toggle">
-            <summary>Show pinyin</summary>
-            <span class="context-pinyin">{{SentencePinyin}}</span>
-        </details>{{/SentencePinyin}}
-        <span class="context-chars">{{Sentence}}</span>
-        {{#SentenceEnglish}}<span class="context-meaning">{{SentenceEnglish}}</span>{{/SentenceEnglish}}
-    </div>
-    <div class="context-audio">{{SentenceAudio}}</div>
-</div>
-{{/Sentence}}
+    {{#Sentence}}
+    <section class="reading-section">
+        <div class="section-heading">
+            <h2 class="section-title">Read &amp; repeat</h2>
+            {{#SentenceAudio}}<div class="context-audio">{{SentenceAudio}}</div>{{/SentenceAudio}}
+        </div>
+        <div class="context-chars" lang="zh-Hans">{{Sentence}}</div>
+        <div class="reading-help">
+            {{#SentencePinyin}}
+            <details class="reveal context-pinyin-toggle">
+                <summary>Show pinyin</summary>
+                <div class="context-pinyin">{{SentencePinyin}}</div>
+            </details>
+            {{/SentencePinyin}}
+            {{#SentenceEnglish}}
+            <details class="reveal context-meaning-toggle">
+                <summary>Show translation</summary>
+                <div class="context-meaning">{{SentenceEnglish}}</div>
+            </details>
+            {{/SentenceEnglish}}
+        </div>
+        {{#SentenceAudio}}<p class="study-instruction">Read once unaided, then listen and repeat.</p>{{/SentenceAudio}}
+        {{^SentenceAudio}}<p class="study-instruction">Read aloud, then check any words you missed.</p>{{/SentenceAudio}}
+    </section>
+    {{/Sentence}}
 
-{{#StrokeOrder}}
-<div class="stroke-order">{{StrokeOrder}}</div>
-{{/StrokeOrder}}
+    {{#Meaning}}
+    <details class="reveal reading-help meaning-toggle">
+        <summary>Show meaning &amp; usage</summary>
+        <div class="meaning">{{Meaning}}</div>
+    </details>
+    {{/Meaning}}
 
-{{#Story}}
-<div class="story">{{Story}}</div>
-{{/Story}}
+    {{#Story}}
+    <details class="reveal memory-section">
+        <summary>Memory story</summary>
+        <div class="story">{{Story}}</div>
+    </details>
+    {{/Story}}
+    {{#StrokeOrder}}
+    <details class="reveal memory-section">
+        <summary>Stroke order</summary>
+        <div class="stroke-order">{{StrokeOrder}}</div>
+    </details>
+    {{/StrokeOrder}}
+</main>

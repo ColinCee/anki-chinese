@@ -1,58 +1,34 @@
-# Copilot Instructions for anki-chinese
+# Copilot instructions
 
-## Project overview
+## Find the owner
 
-`anki-chinese` is a Python CLI that rebuilds an Anki deck for Mandarin study
-with Cantonese support. Live suspended-state changes are handled separately
-through AnkiConnect.
+Read only the matching section, not the whole documentation set.
+`uv run anki-chinese <command> --help` owns commands/options.
 
-Read only the canonical document relevant to the task:
+| Task | Start here |
+| --- | --- |
+| Setup / first import | [README](../README.md#start) |
+| Locate code / checks | [Contributor code map](../CONTRIBUTING.md#where-to-make-a-change) / [checks](../CONTRIBUTING.md#development) |
+| Edit or add card content | [Card workflow](../docs/workflows.md#fix-one-card) |
+| Change card HTML/CSS | [Template rebuild](../docs/workflows.md#customize-card-templates) |
+| Configuration / data / identity | [Reference](../docs/reference.md) |
+| Curate lyrics / change normalization | [Apply the study policy](../docs/decisions/study-target-policy.md#applying-the-policy) |
+| Live state / mutations | [Live safety skill](../.agents/skills/anki-live-activation-safety/SKILL.md) |
+| Docs / skill maintenance | [Maintenance skill](../.agents/skills/documentation-maintenance/SKILL.md) |
 
-- `docs/start.md`: setup and first rebuild
-- `docs/workflows.md`: user tasks
-- `docs/reference.md`: stable commands, configuration, and data layout
-- `docs/architecture.md`: boundaries and data flow
-- `docs/decisions/`: rationale for durable choices
-- `CONTRIBUTING.md`: contribution and documentation policy
+## Guardrails
 
-Use `uv run anki-chinese <command> --help` as the authoritative command
-reference.
+- Humans use the workbench; agents use deterministic CLI commands.
+- Do not change `MODEL_ID`, `DECK_ID`, field order, or GUID behavior without an explicit migration.
+- Keep rebuildable content separate from live suspension, review state, and tags.
+- Keep the workbench presentational, provider details behind `audio/provider.py`
+  and `audio/factory.py`, and AnkiConnect access behind `activation/`.
+- `doctor` is read-only; `--check-anki` is only a version probe.
+- Runtime song planning stays deterministic: no LLM, translation, OpenCC, or
+  pypinyin guessing. Follow the [study policy](../docs/decisions/study-target-policy.md).
+- Use only task-relevant skills. Read-only tasks do not inherit mutation gates;
+  template-only changes do not require content edits or audio regeneration.
 
-## Invariants
-
-- Keep the CLI surface narrow: user workflows go through `uv run anki-chinese ...`.
-- Human navigation starts with the Textual workbench; agents and scripts use
-  deterministic CLI commands.
-- Preserve stable Anki identity: do not change `MODEL_ID`, `DECK_ID`, field order, or GUID behavior without an explicit migration.
-- Keep rebuildable `.apkg` content separate from live suspended state and tags.
-- Keep provider-specific code behind `audio/provider.py` and `audio/factory.py`.
-- Keep AnkiConnect details behind `activation/`.
-- Treat generated files under `data/build/` and `data/state/enriched.json` as generated artifacts.
-- Keep the workbench presentational; reuse workflow and domain functions.
-- `doctor` is read-only; `--check-anki` only probes AnkiConnect.
-
-## Development
-
-```bash
-uv sync --group dev
-uv run ruff check
-uv run pyright
-uv run pytest
-uv run anki-chinese --help
-uv run python -m anki_chinese.cli --help
-```
-
-## Non-obvious constraints
-
-- Google Cloud TTS uses ADC or service-account authentication, not an API key.
-- The study target is mainland Mandarin simplified for active study and
-  traditional for recognition. Particle `著` can map to `着`; lexical uses such
-  as `著名` and `原著` remain valid.
-- Runtime song planning must remain deterministic: no LLM calls, network
-  translation, OpenCC passes, or pypinyin guessing.
-
-## Documentation
-
-Follow the ownership and consolidation rules in `CONTRIBUTING.md`. Prefer
-editing or deleting existing material; do not add a new page or repeat canonical
-content merely to explain a change.
+When a task reveals guidance friction, apply the
+[maintenance loop](../CONTRIBUTING.md#maintaining-docs-and-skills) once in the
+owning file. Prefer correction, deletion, or a better pointer over new prose.

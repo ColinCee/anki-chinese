@@ -1,46 +1,32 @@
 ---
 name: anki-live-activation-safety
-description: Use before any anki-chinese live AnkiConnect mutation or live-state song planning. Requires dry-run, backup/undo snapshot, exact card/note counts, and live active-state queries before unsuspending or tagging cards.
-when_to_use: Trigger on requests to activate, unsuspend, suspend, tag, plan next song characters from live Anki, query unsuspended data from AnkiConnect, or edit src/anki_chinese/activation, cli/activate.py, or cli/songs.py.
-argument-hint: "[chars-or-song-query]"
+description: Use for live Anki state planning, activation, suspension, tagging, undo, or changes to those mutation paths. Separate read-only queries from mutations; require previews, pre-mutation snapshots, and exact affected counts for writes.
 ---
 
-# Anki Live Activation Safety
+# Live Anki safety
 
-State explicitly whether the task mutates live Anki. For every mutation:
+Classify the task first. Read-only planning needs fresh live state, not a backup
+or mutation confirmation. An active character has any card unsuspended; that does
+not imply a recorded review. Offline docs/template work needs neither.
 
-```bash
-uv run anki-chinese activate chars 人 来 为 --dry-run
-uv run anki-chinese songs activate 月亮代表我的心 --limit 10 --dry-run
-```
+For writes, follow [the live workflow](../../../docs/workflows.md#learn-characters-from-songs):
 
-Then:
+1. Preview the exact operation and scope before confirmation.
+2. Use a public command whose service writes the safety snapshot before mutation.
+   Retain its path and report exact changed card/note counts, missing characters,
+   and already-active characters.
+3. Preserve an undo path; a dry-run is not a backup. Use a full Anki backup for
+   broad, uncertain, or first-time automation.
+4. Query live state again before subsequent planning; never infer it from an old
+   export or a previous plan.
 
-1. Use a public command that writes its undo snapshot before mutation.
-2. Verify the snapshot path under `data/build/anki_backups/`.
-3. Report exact changed card and note counts, plus missing or already-active
-   characters.
-4. Query live AnkiConnect state before follow-up planning.
+For implementation, keep calls behind `activation/`; preserve pre-change IDs,
+suspension state, tag ownership, and operation metadata needed for undo.
+Activation, resuspension, and undo all need pre-mutation safety snapshots.
+See `src/anki_chinese/activation/snapshots.py` for the schema, not a copied field
+list. Propagate partial failures and report them; never present partial success
+as a completed mutation.
 
-Dry-runs are previews, not backups. Use a full Anki backup/export for broad,
-uncertain, or first-time automation. Never treat
-`data/source/All Decks.apkg` as current live state unless it was exported
-immediately before the operation.
-
-Targeted snapshots must retain enough state to undo safely: operation,
-requested/found/missing characters, note and card IDs, pre-change suspended
-card IDs, already-active characters, and any applied tag. Public activation,
-resuspension, and undo paths should create their required safety snapshot
-automatically.
-
-For implementation work:
-
-- Keep AnkiConnect calls behind `activation/`; do not add ad hoc CLI queries.
-- A character is active when any card belonging to its `Chinese RSH` note is
-  unsuspended.
-- Propagate partial failures; never continue with a success-shaped result.
-- Reject mutation paths without dry-run support, pre-mutation snapshots, and
-  affected note/card reporting.
-
-See `docs/workflows.md` for commands and `docs/architecture.md` for the live
-activation boundary.
+Stop after the authorized operation and its result; do not activate the next
+batch automatically. For guidance friction, apply the shared
+[maintenance loop](../../../CONTRIBUTING.md#maintaining-docs-and-skills) once.

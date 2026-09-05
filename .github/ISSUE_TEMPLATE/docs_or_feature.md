@@ -12,13 +12,10 @@ assignees: ""
 ## Why is this useful?
 
 
-## Related workflow
+## Existing guidance or workflow
 
-- [ ] Deck rebuild
-- [ ] Sentence generation
-- [ ] TTS/audio
-- [ ] Song activation
-- [ ] Development/contributing
-- [ ] Other
+Where did you look, and what was missing, misleading, or obstructive?
 
-## Notes
+## Proposed simplification
+
+What should be corrected, linked, or removed instead of adding another page/rule?

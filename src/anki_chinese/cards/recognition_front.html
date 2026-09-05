@@ -1,1 +1,17 @@
-<div class="hanzi">{{Hanzi}}</div>
+<main class="study-card study-front">
+    <header class="hero">
+        <h1 class="study-prompt">Read aloud</h1>
+        <div class="hanzi" lang="zh-Hans">{{Hanzi}}</div>
+        <p class="study-instruction">Recall the sound and meaning.</p>
+    </header>
+
+    {{#Sentence}}
+    <section class="reading-section">
+        <div class="section-heading">
+            <h2 class="section-title">Read in context</h2>
+        </div>
+        <div class="context-chars" lang="zh-Hans">{{Sentence}}</div>
+        <p class="study-instruction">Try the whole sentence before turning over.</p>
+    </section>
+    {{/Sentence}}
+</main>

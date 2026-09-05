@@ -28,6 +28,7 @@ def _read_card_file(name: str) -> str:
 def _build_model() -> genanki.Model:
     css = _read_card_file("style.css")
     tone_script = _read_card_file("tone_script.html")
+    reading_script = _read_card_file("reading_script.html")
 
     return genanki.Model(
         MODEL_ID,
@@ -37,13 +38,13 @@ def _build_model() -> genanki.Model:
         templates=[
             {
                 "name": "Recognition",
-                "qfmt": _read_card_file("recognition_front.html"),
-                "afmt": _read_card_file("recognition_back.html") + tone_script,
+                "qfmt": _read_card_file("recognition_front.html") + reading_script,
+                "afmt": _read_card_file("recognition_back.html") + tone_script + reading_script,
             },
             {
                 "name": "Listening",
                 "qfmt": _read_card_file("recall_front.html"),
-                "afmt": _read_card_file("recall_back.html") + tone_script,
+                "afmt": _read_card_file("recall_back.html") + tone_script + reading_script,
             },
         ],
         css=css,
