@@ -58,7 +58,7 @@ pipeline limitations; [Reference](docs/reference.md) owns paths and model constr
 | `docs/decisions/` | Historical rationale and consequences, not current runbooks. |
 | `CONTRIBUTING.md` | Code map, contributor checks, and this maintenance policy. |
 | `SECURITY.md` | Private-data handling and security reporting. |
-| `.github/copilot-instructions.md` | Always-needed agent guardrails and routing. |
+| `AGENTS.md` | Always-needed agent guardrails and routing. |
 | `.agents/skills/*/SKILL.md` | Trigger-specific safeguards and non-obvious workflow traps. |
 
 CLI help owns commands/options. Code, schemas, and tests own implementation

@@ -614,16 +614,22 @@ def run_songs_verify(runtime: AppRuntime, *, lyrics_dir: Path) -> bool:
     # Expected numbering pattern
     number_re = re.compile(r"^(\d{2})-(.+)$")
 
-    for i, path in enumerate(files):
+    previous_num = 0
+    for path in files:
         fname = path.stem
         num_match = number_re.match(fname)
 
-        # Check numbering
-        expected_num = f"{i + 1:02d}"
+        # Numbers are stable IDs: gaps from removed songs are fine, but they must
+        # be unique and ascending.
         if not num_match:
             errors.append((fname, "Missing number prefix (expected NN-artist-title)"))
-        elif num_match.group(1) != expected_num:
-            errors.append((fname, f"Number is {num_match.group(1)}, expected {expected_num}"))
+        else:
+            number = int(num_match.group(1))
+            if number <= previous_num:
+                errors.append(
+                    (fname, f"Number {num_match.group(1)} must be greater than {previous_num:02d}")
+                )
+            previous_num = max(previous_num, number)
 
         # Parse file
         try:

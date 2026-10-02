@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
 
 jobs:
@@ -25,11 +25,17 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
 
+      - name: Lint
+        run: uv run ruff check
+
       - name: Type check
         run: uv run pyright
 
       - name: Run tests
         run: uv run pytest
+
+      - name: Verify lyric files
+        run: uv run anki-chinese songs verify
 
       - name: Verify CLI entrypoints
         run: |

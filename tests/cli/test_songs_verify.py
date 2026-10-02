@@ -88,17 +88,27 @@ def test_verify_detects_lrc_timestamps(runtime_factory) -> None:
     assert "LRC timestamps" in runtime.console.file.getvalue()
 
 
-def test_verify_detects_numbering_gaps(runtime_factory) -> None:
+def test_verify_allows_numbering_gaps(runtime_factory) -> None:
     runtime = runtime_factory()
     lyrics_dir = runtime.song_lyrics_dir
     lyrics_dir.mkdir(parents=True, exist_ok=True)
-    # Write file numbered 03 but it's the only file (should be 01)
     content = "---\ntitle: 歌曲\nartist: 歌手\n---\n简单点说话的方式简单点递进的情节\n"
     (lyrics_dir / "03-歌手-歌曲.md").write_text(content, encoding="utf-8")
 
+    assert run_songs_verify(runtime, lyrics_dir=lyrics_dir) is True
+
+
+def test_verify_detects_duplicate_numbers(runtime_factory) -> None:
+    runtime = runtime_factory()
+    lyrics_dir = runtime.song_lyrics_dir
+    lyrics_dir.mkdir(parents=True, exist_ok=True)
+    for artist in ("歌手甲", "歌手乙"):
+        content = f"---\ntitle: 歌曲\nartist: {artist}\n---\n简单点说话的方式简单点递进的情节\n"
+        (lyrics_dir / f"01-{artist}-歌曲.md").write_text(content, encoding="utf-8")
+
     result = run_songs_verify(runtime, lyrics_dir=lyrics_dir)
     assert result is False
-    assert "expected 01" in runtime.console.file.getvalue()
+    assert "must be greater than 01" in runtime.console.file.getvalue()
 
 
 def test_verify_detects_missing_frontmatter_fields(runtime_factory) -> None:
