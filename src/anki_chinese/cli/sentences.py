@@ -173,8 +173,7 @@ def run_sentence_audit(
     )
     summary = ", ".join(f"{severity}: {count}" for severity, count in severity_counts.items())
     runtime.console.print(
-        f"[yellow]⚠[/yellow] {len(issues)} sentences with phonetic ambiguity"
-        f" ({summary})"
+        f"[yellow]⚠[/yellow] {len(issues)} sentences with phonetic ambiguity ({summary})"
     )
     runtime.console.print(_sentence_audit_table(issues, limit=limit))
     if limit > 0 and len(issues) > limit:

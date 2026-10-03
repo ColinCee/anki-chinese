@@ -236,7 +236,9 @@ class GoogleTTSProvider:
         )
 
     def generation_profile(self, kind: str) -> AudioGenerationProfile:
-        voice = self.settings.cantonese_voice if kind == "cantonese" else self.settings.mandarin_voice
+        voice = (
+            self.settings.cantonese_voice if kind == "cantonese" else self.settings.mandarin_voice
+        )
         language_code = "yue-HK" if kind == "cantonese" else "cmn-CN"
         return AudioGenerationProfile(
             provider="google",

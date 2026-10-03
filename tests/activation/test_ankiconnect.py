@@ -134,9 +134,7 @@ def test_find_active_characters_uses_any_unsuspended_card(
             )
         if payload["action"] == "areSuspended":
             assert payload["params"] == {"cards": [10, 11, 20, 21, 30, 31]}
-            return FakeResponse(
-                {"result": [True, False, True, True, False, False], "error": None}
-            )
+            return FakeResponse({"result": [True, False, True, True, False, False], "error": None})
         raise AssertionError(payload["action"])
 
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)

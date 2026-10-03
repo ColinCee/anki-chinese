@@ -50,8 +50,7 @@ def run_frequency_refresh(
         raise typer.Exit(2) from None
 
     runtime.console.print(
-        f"[green]✓[/green] Cached {len(snapshot.entries):,} characters "
-        f"from {snapshot.source_name}"
+        f"[green]✓[/green] Cached {len(snapshot.entries):,} characters from {snapshot.source_name}"
     )
     word_limit = snapshot.parameters.get("word_limit")
     word_limit_text = f"{word_limit:,}" if isinstance(word_limit, int) else "?"

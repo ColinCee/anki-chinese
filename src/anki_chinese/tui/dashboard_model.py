@@ -39,8 +39,7 @@ class DashboardRuntime(Protocol):
     console: Console
 
     @property
-    def source_content_path(self) -> Path:
-        ...
+    def source_content_path(self) -> Path: ...
 
 
 @dataclass(frozen=True)
@@ -337,7 +336,9 @@ def format_rebuild_view(view: RebuildView) -> str:
     return "\n".join(lines)
 
 
-def build_card_search_view(runtime: DashboardRuntime, query: str, *, limit: int = 8) -> CardSearchView:
+def build_card_search_view(
+    runtime: DashboardRuntime, query: str, *, limit: int = 8
+) -> CardSearchView:
     try:
         notes = runtime.note_store.load()
     except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
@@ -346,8 +347,12 @@ def build_card_search_view(runtime: DashboardRuntime, query: str, *, limit: int 
     term = query.strip()
     if not term:
         flagged = flagged_notes(notes)
-        candidates = tuple(_card_candidate(note, reason="flagged for review") for note in flagged[:limit])
-        return CardSearchView(error=None, selected=candidates[0] if candidates else None, candidates=candidates)
+        candidates = tuple(
+            _card_candidate(note, reason="flagged for review") for note in flagged[:limit]
+        )
+        return CardSearchView(
+            error=None, selected=candidates[0] if candidates else None, candidates=candidates
+        )
 
     exact = next((note for note in notes if note.hanzi == term), None)
     if exact is not None:
@@ -362,12 +367,16 @@ def build_card_search_view(runtime: DashboardRuntime, query: str, *, limit: int 
             "sentence": note.sentence,
             "english": note.sentence_english,
         }
-        reason = next((name for name, value in haystacks.items() if term.lower() in value.lower()), "")
+        reason = next(
+            (name for name, value in haystacks.items() if term.lower() in value.lower()), ""
+        )
         if reason:
             matches.append(_card_candidate(note, reason=f"matched {reason}"))
         if len(matches) >= limit:
             break
-    return CardSearchView(error=None, selected=matches[0] if matches else None, candidates=tuple(matches))
+    return CardSearchView(
+        error=None, selected=matches[0] if matches else None, candidates=tuple(matches)
+    )
 
 
 def format_card_search_view(view: CardSearchView) -> str:
@@ -381,11 +390,15 @@ def format_card_search_view(view: CardSearchView) -> str:
         marker = ">" if candidate == view.selected else " "
         lines.append(f"{marker} {candidate.hanzi} · {candidate.meaning} · {candidate.reason}")
     lines.append("")
-    lines.append("[dim]Selected card loaded into the form. Edit fields, then press s to save.[/dim]")
+    lines.append(
+        "[dim]Selected card loaded into the form. Edit fields, then press s to save.[/dim]"
+    )
     return "\n".join(lines)
 
 
-def build_card_edit_view(note: CharacterNote, updates: dict[str, str | None], sync_impact: str) -> CardEditView:
+def build_card_edit_view(
+    note: CharacterNote, updates: dict[str, str | None], sync_impact: str
+) -> CardEditView:
     changes: list[CardFieldChange] = []
     for field_name, after in updates.items():
         if after is None:
@@ -394,7 +407,9 @@ def build_card_edit_view(note: CharacterNote, updates: dict[str, str | None], sy
         if before != after:
             changes.append(CardFieldChange(field=field_name, before=before, after=after))
     if "sentence" in {change.field for change in changes} and note.sentence_audio:
-        changes.append(CardFieldChange(field="sentence_audio", before=note.sentence_audio, after=""))
+        changes.append(
+            CardFieldChange(field="sentence_audio", before=note.sentence_audio, after="")
+        )
     return CardEditView(hanzi=note.hanzi, changes=tuple(changes), sync_impact=sync_impact)
 
 
@@ -483,7 +498,10 @@ def build_health_undo_view(
     snapshot_dir: Path = ANKI_BACKUP_DIR,
     snapshot_limit: int = 5,
 ) -> HealthUndoView:
-    snapshots = tuple(_snapshot_view(snapshot) for snapshot in list_activation_snapshots(snapshot_dir, limit=snapshot_limit))
+    snapshots = tuple(
+        _snapshot_view(snapshot)
+        for snapshot in list_activation_snapshots(snapshot_dir, limit=snapshot_limit)
+    )
     latest = snapshots[0] if snapshots else None
     undo_preview = (
         f"Latest restore preview would use {latest.filename}: {latest.mutation_card_count} cards across {latest.note_count} notes."
@@ -541,7 +559,9 @@ def build_song_browser_view(
 ) -> SongBrowserView:
     songs = load_songs(runtime.song_lyrics_dir)
     if not songs:
-        return SongBrowserView(error=f"[yellow]No lyric files found in {runtime.song_lyrics_dir}[/yellow]")
+        return SongBrowserView(
+            error=f"[yellow]No lyric files found in {runtime.song_lyrics_dir}[/yellow]"
+        )
 
     factory = client_factory or _default_song_client
     client = factory(os.getenv("ANKICONNECT_API_KEY", "").strip())
@@ -579,7 +599,9 @@ def build_song_browser_view(
         limit=limit,
     )
     rows = _song_browser_rows(analysis.sequence, selected_row=selected_row)
-    selected_index = next(index for index, row in enumerate(analysis.sequence) if row == selected_row)
+    selected_index = next(
+        index for index, row in enumerate(analysis.sequence) if row == selected_row
+    )
     return SongBrowserView(
         error=None,
         song_titles=tuple(row.song.title for row in analysis.sequence),
@@ -675,7 +697,11 @@ def _song_browser_rows(
 ) -> list[SongBrowserRowView]:
     rendered: list[SongBrowserRowView] = []
     for row in rows[:12]:
-        ready = "next" if row == selected_row else ("learned" if not row.activation_deck_chars else "later")
+        ready = (
+            "next"
+            if row == selected_row
+            else ("learned" if not row.activation_deck_chars else "later")
+        )
         rendered.append(
             SongBrowserRowView(
                 title=row.song.title,
@@ -784,7 +810,9 @@ def _credential_views() -> tuple[CredentialView, ...]:
         CredentialView(
             "Google TTS",
             bool(google_adc),
-            "GOOGLE_APPLICATION_CREDENTIALS set" if google_adc else "set GOOGLE_APPLICATION_CREDENTIALS or use gcloud ADC",
+            "GOOGLE_APPLICATION_CREDENTIALS set"
+            if google_adc
+            else "set GOOGLE_APPLICATION_CREDENTIALS or use gcloud ADC",
         ),
         CredentialView(
             "MiniMax TTS",

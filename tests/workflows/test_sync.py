@@ -56,7 +56,9 @@ def test_plan_requires_init_when_enriched_state_is_missing(tmp_path: Path) -> No
 
 def test_plan_requires_init_when_source_deck_is_newer_than_state(tmp_path: Path) -> None:
     _touch(tmp_path / "data" / "source" / "deck.apkg", 100)
-    save_notes([CharacterNote(hanzi="一", meaning="one")], tmp_path / "data" / "state" / "enriched.json")
+    save_notes(
+        [CharacterNote(hanzi="一", meaning="one")], tmp_path / "data" / "state" / "enriched.json"
+    )
     os.utime(tmp_path / "data" / "state" / "enriched.json", (110, 110))
     os.utime(tmp_path / "data" / "source" / "deck.apkg", (120, 120))
 
@@ -103,7 +105,9 @@ def test_plan_detects_pending_sentence_audio_and_blocks_build_until_audio(tmp_pa
 
 def test_plan_requires_build_when_deck_is_missing_after_state_is_ready(tmp_path: Path) -> None:
     _touch(tmp_path / "data" / "source" / "deck.apkg", 100)
-    save_notes([CharacterNote(hanzi="一", meaning="one")], tmp_path / "data" / "state" / "enriched.json")
+    save_notes(
+        [CharacterNote(hanzi="一", meaning="one")], tmp_path / "data" / "state" / "enriched.json"
+    )
     os.utime(tmp_path / "data" / "state" / "enriched.json", (110, 110))
 
     plan = _plan(tmp_path)
@@ -118,7 +122,9 @@ def test_plan_requires_build_when_deck_is_missing_after_state_is_ready(tmp_path:
 
 def test_plan_reports_up_to_date_when_artifacts_are_current(tmp_path: Path) -> None:
     _touch(tmp_path / "data" / "source" / "deck.apkg", 100)
-    save_notes([CharacterNote(hanzi="一", meaning="one")], tmp_path / "data" / "state" / "enriched.json")
+    save_notes(
+        [CharacterNote(hanzi="一", meaning="one")], tmp_path / "data" / "state" / "enriched.json"
+    )
     os.utime(tmp_path / "data" / "state" / "enriched.json", (110, 110))
     _touch(tmp_path / "data" / "build" / "decks" / "deck.apkg", 120)
 
@@ -128,7 +134,9 @@ def test_plan_reports_up_to_date_when_artifacts_are_current(tmp_path: Path) -> N
     assert plan.required_commands == []
 
 
-def test_plan_requires_audio_when_manifest_needs_backfill(tmp_path: Path, stub_tts_provider) -> None:
+def test_plan_requires_audio_when_manifest_needs_backfill(
+    tmp_path: Path, stub_tts_provider
+) -> None:
     source = tmp_path / "data" / "source" / "deck.apkg"
     enriched = tmp_path / "data" / "state" / "enriched.json"
     deck = tmp_path / "data" / "build" / "decks" / "deck.apkg"

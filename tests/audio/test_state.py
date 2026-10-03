@@ -16,7 +16,9 @@ def _write_audio_files(generated_audio_dir: Path, filenames: list[str]) -> None:
         (generated_audio_dir / filename).write_bytes(b"ID3")
 
 
-def test_backfills_existing_valid_audio_with_current_profile(tmp_path: Path, stub_tts_provider) -> None:
+def test_backfills_existing_valid_audio_with_current_profile(
+    tmp_path: Path, stub_tts_provider
+) -> None:
     note = CharacterNote(
         hanzi="水",
         meaning="water",

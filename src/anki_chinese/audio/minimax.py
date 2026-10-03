@@ -226,7 +226,11 @@ class MiniMaxTTSProvider:
         )
 
     def generation_profile(self, kind: str) -> AudioGenerationProfile:
-        voice = self.settings.cantonese_voice_id if kind == "cantonese" else self.settings.mandarin_voice_id
+        voice = (
+            self.settings.cantonese_voice_id
+            if kind == "cantonese"
+            else self.settings.mandarin_voice_id
+        )
         language_boost = "Chinese,Yue" if kind == "cantonese" else "Chinese"
         return AudioGenerationProfile(
             provider="minimax",

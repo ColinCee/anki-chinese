@@ -225,11 +225,7 @@ class AnkiConnectClient:
         if not note_ids:
             return set()
         infos = self._notes_info(note_ids)
-        card_ids = [
-            int(card_id)
-            for info in infos
-            for card_id in info.get("cards", [])
-        ]
+        card_ids = [int(card_id) for info in infos for card_id in info.get("cards", [])]
         suspended = self.suspended_card_ids(card_ids)
 
         active: set[str] = set()

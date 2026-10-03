@@ -75,10 +75,7 @@ def _extract_db(apkg_path: Path, tmp_dir: Path) -> Path:
             db_path.write_bytes(zf.read("collection.anki2"))
             return db_path
 
-        raise FileNotFoundError(
-            f"No collection database found in {apkg_path}. "
-            f"Contents: {names}"
-        )
+        raise FileNotFoundError(f"No collection database found in {apkg_path}. Contents: {names}")
 
 
 def _strip_html(html: str) -> str:
@@ -162,7 +159,9 @@ def _curriculum_from_apkg(
         fallback = explicit_lesson or legacy_lesson
         if fallback and not fallback.lower().startswith("leech"):
             lesson = fallback
-    raw_number = values.get("rsh") or "".join(character for character in heisig_num if character.isdigit())
+    raw_number = values.get("rsh") or "".join(
+        character for character in heisig_num if character.isdigit()
+    )
     return Curriculum(
         track="rsh",
         rsh_number=int(raw_number) if raw_number else None,

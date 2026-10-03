@@ -101,7 +101,9 @@ def test_card_set_makes_sync_plan_require_build(runtime_factory, runner) -> None
 
 
 def test_card_set_preserves_existing_cached_fields(runtime_factory) -> None:
-    runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="水", meaning="water", pinyin="shuǐ")])
+    runtime = runtime_factory(
+        saved_notes=[CharacterNote(hanzi="水", meaning="water", pinyin="shuǐ")]
+    )
 
     run_card_set(runtime, "水", meaning="water; liquid")
 
@@ -152,9 +154,7 @@ def test_card_add_requires_complete_example(runtime_factory) -> None:
 
 
 def test_card_add_reports_invalid_legacy_migration(runtime_factory) -> None:
-    runtime = runtime_factory(
-        parsed_notes=[CharacterNote(hanzi="一"), CharacterNote(hanzi="一")]
-    )
+    runtime = runtime_factory(parsed_notes=[CharacterNote(hanzi="一"), CharacterNote(hanzi="一")])
     runtime.source_records_path = runtime.source_deck_path.parent / "characters.json"
 
     with pytest.raises(typer.Exit):

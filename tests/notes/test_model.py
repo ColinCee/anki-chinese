@@ -6,6 +6,7 @@ def test_character_note_round_trips_through_dict_and_ignores_unknown_fields(full
 
     assert restored == full_note
 
+
 def test_sentence_fields_round_trip_through_dict() -> None:
     note = CharacterNote(
         hanzi="水",

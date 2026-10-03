@@ -88,4 +88,3 @@ def test_polyphonic_character_gets_review_flag_with_correct_message(
     assert enriched.needs_review
     assert "Polyphonic character" in enriched.review_reason
     assert "defaulted to 'lè'" in enriched.review_reason
-

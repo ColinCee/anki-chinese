@@ -50,7 +50,9 @@ def run_source_import(
         f"[green]✓[/green] Imported {len(notes)} records ({custom_count} custom) "
         f"→ {runtime.source_records_path}"
     )
-    runtime.console.print("[dim]Run `anki-chinese sync` to refresh generated state and the APKG.[/dim]")
+    runtime.console.print(
+        "[dim]Run `anki-chinese sync` to refresh generated state and the APKG.[/dim]"
+    )
     return len(notes)
 
 

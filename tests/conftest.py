@@ -235,10 +235,20 @@ def runtime_factory(tmp_path: Path):
 
 
 _APKG_FIELD_KEYS = [
-    "hanzi", "meaning", "pinyin", "jyutping",
-    "mandarin_audio", "cantonese_audio",
-    "stroke_order", "heisig_num", "lesson", "story",
-    "sentence_audio", "sentence", "sentence_pinyin", "sentence_english",
+    "hanzi",
+    "meaning",
+    "pinyin",
+    "jyutping",
+    "mandarin_audio",
+    "cantonese_audio",
+    "stroke_order",
+    "heisig_num",
+    "lesson",
+    "story",
+    "sentence_audio",
+    "sentence",
+    "sentence_pinyin",
+    "sentence_english",
 ]
 
 

@@ -1,8 +1,5 @@
 """
 Jyutping lookup using ToJyutping as primary, pycantonese as optional fallback.
-
-pycantonese has a broken dependency on pkg_resources (removed in Python 3.13),
-so we make it optional and use ToJyutping as the reliable primary source.
 """
 
 from __future__ import annotations
@@ -12,7 +9,6 @@ from types import ModuleType
 
 import ToJyutping
 
-# Try importing pycantonese — it may fail on Python 3.13+
 _pycantonese: ModuleType | None = None
 try:
     import pycantonese as _pycantonese_mod

@@ -382,6 +382,8 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
     ) -> None:
         """Remove generated audio files that are no longer referenced by notes."""
         if kind not in {"all", "sentence", "mandarin", "cantonese"}:
-            runtime.console.print("[red]✗[/red] --kind must be all, sentence, mandarin, or cantonese")
+            runtime.console.print(
+                "[red]✗[/red] --kind must be all, sentence, mandarin, or cantonese"
+            )
             raise typer.Exit(1)
         run_audio_clean(runtime, apply=apply, kind=kind)

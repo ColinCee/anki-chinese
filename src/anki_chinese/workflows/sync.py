@@ -86,14 +86,20 @@ def _is_newer_than_any(path: Path, candidates: list[Path]) -> bool:
     path_mtime = _mtime(path)
     if path_mtime is None:
         return False
-    return any((candidate_mtime := _mtime(candidate)) is not None and candidate_mtime > path_mtime for candidate in candidates)
+    return any(
+        (candidate_mtime := _mtime(candidate)) is not None and candidate_mtime > path_mtime
+        for candidate in candidates
+    )
 
 
 def _generated_audio_newer_than(deck_output_path: Path, generated_audio_dir: Path) -> bool:
     deck_mtime = _mtime(deck_output_path)
     if deck_mtime is None or not generated_audio_dir.is_dir():
         return False
-    return any(path.suffix == ".mp3" and path.stat().st_mtime > deck_mtime for path in generated_audio_dir.iterdir())
+    return any(
+        path.suffix == ".mp3" and path.stat().st_mtime > deck_mtime
+        for path in generated_audio_dir.iterdir()
+    )
 
 
 def _audio_details(
@@ -199,7 +205,9 @@ def plan_sync(
 
     stages: list[SyncStagePlan] = []
     pipeline_state = (
-        load_pipeline_state(pipeline_state_path) if pipeline_state_path is not None else PipelineState.empty()
+        load_pipeline_state(pipeline_state_path)
+        if pipeline_state_path is not None
+        else PipelineState.empty()
     )
 
     if not source_deck_path.exists():
@@ -278,8 +286,13 @@ def plan_sync(
         elif is_valid_audio_tag is not None:
             audio_details = _audio_details(notes, is_valid_audio_tag=is_valid_audio_tag)
         else:
-            raise ValueError("plan_sync requires either tts_provider/audio_manifest_path or is_valid_audio_tag")
-        audio_needed = int(audio_details["pending_notes"]) > 0 or int(audio_details.get("manifest_current", 1)) == 0
+            raise ValueError(
+                "plan_sync requires either tts_provider/audio_manifest_path or is_valid_audio_tag"
+            )
+        audio_needed = (
+            int(audio_details["pending_notes"]) > 0
+            or int(audio_details.get("manifest_current", 1)) == 0
+        )
         audio_status = "needed" if audio_needed else "up_to_date"
         if int(audio_details["pending_notes"]) > 0:
             audio_reason = f"{audio_details['pending_notes']} notes need audio updates."
