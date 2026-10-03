@@ -26,7 +26,17 @@ def test_extract_cjk_collapses_duplicates() -> None:
 
 
 def test_extract_study_cjk_normalizes_particle_zhe() -> None:
-    assert extract_study_cjk("每天都贪恋著你的好") == {"每", "天", "都", "贪", "恋", "着", "你", "的", "好"}
+    assert extract_study_cjk("每天都贪恋著你的好") == {
+        "每",
+        "天",
+        "都",
+        "贪",
+        "恋",
+        "着",
+        "你",
+        "的",
+        "好",
+    }
 
 
 def test_normalize_lyric_text_for_study_preserves_lexical_zhu_words() -> None:
@@ -63,9 +73,7 @@ def test_parse_lyric_file_reads_frontmatter_and_characters(tmp_path: Path) -> No
 def test_audited_lyric_files_no_longer_use_traditional_particle_form() -> None:
     root = Path(__file__).resolve().parents[2]
     lyrics_dir = root / "data" / "songs" / "lyrics"
-    songs_by_title = {
-        parse_lyric_file(path).title: path for path in lyrics_dir.glob("*.md")
-    }
+    songs_by_title = {parse_lyric_file(path).title: path for path in lyrics_dir.glob("*.md")}
     audited_titles = [
         "学猫叫",
         "童话",

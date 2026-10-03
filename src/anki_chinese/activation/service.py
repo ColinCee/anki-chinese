@@ -54,15 +54,11 @@ class ResuspendPreview:
 
     @property
     def note_ids(self) -> tuple[int, ...]:
-        return tuple(
-            sorted({note_id for note in self.notes for note_id in note.note_ids})
-        )
+        return tuple(sorted({note_id for note in self.notes for note_id in note.note_ids}))
 
     @property
     def card_ids(self) -> tuple[int, ...]:
-        return tuple(
-            sorted({card_id for note in self.notes for card_id in note.card_ids})
-        )
+        return tuple(sorted({card_id for note in self.notes for card_id in note.card_ids}))
 
     @property
     def note_ids_to_suspend(self) -> tuple[int, ...]:
@@ -215,11 +211,7 @@ def preview_activation(client: AnkiClient, chars: list[str]) -> ActivationPrevie
 
     found_chars = tuple(char for char in requested if char in note_map)
     missing_chars = tuple(char for char in requested if char not in note_map)
-    card_ids = tuple(
-        card_id
-        for char in found_chars
-        for card_id in note_map[char].card_ids
-    )
+    card_ids = tuple(card_id for char in found_chars for card_id in note_map[char].card_ids)
     suspended = tuple(sorted(client.suspended_card_ids(list(card_ids)))) if card_ids else ()
     suspended_set = set(suspended)
     already_active = tuple(
@@ -320,15 +312,9 @@ def preview_tag_resuspension(client: ResuspendClient, tag: str) -> ResuspendPrev
     note_map = client.find_notes_by_tag(normalized_tag) if normalized_tag else {}
     notes = tuple(note_map[char] for char in sorted(note_map))
     card_ids = sorted({card_id for note in notes for card_id in note.card_ids})
-    suspended = (
-        tuple(sorted(client.suspended_card_ids(card_ids)))
-        if card_ids
-        else ()
-    )
+    suspended = tuple(sorted(client.suspended_card_ids(card_ids))) if card_ids else ()
     suspended_set = set(suspended)
-    cards_to_suspend = tuple(
-        card_id for card_id in card_ids if card_id not in suspended_set
-    )
+    cards_to_suspend = tuple(card_id for card_id in card_ids if card_id not in suspended_set)
     return ResuspendPreview(
         tag=normalized_tag,
         notes=notes,
@@ -392,9 +378,13 @@ def preview_snapshot_undo(
 
     if source_operation in {"activate-chars", "activate-song"}:
         undo_card_ids = snapshot.pre_change_suspended_card_ids
-        current_suspended = tuple(sorted(client.suspended_card_ids(list(undo_card_ids)))) if undo_card_ids else ()
+        current_suspended = (
+            tuple(sorted(client.suspended_card_ids(list(undo_card_ids)))) if undo_card_ids else ()
+        )
         current_suspended_set = set(current_suspended)
-        cards_to_suspend = tuple(card_id for card_id in undo_card_ids if card_id not in current_suspended_set)
+        cards_to_suspend = tuple(
+            card_id for card_id in undo_card_ids if card_id not in current_suspended_set
+        )
         return SnapshotUndoPreview(
             snapshot_path=snapshot.path,
             source_operation=source_operation,
@@ -411,7 +401,9 @@ def preview_snapshot_undo(
 
     if source_operation == "resuspend-tagged-cards":
         undo_card_ids = snapshot.card_ids_to_suspend
-        current_suspended = tuple(sorted(client.suspended_card_ids(list(undo_card_ids)))) if undo_card_ids else ()
+        current_suspended = (
+            tuple(sorted(client.suspended_card_ids(list(undo_card_ids)))) if undo_card_ids else ()
+        )
         cards_to_unsuspend = current_suspended
         return SnapshotUndoPreview(
             snapshot_path=snapshot.path,

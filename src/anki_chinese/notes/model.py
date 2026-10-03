@@ -94,7 +94,9 @@ class CharacterNote:
         heisig_num = (
             str(self.curriculum.rsh_number)
             if self.curriculum.track == "rsh" and self.curriculum.rsh_number is not None
-            else self.heisig_num if self.curriculum.track == "rsh" else ""
+            else self.heisig_num
+            if self.curriculum.track == "rsh"
+            else ""
         )
         lesson = self.curriculum.lesson or self.lesson
         return [

@@ -362,7 +362,9 @@ def _write_song_activation_snapshot(
     tag: str = "activated::song::测试歌",
 ) -> Path:
     snapshot_dir.mkdir(parents=True, exist_ok=True)
-    path = snapshot_dir / f"activation-{created_at[11:13]}{created_at[14:16]}{created_at[17:19]}.json"
+    path = (
+        snapshot_dir / f"activation-{created_at[11:13]}{created_at[14:16]}{created_at[17:19]}.json"
+    )
     path.write_text(
         json.dumps(
             {

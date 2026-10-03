@@ -121,9 +121,7 @@ def _split_compound_pinyin_token(token: str) -> list[str] | None:
 
 def _split_stored_sentence_pinyin(sentence_pinyin: str) -> list[str] | None:
     tokens = [
-        token
-        for token in re.split(r"[\s，。！？；：、,.?!;:·'’`-]+", sentence_pinyin)
-        if token
+        token for token in re.split(r"[\s，。！？；：、,.?!;:·'’`-]+", sentence_pinyin) if token
     ]
     syllables: list[str] = []
     for token in tokens:

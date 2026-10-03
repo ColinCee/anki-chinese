@@ -57,10 +57,13 @@ def test_restore_cached_fields_overwrites_invalid_current_audio() -> None:
     _, restored = _restore_cached_fields(
         current,
         previous,
-        is_valid_audio_tag=lambda tag: tag in {
-            "[sound:cmn_行_xíng.mp3]",
-            "[sound:yue_行_haang4.mp3]",
-        },
+        is_valid_audio_tag=lambda tag: (
+            tag
+            in {
+                "[sound:cmn_行_xíng.mp3]",
+                "[sound:yue_行_haang4.mp3]",
+            }
+        ),
     )
 
     note = current[0]

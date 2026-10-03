@@ -8,7 +8,21 @@ from pathlib import Path
 
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n(.*)$", re.DOTALL)
 _LEXICAL_ZHU_NEXT_CHARS = {"作", "名", "者", "录", "錄", "述", "称", "稱"}
-_LEXICAL_ZHU_PREV_CHARS = {"原", "土", "名", "显", "顯", "卓", "昭", "编", "編", "合", "巨", "译", "譯"}
+_LEXICAL_ZHU_PREV_CHARS = {
+    "原",
+    "土",
+    "名",
+    "显",
+    "顯",
+    "卓",
+    "昭",
+    "编",
+    "編",
+    "合",
+    "巨",
+    "译",
+    "譯",
+}
 
 
 @dataclass(frozen=True)

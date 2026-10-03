@@ -43,13 +43,13 @@ def test_source_import_is_registered(runtime_factory, runner) -> None:
 
 
 def test_source_import_rejects_invalid_records_without_replacing_source(runtime_factory) -> None:
-    runtime = runtime_factory(
-        parsed_notes=[CharacterNote(hanzi="一"), CharacterNote(hanzi="一")]
-    )
+    runtime = runtime_factory(parsed_notes=[CharacterNote(hanzi="一"), CharacterNote(hanzi="一")])
     runtime.source_records_path = runtime.source_deck_path.parent / "characters.json"
     CharacterSourceStore(runtime.source_records_path).save([CharacterNote(hanzi="水")])
 
     with pytest.raises(typer.Exit):
         run_source_import(runtime, runtime.source_deck_path, replace=True)
 
-    assert [note.hanzi for note in CharacterSourceStore(runtime.source_records_path).load()] == ["水"]
+    assert [note.hanzi for note in CharacterSourceStore(runtime.source_records_path).load()] == [
+        "水"
+    ]

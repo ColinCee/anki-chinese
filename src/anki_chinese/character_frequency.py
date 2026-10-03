@@ -114,9 +114,7 @@ class FrequencyReport:
             "estimated_band": self.estimated_band,
             "studied_unranked_count": self.studied_unranked_count,
             "unranked_gap_count": self.unranked_gap_count,
-            "top_rank_coverage": {
-                str(rank): percent for rank, percent in self.top_rank_coverage
-            },
+            "top_rank_coverage": {str(rank): percent for rank, percent in self.top_rank_coverage},
             "top_rank_deck_counts": {
                 str(rank): {
                     "reviewed": reviewed,
@@ -200,7 +198,9 @@ def build_wordfreq_snapshot(
             )
         )
 
-    retrieved = retrieved_at or datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    retrieved = retrieved_at or datetime.now(UTC).replace(microsecond=0).isoformat().replace(
+        "+00:00", "Z"
+    )
     return FrequencySnapshot(
         source_name=FREQUENCY_SOURCE_NAME,
         source_url=FREQUENCY_SOURCE_URL,
@@ -253,9 +253,7 @@ def load_frequency_snapshot(path: Path) -> FrequencySnapshot:
             source_last_updated=str(source["last_updated"]),
             retrieved_at=str(source["retrieved_at"]),
             corpus_characters=(
-                int(raw["corpus_characters"])
-                if raw.get("corpus_characters") is not None
-                else None
+                int(raw["corpus_characters"]) if raw.get("corpus_characters") is not None else None
             ),
             entries=entries,
             parameters=dict(raw.get("parameters", {})),
@@ -332,11 +330,7 @@ def build_frequency_report(
     )
     gaps = tuple(
         sorted(
-            (
-                entries_by_character[char]
-                for char in deck - studied
-                if char in entries_by_character
-            ),
+            (entries_by_character[char] for char in deck - studied if char in entries_by_character),
             key=lambda entry: entry.rank,
         )[:limit]
     )
@@ -352,9 +346,7 @@ def build_frequency_report(
         top_covered = sum(
             entry.frequency for entry in top_entries if entry.character in top_reviewed_characters
         )
-        top_rank_coverage.append(
-            (rank_limit, 100 * top_covered / top_total if top_total else 0.0)
-        )
+        top_rank_coverage.append((rank_limit, 100 * top_covered / top_total if top_total else 0.0))
         top_rank_deck_counts.append(
             (
                 rank_limit,

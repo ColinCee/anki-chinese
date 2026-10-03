@@ -57,7 +57,9 @@ def _check_google_adc() -> DoctorCheck:
     if credentials_path:
         path = Path(credentials_path).expanduser()
         if path.is_file():
-            return DoctorCheck("Google TTS auth", "ok", "GOOGLE_APPLICATION_CREDENTIALS points to a file")
+            return DoctorCheck(
+                "Google TTS auth", "ok", "GOOGLE_APPLICATION_CREDENTIALS points to a file"
+            )
         return DoctorCheck(
             "Google TTS auth",
             "warn",
@@ -84,7 +86,9 @@ def _check_env() -> list[DoctorCheck]:
             "GEMINI_API_KEY is set"
             if _env_is_set("GEMINI_API_KEY")
             else "GEMINI_API_KEY is not set",
-            "" if _env_is_set("GEMINI_API_KEY") else "Needed for sentences, keywords, and repair commands.",
+            ""
+            if _env_is_set("GEMINI_API_KEY")
+            else "Needed for sentences, keywords, and repair commands.",
         ),
         DoctorCheck(
             "MiniMax API key",
@@ -124,7 +128,9 @@ def _check_files(runtime: AppRuntime) -> list[DoctorCheck]:
             "Built deck output",
             "ok" if runtime.deck_output_path.is_file() else "warn",
             str(runtime.deck_output_path),
-            "" if runtime.deck_output_path.is_file() else "Run `uv run anki-chinese sync` or `build`.",
+            ""
+            if runtime.deck_output_path.is_file()
+            else "Run `uv run anki-chinese sync` or `build`.",
         ),
     ]
 
@@ -168,7 +174,9 @@ def _check_sync(runtime: AppRuntime) -> DoctorCheck:
         "Sync plan",
         "warn",
         f"{needed} needed, {blocked} blocked",
-        plan.required_commands[0] if plan.required_commands else "Run `uv run anki-chinese sync --dry-run`.",
+        plan.required_commands[0]
+        if plan.required_commands
+        else "Run `uv run anki-chinese sync --dry-run`.",
     )
 
 

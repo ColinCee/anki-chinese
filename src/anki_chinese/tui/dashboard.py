@@ -158,7 +158,10 @@ class DashboardApp(App[None]):
             with Vertical(id="menu-view"):
                 yield Label("Today", id="workflow-heading")
                 yield Static("", id="primary-action")
-                yield Static("Other workflows: choose one, then press Enter for details. Press a for advanced details.", id="menu-help")
+                yield Static(
+                    "Other workflows: choose one, then press Enter for details. Press a for advanced details.",
+                    id="menu-help",
+                )
                 yield ListView(
                     *[
                         ListItem(
@@ -176,7 +179,9 @@ class DashboardApp(App[None]):
                     yield Static("", id="sync-stages")
                     yield Static("", id="action-output")
                     with Vertical(id="card-editor"):
-                        yield Static("[bold]Card editor[/bold]\nEnter a character, press l to load, edit fields, press s to save.")
+                        yield Static(
+                            "[bold]Card editor[/bold]\nEnter a character, press l to load, edit fields, press s to save."
+                        )
                         yield Input(placeholder="Character", id="card-hanzi", max_length=4)
                         yield Input(placeholder="Meaning", id="card-meaning")
                         yield Input(placeholder="Sentence", id="card-sentence")
@@ -188,10 +193,16 @@ class DashboardApp(App[None]):
                             "Optionally enter a song title, then press x to preview the next batch. "
                             "This does not activate cards."
                         )
-                        yield Input(placeholder="Song title or blank for next recommended song", id="song-query")
+                        yield Input(
+                            placeholder="Song title or blank for next recommended song",
+                            id="song-query",
+                        )
                     yield Static("", id="commands")
                     yield Static("", id="safety")
-                yield Static("p: preview · x: run safe action · a: advanced · Esc: back · r: refresh · q: quit", id="back-hint")
+                yield Static(
+                    "p: preview · x: run safe action · a: advanced · Esc: back · r: refresh · q: quit",
+                    id="back-hint",
+                )
         yield Footer()
 
     def on_mount(self) -> None:
@@ -325,7 +336,11 @@ class DashboardApp(App[None]):
         self._render_card_editor(show=item.key == "2")
         self._render_song_planner(show=item.key == "4")
         self._render_commands(item, preview=True)
-        safety = f"Safety: {item.safety}" if item.safety else "Preview only. No files or live Anki state changed."
+        safety = (
+            f"Safety: {item.safety}"
+            if item.safety
+            else "Preview only. No files or live Anki state changed."
+        )
         self.query_one("#safety", Static).update(safety)
 
     def _show_menu(self) -> None:
@@ -376,14 +391,20 @@ class DashboardApp(App[None]):
             action_output.update("[bold]Ready:[/bold] Press x to open the song analysis browser.")
             return
         if item.key == "3":
-            action_output.update("[bold]Ready:[/bold] Press x to preview content/audio tasks and credential readiness.")
+            action_output.update(
+                "[bold]Ready:[/bold] Press x to preview content/audio tasks and credential readiness."
+            )
             return
-        action_output.update("[dim]No in-place run action yet for this workflow. Press a for command equivalents.[/dim]")
+        action_output.update(
+            "[dim]No in-place run action yet for this workflow. Press a for command equivalents.[/dim]"
+        )
 
     def _capture_runtime_output(self, action: Callable[[], object]) -> str:
         original_console = self.runtime.console
         buffer = StringIO()
-        self.runtime.console = Console(file=buffer, force_terminal=False, color_system=None, width=100)
+        self.runtime.console = Console(
+            file=buffer, force_terminal=False, color_system=None, width=100
+        )
         try:
             action()
         except typer.Exit as error:
@@ -449,7 +470,9 @@ class DashboardApp(App[None]):
         self.query_one("#menu-view", Vertical).display = False
         self.query_one("#detail-view", Vertical).display = True
         self.query_one("#detail-title", Static).update("Run: Health, cleanup, undo")
-        self.query_one("#detail-body", Static).update("Running read-only doctor checks without AnkiConnect probing.")
+        self.query_one("#detail-body", Static).update(
+            "Running read-only doctor checks without AnkiConnect probing."
+        )
         self._render_sync_stages(show=False)
         action_output = self.query_one("#action-output", Static)
         action_output.display = True
@@ -495,7 +518,9 @@ class DashboardApp(App[None]):
         )
 
     def _render_song_browser(self, *, song_query: str) -> str:
-        return format_song_browser_view(build_song_browser_view(self.runtime, song_query=song_query, limit=20, pace=20))
+        return format_song_browser_view(
+            build_song_browser_view(self.runtime, song_query=song_query, limit=20, pace=20)
+        )
 
     def _cycle_song_selection(self, offset: int) -> None:
         action_output = self.query_one("#action-output", Static)
@@ -528,7 +553,9 @@ class DashboardApp(App[None]):
         action_output.display = True
         action_output.update(format_content_audio_view(build_content_audio_view(self.runtime)))
         self._render_commands(self.items[self._item_index("3")], preview=True)
-        self.query_one("#safety", Static).update("Read-only. No Gemini, TTS, or live Anki action was run.")
+        self.query_one("#safety", Static).update(
+            "Read-only. No Gemini, TTS, or live Anki action was run."
+        )
 
     def _card_input_value(self, selector: str) -> str:
         return self.query_one(selector, Input).value.strip()
@@ -614,9 +641,13 @@ class DashboardApp(App[None]):
         self._refresh_plan()
         self._render_sync_stages(show=False)
         self._render_commands(self.items[self._item_index("2")], preview=True)
-        saved_view = build_card_edit_view(original, updates, sync_impact=sync_summary(self.plan) if self.plan else "unknown")
+        saved_view = build_card_edit_view(
+            original, updates, sync_impact=sync_summary(self.plan) if self.plan else "unknown"
+        )
         action_output.update("\n".join([format_card_edit_view(saved_view), "", output]))
-        self.query_one("#safety", Static).update("Source deck updated locally. No live Anki state was changed.")
+        self.query_one("#safety", Static).update(
+            "Source deck updated locally. No live Anki state was changed."
+        )
 
     def _preview_body(self, item: WorkflowItem) -> str:
         if item.key == "1":
@@ -638,7 +669,9 @@ class DashboardApp(App[None]):
         try:
             notes = self.runtime.note_store.load()
         except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
-            return f"Could not load enriched notes: {error}\nRun health checks before editing cards."
+            return (
+                f"Could not load enriched notes: {error}\nRun health checks before editing cards."
+            )
 
         issues = validation_issues(notes)
         flagged = flagged_notes(notes)
@@ -689,7 +722,9 @@ class DashboardApp(App[None]):
 
         if item.commands:
             title = "Advanced: command equivalents" if preview else "Advanced: command equivalents"
-            rendered = "\n".join([f"[bold]{title}[/bold]", *[f"  {command}" for command in item.commands]])
+            rendered = "\n".join(
+                [f"[bold]{title}[/bold]", *[f"  {command}" for command in item.commands]]
+            )
         else:
             rendered = ""
         commands.update(rendered)

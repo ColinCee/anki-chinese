@@ -190,11 +190,15 @@ def run_snapshot_show(
         f"  [dim]Cards affected by undo/change:[/dim] {snapshot.mutation_card_count}"
     )
     if snapshot.found_chars:
-        runtime.console.print(f"  [dim]Characters:[/dim] {_snapshot_chars_text(snapshot.found_chars)}")
+        runtime.console.print(
+            f"  [dim]Characters:[/dim] {_snapshot_chars_text(snapshot.found_chars)}"
+        )
 
     missing = snapshot.data.get("missing_chars")
     if isinstance(missing, list) and missing:
-        runtime.console.print(f"  [yellow]Missing:[/yellow] {' '.join(str(char) for char in missing)}")
+        runtime.console.print(
+            f"  [yellow]Missing:[/yellow] {' '.join(str(char) for char in missing)}"
+        )
 
 
 def _undo_result_dict(result: SnapshotUndoResult) -> dict[str, object]:
@@ -255,7 +259,9 @@ def run_activate_undo(
     runtime.console.print(f"[bold]Snapshot:[/bold] {preview.snapshot_path.name}")
     runtime.console.print(f"  [dim]Source operation:[/dim] {preview.source_operation}")
     if preview.found_chars:
-        runtime.console.print(f"  [dim]Characters:[/dim] {_snapshot_chars_text(list(preview.found_chars))}")
+        runtime.console.print(
+            f"  [dim]Characters:[/dim] {_snapshot_chars_text(list(preview.found_chars))}"
+        )
 
     if preview.cards_to_suspend:
         runtime.console.print(

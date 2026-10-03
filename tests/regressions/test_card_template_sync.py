@@ -54,7 +54,9 @@ def test_sentence_helpers_are_separate_and_collapsed_by_default(template: str) -
 @pytest.mark.parametrize("template", ["recognition_back.html", "recall_back.html"])
 @pytest.mark.parametrize("sentence", ["我喝水。", ""])
 def test_meaning_is_collapsed_after_chinese_reading(template: str, sentence: str) -> None:
-    root = _render(template, Hanzi="水", Meaning="water; in 水杯: drinking glass", Sentence=sentence)
+    root = _render(
+        template, Hanzi="水", Meaning="water; in 水杯: drinking glass", Sentence=sentence
+    )
     meaning_toggle = _with_class(root, "meaning-toggle")[0]
 
     assert meaning_toggle.tag == "details"

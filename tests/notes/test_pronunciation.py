@@ -30,7 +30,10 @@ def test_audit_sentence_pinyin_allows_compound_spacing() -> None:
 
 def test_audit_sentence_pinyin_allows_erhua_and_polyphonic_defaults() -> None:
     assert audit_sentence_pinyin("我的舌头有一点儿疼", "wǒ de shé tou yǒu yì diǎnr téng") is None
-    assert audit_sentence_pinyin("请帮我削一下这个苹果", "qǐng bāng wǒ xiāo yī xià zhè ge píng guǒ") is None
+    assert (
+        audit_sentence_pinyin("请帮我削一下这个苹果", "qǐng bāng wǒ xiāo yī xià zhè ge píng guǒ")
+        is None
+    )
     assert audit_sentence_pinyin("气球慢慢地升上去了", "qìqiú mànmàn de shēng shàngqù le") is None
 
 
@@ -44,9 +47,9 @@ def test_reading_matches_checks_target_character_syllable() -> None:
 
 
 def test_find_phonetic_confusers_flags_same_base() -> None:
-    assert find_phonetic_confusers("和", "hé", "我和朋友一起去喝茶", "wǒ hé péngyǒu yīqǐ qù hē chá") == [
-        ("喝", "hē", "same-base")
-    ]
+    assert find_phonetic_confusers(
+        "和", "hé", "我和朋友一起去喝茶", "wǒ hé péngyǒu yīqǐ qù hē chá"
+    ) == [("喝", "hē", "same-base")]
 
 
 def test_find_phonetic_confusers_flags_retroflex_pair() -> None:
@@ -80,6 +83,4 @@ def test_find_phonetic_confusers_same_final_is_opt_in() -> None:
         include_same_final=True,
     )
 
-    assert [(c.character, c.pinyin, c.severity) for c in confusers] == [
-        ("人", "rén", "same-final")
-    ]
+    assert [(c.character, c.pinyin, c.severity) for c in confusers] == [("人", "rén", "same-final")]

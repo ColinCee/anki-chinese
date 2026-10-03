@@ -69,9 +69,7 @@ def _load_song_inputs(
         deck_order, deck_chars = ac.find_all_deck_info()
     except AnkiConnectError as error:
         runtime.console.print(f"[red]✗[/red] {error}")
-        runtime.console.print(
-            "[dim]Ensure Anki is open with AnkiConnect installed.[/dim]"
-        )
+        runtime.console.print("[dim]Ensure Anki is open with AnkiConnect installed.[/dim]")
         raise typer.Exit(2) from None
     return songs, active_chars, studied_chars, deck_chars, deck_order
 
@@ -89,9 +87,7 @@ def _print_song_plan(runtime: AppRuntime, plan: SongActivationPlan) -> None:
             f"{' '.join(plan.remaining_after_limit)}"
         )
     if plan.non_deck_chars:
-        runtime.console.print(
-            f"[yellow]Non-RSH skipped:[/yellow] {' '.join(plan.non_deck_chars)}"
-        )
+        runtime.console.print(f"[yellow]Non-RSH skipped:[/yellow] {' '.join(plan.non_deck_chars)}")
     if plan.already_active:
         runtime.console.print(f"[dim]Already active:[/dim] {len(plan.already_active)}")
 
@@ -226,10 +222,10 @@ def _song_from_query(
 
 
 def _is_song_undo_snapshot(snapshot: ActivationSnapshot) -> bool:
-    return (
-        snapshot.operation in {"activate-song", "resuspend-tagged-cards"}
-        and snapshot.tag.startswith("activated::song::")
-    )
+    return snapshot.operation in {
+        "activate-song",
+        "resuspend-tagged-cards",
+    } and snapshot.tag.startswith("activated::song::")
 
 
 def _resolve_song_undo_snapshot(
@@ -240,7 +236,10 @@ def _resolve_song_undo_snapshot(
     snapshots = list_activation_snapshots(snapshot_dir)
     for snapshot in snapshots:
         if tag:
-            if snapshot.tag == tag and snapshot.operation in {"activate-song", "resuspend-tagged-cards"}:
+            if snapshot.tag == tag and snapshot.operation in {
+                "activate-song",
+                "resuspend-tagged-cards",
+            }:
                 return snapshot
         elif _is_song_undo_snapshot(snapshot):
             return snapshot
@@ -405,8 +404,7 @@ def run_songs_learn(
         )
     elif result.snapshot_path is not None:
         runtime.console.print(
-            "[dim]Undo with:[/dim] "
-            f"uv run anki-chinese songs undo {command_song}"
+            f"[dim]Undo with:[/dim] uv run anki-chinese songs undo {command_song}"
         )
     return result
 
@@ -444,9 +442,7 @@ def _print_resuspend_result(
 
     if remove_tag:
         tag_action = "Would remove" if dry_run else "Removed"
-        runtime.console.print(
-            f"  [dim]{tag_action} tag from {len(preview.note_ids)} notes[/dim]"
-        )
+        runtime.console.print(f"  [dim]{tag_action} tag from {len(preview.note_ids)} notes[/dim]")
     else:
         runtime.console.print("  [dim]Kept activation tag[/dim]")
 
@@ -558,9 +554,7 @@ def run_songs_fetch(
 
     if pick > 0:
         if pick > len(results):
-            runtime.console.print(
-                f"[red]✗[/red] Pick {pick} out of range (1-{len(results)})"
-            )
+            runtime.console.print(f"[red]✗[/red] Pick {pick} out of range (1-{len(results)})")
             raise typer.Exit(1)
         selected = results[pick - 1]
     elif len(results) == 1:
@@ -654,14 +648,19 @@ def run_songs_verify(runtime: AppRuntime, *, lyrics_dir: Path) -> bool:
             actual_clean = re.sub(r"[，。、！？·\s]", "", fname)
             if actual_clean != expected_stem:
                 warnings.append(
-                    (fname, f"Filename doesn't match metadata (artist={song.artist}, title={song.title})")
+                    (
+                        fname,
+                        f"Filename doesn't match metadata (artist={song.artist}, title={song.title})",
+                    )
                 )
 
         # Check lyrics content
         if not song.lyrics.strip():
             errors.append((fname, "Empty lyrics"))
         elif len(song.lyrics.strip().split("\n")) < 4:
-            warnings.append((fname, f"Very short lyrics ({len(song.lyrics.strip().split(chr(10)))} lines)"))
+            warnings.append(
+                (fname, f"Very short lyrics ({len(song.lyrics.strip().split(chr(10)))} lines)")
+            )
 
         # Check for stray HTML tags
         if re.search(r"<[a-z/]", song.lyrics):
@@ -700,16 +699,12 @@ def run_songs_verify(runtime: AppRuntime, *, lyrics_dir: Path) -> bool:
         # Check for duplicates by artist+title
         key = (song.artist, song.title)
         if key in seen_artists_titles:
-            errors.append(
-                (fname, f"Duplicate song (also in {seen_artists_titles[key]})")
-            )
+            errors.append((fname, f"Duplicate song (also in {seen_artists_titles[key]})"))
         seen_artists_titles[key] = fname
 
     # Report
     if not errors and not warnings:
-        runtime.console.print(
-            f"[green]✓[/green] All {len(files)} lyric files pass verification."
-        )
+        runtime.console.print(f"[green]✓[/green] All {len(files)} lyric files pass verification.")
         return True
 
     if errors:
@@ -764,11 +759,7 @@ def run_songs_verify_online(runtime: AppRuntime, *, lyrics_dir: Path) -> bool:
         # Find best artist match
         match = None
         for r in results:
-            if (
-                r.artist == song.artist
-                or song.artist in r.artist
-                or r.artist in song.artist
-            ):
+            if r.artist == song.artist or song.artist in r.artist or r.artist in song.artist:
                 match = r
                 break
         if not match:
@@ -816,14 +807,10 @@ def run_songs_verify_online(runtime: AppRuntime, *, lyrics_dir: Path) -> bool:
     # Report
     runtime.console.print()
     if skipped:
-        runtime.console.print(
-            f"[dim]Skipped {len(skipped)}: {', '.join(skipped)}[/dim]\n"
-        )
+        runtime.console.print(f"[dim]Skipped {len(skipped)}: {', '.join(skipped)}[/dim]\n")
 
     if not issues:
-        runtime.console.print(
-            "[green]✓[/green] All checked songs match their online source."
-        )
+        runtime.console.print("[green]✓[/green] All checked songs match their online source.")
         return True
 
     error_count = sum(1 for _, sev, _ in issues if sev == "error")

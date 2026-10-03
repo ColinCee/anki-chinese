@@ -166,7 +166,9 @@ def run_card_set(
         runtime.console.print(f"[red]✗[/red] Source deck not found: {runtime.source_deck_path}")
         raise typer.Exit(1) from None
     except KeyError:
-        runtime.console.print(f"[red]✗[/red] {key} is not in source deck: {runtime.source_deck_path}")
+        runtime.console.print(
+            f"[red]✗[/red] {key} is not in source deck: {runtime.source_deck_path}"
+        )
         raise typer.Exit(1) from None
     except ValueError as error:
         runtime.console.print(f"[red]✗[/red] {error}")
@@ -177,7 +179,9 @@ def run_card_set(
     runtime.console.print(f"[green]✓[/green] Updated source deck for {key}")
     for field_name in updates:
         runtime.console.print(f"  {field_name}")
-    runtime.console.print("[dim]Run `anki-chinese sync --dry-run` to preview required rebuild steps.[/dim]")
+    runtime.console.print(
+        "[dim]Run `anki-chinese sync --dry-run` to preview required rebuild steps.[/dim]"
+    )
     return dict(updates)
 
 

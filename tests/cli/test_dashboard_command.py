@@ -394,7 +394,10 @@ async def test_textual_dashboard_runs_song_preview_without_activation(runtime_fa
     async with app.run_test(size=(80, 32)) as pilot:
         await pilot.press("down", "down", "down", "enter")
         _input(app, "#song-query").value = "测试歌"
-        with patch("anki_chinese.tui.dashboard_model.AnkiConnectClient", return_value=StubSongKnowledgeClient()):
+        with patch(
+            "anki_chinese.tui.dashboard_model.AnkiConnectClient",
+            return_value=StubSongKnowledgeClient(),
+        ):
             await pilot.press("x")
 
         assert "Recommended next song" in _content(app, "#action-output")
@@ -413,7 +416,10 @@ async def test_textual_dashboard_song_browser_moves_between_songs(runtime_factor
 
     async with app.run_test(size=(80, 32)) as pilot:
         await pilot.press("down", "down", "down", "enter")
-        with patch("anki_chinese.tui.dashboard_model.AnkiConnectClient", return_value=StubSongKnowledgeClient()):
+        with patch(
+            "anki_chinese.tui.dashboard_model.AnkiConnectClient",
+            return_value=StubSongKnowledgeClient(),
+        ):
             await pilot.press("x")
             assert _input(app, "#song-query").value == ""
             assert "测试歌" in _content(app, "#action-output")
@@ -513,7 +519,9 @@ async def test_textual_dashboard_runs_health_action(runtime_factory) -> None:
 
 
 @pytest.mark.anyio
-async def test_textual_dashboard_health_guidance_includes_activation_recovery(runtime_factory) -> None:
+async def test_textual_dashboard_health_guidance_includes_activation_recovery(
+    runtime_factory,
+) -> None:
     runtime = runtime_factory(saved_notes=[CharacterNote(hanzi="一", meaning="one")])
     app = DashboardApp(runtime)
 

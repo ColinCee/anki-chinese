@@ -152,7 +152,9 @@ def run_sync(
             if result.final_plan.is_up_to_date:
                 runtime.console.print("[green]✓[/green] Sync complete")
             else:
-                runtime.console.print("[yellow]⚠[/yellow] Sync stopped before all stages were current")
+                runtime.console.print(
+                    "[yellow]⚠[/yellow] Sync stopped before all stages were current"
+                )
                 _render_sync_plan(runtime, result.final_plan, dry_run_footer=False)
             return result.final_plan
         return _build_sync_plan(runtime, skip_audio=skip_audio)
