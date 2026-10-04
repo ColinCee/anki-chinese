@@ -170,6 +170,20 @@ class ResuspendClient(Protocol):
         ...
 
 
+class TemplateSuspendClient(Protocol):
+    def find_notes_by_template(self, template: str) -> dict[str, LiveNoteCards]:
+        """Return every model note with only its cards for one template."""
+        ...
+
+    def suspended_card_ids(self, card_ids: list[int]) -> set[int]:
+        """Return the subset of card IDs that are currently suspended."""
+        ...
+
+    def suspend_cards(self, card_ids: list[int]) -> None:
+        """Suspend the supplied live Anki card IDs."""
+        ...
+
+
 class SnapshotUndoClient(Protocol):
     def suspended_card_ids(self, card_ids: list[int]) -> set[int]:
         """Return the subset of card IDs that are currently suspended."""
@@ -503,4 +517,35 @@ def resuspend_tagged_cards(
         client.suspend_cards(list(preview.cards_to_suspend))
     if should_remove_tag:
         client.remove_tags(list(preview.note_ids), preview.tag)
+    return ResuspendResult(preview=preview, snapshot_path=snapshot_path)
+
+
+def preview_template_suspension(client: TemplateSuspendClient, template: str) -> ResuspendPreview:
+    note_map = client.find_notes_by_template(template)
+    notes = tuple(note_map[char] for char in sorted(note_map) if note_map[char].card_ids)
+    card_ids = sorted({card_id for note in notes for card_id in note.card_ids})
+    suspended = tuple(sorted(client.suspended_card_ids(card_ids))) if card_ids else ()
+    suspended_set = set(suspended)
+    return ResuspendPreview(
+        tag="",
+        notes=notes,
+        already_suspended_card_ids=suspended,
+        cards_to_suspend=tuple(card_id for card_id in card_ids if card_id not in suspended_set),
+    )
+
+
+def suspend_template_cards(
+    client: TemplateSuspendClient,
+    template: str,
+    *,
+    dry_run: bool = False,
+    snapshot_dir: Path,
+) -> ResuspendResult:
+    """Suspend every active card of one template, e.g. to retire the listening card."""
+    preview = preview_template_suspension(client, template)
+    if dry_run or not preview.cards_to_suspend:
+        return ResuspendResult(preview=preview, snapshot_path=None)
+
+    snapshot_path = write_resuspend_undo_snapshot(preview, snapshot_dir, remove_tag=False)
+    client.suspend_cards(list(preview.cards_to_suspend))
     return ResuspendResult(preview=preview, snapshot_path=snapshot_path)

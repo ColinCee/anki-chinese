@@ -188,6 +188,8 @@ uv run anki-chinese audio-clean --apply
 `songs verify` checks local lyric files without Anki. Song analysis and next-card
 planning query live AnkiConnect state; keep Anki open. An active character has
 at least one unsuspended card; a studied character has a recorded review.
+Activation unsuspends only the Recognition card. The Listening (recall) card
+is retired: `activate retire-listening` suspends any that are still active.
 
 ```bash
 uv run anki-chinese doctor --check-anki

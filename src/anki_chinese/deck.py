@@ -14,8 +14,10 @@ from .config import (
     DECK_OUTPUT_DIR,
     FIELDS,
     GENERATED_AUDIO_DIR,
+    LISTENING_TEMPLATE,
     MODEL_ID,
     MODEL_NAME,
+    RECOGNITION_TEMPLATE,
 )
 from .notes import CharacterNote
 
@@ -37,12 +39,12 @@ def _build_model() -> genanki.Model:
         sort_field_index=FIELDS.index("HeisigNum"),
         templates=[
             {
-                "name": "Recognition",
+                "name": RECOGNITION_TEMPLATE,
                 "qfmt": _read_card_file("recognition_front.html") + reading_script,
                 "afmt": _read_card_file("recognition_back.html") + tone_script + reading_script,
             },
             {
-                "name": "Listening",
+                "name": LISTENING_TEMPLATE,
                 "qfmt": _read_card_file("recall_front.html"),
                 "afmt": _read_card_file("recall_back.html") + tone_script + reading_script,
             },

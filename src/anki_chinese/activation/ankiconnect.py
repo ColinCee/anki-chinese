@@ -8,7 +8,7 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-from ..config import ANKICONNECT_URL, MODEL_NAME
+from ..config import ANKICONNECT_URL, MODEL_NAME, RECOGNITION_TEMPLATE
 from .service import LiveNoteCards
 
 
@@ -24,12 +24,14 @@ class AnkiConnectClient:
         api_key: str = "",
         model_name: str = MODEL_NAME,
         field_name: str = "Hanzi",
+        activation_template: str = RECOGNITION_TEMPLATE,
         timeout_seconds: float = 10.0,
     ) -> None:
         self.url = url
         self.api_key = api_key
         self.model_name = model_name
         self.field_name = field_name
+        self.activation_template = activation_template
         self.timeout_seconds = timeout_seconds
 
     def _invoke(self, action: str, params: dict[str, Any] | None = None) -> Any:
@@ -123,7 +125,36 @@ class AnkiConnectClient:
             found[char] = LiveNoteCards(character=char, note_ids=note_ids, card_ids=card_ids)
         return found
 
+    def _template_card_ids(self, template: str) -> set[int]:
+        result = self._invoke(
+            "findCards",
+            {"query": f'note:"{self.model_name}" card:"{template}"'},
+        )
+        if not isinstance(result, list):
+            raise AnkiConnectError("findCards returned an unexpected response shape.")
+        return {int(card_id) for card_id in result}
+
+    def _only_template_cards(
+        self,
+        notes: dict[str, LiveNoteCards],
+        template: str,
+    ) -> dict[str, LiveNoteCards]:
+        if not notes:
+            return {}
+        template_card_ids = self._template_card_ids(template)
+        return {
+            char: LiveNoteCards(
+                character=char,
+                note_ids=note.note_ids,
+                card_ids=tuple(
+                    card_id for card_id in note.card_ids if card_id in template_card_ids
+                ),
+            )
+            for char, note in notes.items()
+        }
+
     def find_notes_by_chars(self, chars: list[str]) -> dict[str, LiveNoteCards]:
+        """Return exact Hanzi matches with only their activation-template cards."""
         found: dict[str, LiveNoteCards] = {}
         for char in chars:
             note_ids = self._find_note_ids(char)
@@ -136,7 +167,30 @@ class AnkiConnectClient:
         if missing:
             all_note_ids = self._find_all_model_note_ids()
             found.update(self._collect_exact_infos(missing, self._notes_info(all_note_ids)))
-        return found
+        return self._only_template_cards(found, self.activation_template)
+
+    def find_notes_by_template(self, template: str) -> dict[str, LiveNoteCards]:
+        """Return every model note with only its cards for one template."""
+        note_ids = self._find_all_model_note_ids()
+        if not note_ids:
+            return {}
+        found: dict[str, LiveNoteCards] = {}
+        for info in self._notes_info(note_ids):
+            char = self._info_character(info)
+            if not char:
+                continue
+            existing = found.get(char)
+            found[char] = LiveNoteCards(
+                character=char,
+                note_ids=tuple([*(existing.note_ids if existing else ()), int(info["noteId"])]),
+                card_ids=tuple(
+                    [
+                        *(existing.card_ids if existing else ()),
+                        *(int(card_id) for card_id in info.get("cards", [])),
+                    ]
+                ),
+            )
+        return self._only_template_cards(found, template)
 
     def find_notes_by_tag(self, tag: str) -> dict[str, LiveNoteCards]:
         if not tag:
