@@ -1,9 +1,25 @@
 # anki-chinese
 
-Maintain a Mandarin Anki deck with Cantonese support: character recognition,
-vocabulary in context, example sentences, pronunciation audio, and song-driven
-study. Anki handles reviews; this project handles rebuildable content and
-separate, preview-first live card activation.
+Maintain a Mandarin Anki deck with Cantonese support.
+
+[![CI](https://github.com/ColinCee/anki-chinese/actions/workflows/ci.yml/badge.svg?branch=master&event=push)](https://github.com/ColinCee/anki-chinese/actions/workflows/ci.yml?query=branch%3Amaster)
+
+## What it does
+
+- Builds character recognition, vocabulary-in-context, and example-sentence cards
+- Generates Mandarin and Cantonese pronunciation audio
+- Plans study targets from curated song lyrics
+- Leaves reviews to Anki; keeps rebuildable content separate from preview-first
+  live card activation
+
+## Stack
+
+| Area | Tooling |
+| --- | --- |
+| CLI / workbench | Python 3.13, uv, Typer, Textual |
+| Deck output | genanki APKG, AnkiConnect for live state |
+| Text | jieba, pypinyin, pycantonese, wordfreq |
+| Generation | Gemini (sentences), Google TTS or MiniMax (audio) |
 
 ## Start
 
@@ -42,6 +58,13 @@ Stable [Anki identity](docs/reference.md#anki-model) lets imports update notes
 instead of duplicating them. Rebuilding alone does not change the open collection.
 AnkiConnect is needed for live-state workflows, not APKG rebuilding.
 To use a different dataset, follow [Replace the source](docs/workflows.md#replace-the-source).
+
+## How it works
+
+Canonical records in `data/source/` are enriched, given audio, and rebuilt into
+an APKG for manual import; live suspension and review state change only through
+AnkiConnect. See [Data layout](docs/reference.md#data-layout) and
+[Workflows](docs/workflows.md).
 
 ## Find the right guide
 
