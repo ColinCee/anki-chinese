@@ -48,6 +48,8 @@ def test_find_notes_by_chars_filters_exact_hanzi(monkeypatch: pytest.MonkeyPatch
                     "error": None,
                 }
             )
+        if payload["action"] == "findCards":
+            return FakeResponse({"result": [10, 20], "error": None})
         raise AssertionError(payload["action"])
 
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
@@ -56,8 +58,40 @@ def test_find_notes_by_chars_filters_exact_hanzi(monkeypatch: pytest.MonkeyPatch
     result = client.find_notes_by_chars(["水"])
 
     assert result["水"].note_ids == (1,)
-    assert result["水"].card_ids == (10, 11)
+    assert result["水"].card_ids == (10,)
     assert requests[0]["params"]["query"] == 'note:"Chinese RSH" Hanzi:水'
+    assert requests[-1]["params"]["query"] == 'note:"Chinese RSH" card:"Recognition"'
+
+
+def test_find_notes_by_template_returns_only_that_templates_cards(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_urlopen(request, timeout: int = 10):  # noqa: ANN001
+        payload = json.loads(request.data.decode("utf-8"))
+        if payload["action"] == "findNotes":
+            return FakeResponse({"result": [1, 2], "error": None})
+        if payload["action"] == "notesInfo":
+            return FakeResponse(
+                {
+                    "result": [
+                        {"noteId": 1, "fields": {"Hanzi": {"value": "水"}}, "cards": [10, 11]},
+                        {"noteId": 2, "fields": {"Hanzi": {"value": "火"}}, "cards": [20, 21]},
+                    ],
+                    "error": None,
+                }
+            )
+        if payload["action"] == "findCards":
+            assert payload["params"]["query"] == 'note:"Chinese RSH" card:"Listening"'
+            return FakeResponse({"result": [11, 21], "error": None})
+        raise AssertionError(payload["action"])
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    client = AnkiConnectClient(url="http://anki.test", model_name="Chinese RSH")
+
+    result = client.find_notes_by_template("Listening")
+
+    assert result["水"].card_ids == (11,)
+    assert result["火"].card_ids == (21,)
 
 
 def test_find_notes_by_tag_and_resuspend_actions(monkeypatch: pytest.MonkeyPatch) -> None:

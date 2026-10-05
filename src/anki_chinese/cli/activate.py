@@ -14,17 +14,20 @@ from ..activation import (
     AnkiClient,
     AnkiConnectClient,
     AnkiConnectError,
+    ResuspendResult,
     SnapshotError,
     SnapshotUndoClient,
     SnapshotUndoResult,
+    TemplateSuspendClient,
     activate_characters,
     list_activation_snapshots,
     load_activation_snapshot,
     normalize_character_args,
     resolve_activation_snapshot,
+    suspend_template_cards,
     undo_activation_snapshot,
 )
-from ..config import ANKI_BACKUP_DIR
+from ..config import ANKI_BACKUP_DIR, LISTENING_TEMPLATE
 from .app import AppRuntime
 from .interaction import preview_unless_confirmed
 
@@ -109,6 +112,43 @@ def run_activate_chars(
         raise typer.Exit(2) from None
 
     _print_result(runtime, result, dry_run=dry_run, tag=tag)
+    return result
+
+
+def run_retire_listening(
+    runtime: AppRuntime,
+    *,
+    dry_run: bool = False,
+    client: TemplateSuspendClient | None = None,
+    snapshot_dir: Path = ANKI_BACKUP_DIR,
+) -> ResuspendResult:
+    client = client or _default_client()
+    try:
+        result = suspend_template_cards(
+            client,
+            LISTENING_TEMPLATE,
+            dry_run=dry_run,
+            snapshot_dir=snapshot_dir,
+        )
+    except AnkiConnectError as error:
+        runtime.console.print(f"[red]✗[/red] {error}")
+        raise typer.Exit(2) from None
+
+    preview = result.preview
+    already = len(preview.already_suspended_card_ids)
+    if not preview.cards_to_suspend:
+        runtime.console.print(
+            f"[green]✓[/green] No active {LISTENING_TEMPLATE} cards to suspend "
+            f"({already} already suspended)"
+        )
+        return result
+    action = "Would suspend" if dry_run else "Suspended"
+    runtime.console.print(
+        f"[green]✓[/green] {action} {len(preview.cards_to_suspend)} {LISTENING_TEMPLATE} cards "
+        f"across {len(preview.note_ids_to_suspend)} notes ({already} already suspended)"
+    )
+    if result.snapshot_path is not None:
+        runtime.console.print(f"  [dim]Undo snapshot:[/dim] {result.snapshot_path}")
     return result
 
 
@@ -317,7 +357,7 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             help="Mutate live Anki after writing an undo snapshot. Without this, only previews.",
         ),
     ) -> None:
-        """Unsuspend specific characters by Hanzi."""
+        """Unsuspend the recognition card of specific characters by Hanzi."""
         effective_dry_run = preview_unless_confirmed(
             runtime.console,
             dry_run=dry_run,
@@ -325,6 +365,28 @@ def register(app: typer.Typer, runtime: AppRuntime) -> None:
             action="Activating cards",
         )
         run_activate_chars(runtime, chars, dry_run=effective_dry_run, tag=tag)
+
+    @activate_app.command("retire-listening")
+    def retire_listening_command(
+        dry_run: bool = typer.Option(
+            False,
+            "--dry-run",
+            help="Show how many cards would be suspended without changing Anki.",
+        ),
+        confirm: bool = typer.Option(
+            False,
+            "--confirm",
+            help="Mutate live Anki after writing an undo snapshot. Without this, only previews.",
+        ),
+    ) -> None:
+        """Suspend every active listening (recall) card."""
+        effective_dry_run = preview_unless_confirmed(
+            runtime.console,
+            dry_run=dry_run,
+            confirm=confirm,
+            action="Suspending listening cards",
+        )
+        run_retire_listening(runtime, dry_run=effective_dry_run)
 
     @activate_app.command("undo")
     def undo_command(

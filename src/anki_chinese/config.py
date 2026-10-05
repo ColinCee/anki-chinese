@@ -51,6 +51,10 @@ DECK_ID = 1_704_328_572  # Unique ID for the deck
 # ── Deck metadata ─────────────────────────────────────────────────────
 DECK_NAME = "Chinese"
 MODEL_NAME = "Chinese RSH"
+# Card template names. Live activation only unsuspends the recognition card;
+# the listening (recall) card stays suspended.
+RECOGNITION_TEMPLATE = "Recognition"
+LISTENING_TEMPLATE = "Listening"
 
 # ── Field order (index into the fields list) ──────────────────────────
 # If you add/remove/reorder fields, update this AND the FIELDS list AND

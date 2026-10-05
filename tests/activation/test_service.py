@@ -9,10 +9,12 @@ from anki_chinese.activation import (
     LiveNoteCards,
     activate_characters,
     list_activation_snapshots,
+    load_activation_snapshot,
     normalize_character_args,
     preview_tag_resuspension,
     resolve_activation_snapshot,
     resuspend_tagged_cards,
+    suspend_template_cards,
     undo_activation_snapshot,
 )
 
@@ -368,3 +370,55 @@ def test_undo_resuspend_snapshot_restores_cards_and_tag(tmp_path: Path) -> None:
     assert client.tags == [([1], "activated::song::test")]
     assert result.preview.cards_to_unsuspend == (10,)
     assert result.preview.restore_tag is True
+
+
+class StubTemplateClient(StubAnkiClient):
+    def __init__(self, snapshot_dir: Path | None = None) -> None:
+        super().__init__(snapshot_dir)
+        self.suspended = {21}
+
+    def find_notes_by_template(self, template: str) -> dict[str, LiveNoteCards]:
+        assert template == "Listening"
+        return {
+            "水": LiveNoteCards(character="水", note_ids=(1,), card_ids=(11,)),
+            "火": LiveNoteCards(character="火", note_ids=(2,), card_ids=(21,)),
+        }
+
+    def suspend_cards(self, card_ids: list[int]) -> None:
+        if self.snapshot_dir is not None:
+            assert list(self.snapshot_dir.glob("resuspend-*.json"))
+        self.resuspended.extend(card_ids)
+        self.suspended.update(card_ids)
+
+
+def test_suspend_template_cards_dry_run_does_not_mutate(tmp_path: Path) -> None:
+    client = StubTemplateClient()
+
+    result = suspend_template_cards(client, "Listening", dry_run=True, snapshot_dir=tmp_path)
+
+    assert result.preview.cards_to_suspend == (11,)
+    assert result.preview.already_suspended_card_ids == (21,)
+    assert client.resuspended == []
+    assert not list(tmp_path.glob("*.json"))
+
+
+def test_suspend_template_cards_snapshot_can_be_undone(tmp_path: Path) -> None:
+    client = StubTemplateClient(snapshot_dir=tmp_path)
+
+    result = suspend_template_cards(client, "Listening", snapshot_dir=tmp_path)
+
+    assert client.resuspended == [11]
+    assert result.snapshot_path is not None
+    snapshot = json.loads(result.snapshot_path.read_text(encoding="utf-8"))
+    assert snapshot["card_ids_to_suspend"] == [11]
+    assert snapshot["pre_change_suspended_card_ids"] == [21]
+
+    undo = undo_activation_snapshot(
+        client,
+        load_activation_snapshot(result.snapshot_path),
+        snapshot_dir=tmp_path,
+    )
+
+    assert undo.preview.cards_to_unsuspend == (11,)
+    assert client.unsuspended == [11]
+    assert client.tags == []
