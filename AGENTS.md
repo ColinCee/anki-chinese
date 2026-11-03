@@ -5,6 +5,8 @@
 Read only the matching section, not the whole documentation set.
 `uv run anki-chinese <command> --help` owns commands/options.
 
+Checks: `uv run ruff check && uv run ruff format --check && uv run ty check && uv run pytest && uv run anki-chinese songs verify && uv run anki-chinese --help && uv run python -m anki_chinese.cli --help`
+
 | Task | Start here |
 | --- | --- |
 | Setup / first import | [README](README.md#start) |
