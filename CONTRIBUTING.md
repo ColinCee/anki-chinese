@@ -11,7 +11,7 @@ with code changes, run:
 ```bash
 uv run ruff check
 uv run ruff format --check
-uv run pyright
+uv run ty check
 uv run pytest
 uv run anki-chinese --help
 uv run python -m anki_chinese.cli --help

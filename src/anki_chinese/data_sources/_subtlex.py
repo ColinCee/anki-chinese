@@ -42,7 +42,7 @@ def _coerce_frequency(value: object) -> float:
 def _load(path: Path) -> dict[str, float]:
     """Parse SUBTLEX-CH Excel file into {word: WFpmw}."""
     try:
-        import openpyxl  # type: ignore[import-untyped]
+        import openpyxl  # ty: ignore[unresolved-import]
     except ImportError:
         return {}
 
@@ -105,7 +105,7 @@ def is_available(path: Path) -> bool:
     if not path.exists():
         return False
     try:
-        import openpyxl  # noqa: F401  # type: ignore[import-untyped]
+        import openpyxl  # noqa: F401  # ty: ignore[unresolved-import]
 
         return True
     except ImportError:

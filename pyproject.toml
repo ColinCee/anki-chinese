@@ -30,12 +30,8 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/anki_chinese"]
 
-[tool.pyright]
-pythonVersion = "3.13"
-typeCheckingMode = "standard"
+[tool.ty.src]
 include = ["src"]
-venvPath = "."
-venv = ".venv"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -43,9 +39,9 @@ testpaths = ["tests"]
 [dependency-groups]
 dev = [
     "opencc-python-reimplemented>=0.1.7",
-    "pyright>=1.1.408",
     "pytest>=9.0.2",
     "ruff>=0.11.0",
+    "ty>=0.0.95",
 ]
 
 [tool.ruff]
