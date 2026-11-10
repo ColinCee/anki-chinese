@@ -39,6 +39,24 @@ def test_build_wordfreq_snapshot_scores_hanzi_occurrences() -> None:
     assert [entry.frequency for entry in snapshot.entries] == pytest.approx([1.2, 1.2, 0.7, 0.4])
 
 
+def test_build_wordfreq_snapshot_stays_loadable_when_float_sums_overshoot(
+    tmp_path: Path,
+) -> None:
+    # A running sum of these exceeds Python's compensated sum() of them.
+    frequencies = {"甲": 0.99, "乙": 0.86, "丙": 0.33, "丁": 0.12}
+
+    snapshot = build_wordfreq_snapshot(
+        word_limit=4,
+        words=list(frequencies),
+        frequency_lookup=lambda word: frequencies[word],
+        retrieved_at="2026-01-01T00:00:00Z",
+    )
+    path = tmp_path / "frequency.json"
+    save_frequency_snapshot(snapshot, path)
+
+    assert load_frequency_snapshot(path).entries[-1].cumulative_percent == 100.0
+
+
 def test_frequency_snapshot_round_trips(tmp_path: Path) -> None:
     snapshot = FrequencySnapshot(
         source_name="test",
