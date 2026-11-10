@@ -193,7 +193,9 @@ def build_wordfreq_snapshot(
                 character=character,
                 rank=rank,
                 frequency=frequency,
-                cumulative_percent=100 * cumulative_frequency / total_frequency,
+                # sum() is compensated but this running total is not, so the last entry
+                # can exceed 100 by a rounding error, which the loader rejects.
+                cumulative_percent=min(100.0, 100 * cumulative_frequency / total_frequency),
                 pinyin="",
             )
         )
