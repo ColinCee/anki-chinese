@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __all__: list[str] = []  # Internal module — import from package instead
 
+import contextlib
 import json
 import os
 from collections.abc import Iterator
@@ -151,6 +152,12 @@ def _build_request_payload(
             "channel": 1,
         },
     }
+
+
+def _raise_for_status(event: dict[str, Any]) -> None:
+    status_code, status_message = _extract_status_details(event)
+    if status_code not in {None, _SUCCESS_STATUS_CODE}:
+        raise TTSError(status_message or f"MiniMax status_code={status_code}")
 
 
 def _http_error(error: HTTPError) -> TTSError:
@@ -303,18 +310,27 @@ class MiniMaxTTSProvider:
         self.rate_limiter.acquire()
         try:
             with urlopen(request, timeout=self.settings.timeout_seconds) as response:
+                other_lines: list[bytes] = []
                 for raw in response:
                     line = raw.strip()
                     if not line.startswith(b"data:"):
+                        other_lines.append(line)
                         continue
-                    event = json.loads(line[len(b"data:") :])
-                    status_code, status_message = _extract_status_details(event)
-                    if status_code not in {None, _SUCCESS_STATUS_CODE}:
-                        raise TTSError(status_message or f"MiniMax status_code={status_code}")
+                    try:
+                        event = json.loads(line[len(b"data:") :])
+                    except ValueError:
+                        continue
+                    _raise_for_status(event)
                     data = event.get("data") or {}
                     # The final event (status 2) repeats the whole clip; only status 1 is new audio.
                     if data.get("status") == 1 and data.get("audio"):
                         yield bytes.fromhex(data["audio"])
+                    elif data.get("status") == 2:
+                        return
+                # Errors can arrive as a plain JSON body with HTTP 200 instead of events.
+                with contextlib.suppress(ValueError):
+                    _raise_for_status(json.loads(b"".join(other_lines) or b"{}"))
+                raise TTSError("MiniMax stream ended before the clip was complete")
         except HTTPError as error:
             raise _http_error(error) from error
         except URLError as error:

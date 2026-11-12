@@ -42,6 +42,7 @@ Paths below are relative to `src/anki_chinese/`. Tests generally mirror these ar
 | Audio | `audio/provider.py`, `audio/factory.py`, `audio/state.py`: protocol, construction, provenance; vendor details stay in implementations. |
 | Lyrics / planning | `songs/lyrics.py`, `songs/analysis.py`: [study policy](docs/decisions/study-target-policy.md#applying-the-policy); fetching is a separate network action. |
 | Live collection | `activation/`: all AnkiConnect access, mutation services, and safety snapshots. |
+| Chat tutor | `tutor/`: known characters, new-character log, `tutor say`; `tutor/chat.py` + `server.py` + `page.html` are the fast page (one long-lived `claude -p`, streamed MiniMax). |
 | Reading coverage | `character_frequency.py`: cached frequency data plus live review state. |
 
 Card regressions start in `tests/regressions/test_card_template_sync.py` and

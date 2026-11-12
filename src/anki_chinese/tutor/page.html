@@ -4,9 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>中文 Tutor</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Noto+Sans+SC:wght@400;500&display=swap">
 <style>
-:root{--bg:#f5f7f6;--surface:#fff;--fg:#1b2422;--muted:#62716d;--line:#d8e1de;--accent:#16786a;--accent-soft:#e1f1ed;--user:#e9eef6;--han:"Noto Sans SC","Microsoft YaHei",sans-serif;--body:"Inter",system-ui,sans-serif;color-scheme:light}
+:root{--bg:#f5f7f6;--surface:#fff;--fg:#1b2422;--muted:#62716d;--line:#d8e1de;--accent:#16786a;--accent-soft:#e1f1ed;--user:#e9eef6;--han:"Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;--body:"Segoe UI",system-ui,sans-serif;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#101615;--surface:#172020;--fg:#e3ebe9;--muted:#93a39f;--line:#2b3936;--accent:#5cc4b2;--accent-soft:#1c332e;--user:#1d2633;color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
@@ -55,6 +54,8 @@ const input = document.getElementById('input');
 const sendBtn = document.getElementById('send');
 const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const bold = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+const post = (path, body = {}) => fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+async function errorOf(res) { try { return (await res.json()).error || res.statusText; } catch { return res.statusText; } }
 
 function add(cls, html) {
   const el = document.createElement('div');
@@ -78,7 +79,7 @@ function tutorBubble(text = '') {
   const el = add('tutor', '<div class="zh"><button type="button" aria-label="Play again">▶</button><span></span></div><div class="rest"></div><div class="chips"></div><div class="times"></div>');
   el.querySelector('.zh button').onclick = () => {
     const line = el.querySelector('.zh span').textContent.trim();
-    if (line) fetch('/api/replay', {method:'POST', body: JSON.stringify({text: line})});
+    if (line) post('/api/replay', {text: line});
   };
   renderTutor(el, text);
   return el;
@@ -104,14 +105,15 @@ function setModels(models, current) {
   box.innerHTML = models.map(m => `<button type="button" aria-pressed="${m === current}" data-m="${m}">${m[0].toUpperCase() + m.slice(1)}</button>`).join('');
   box.querySelectorAll('button').forEach(b => b.onclick = async () => {
     b.textContent = '…';
-    const r = await (await fetch('/api/model', {method:'POST', body: JSON.stringify({model: b.dataset.m})})).json();
-    setModels(models, r.model);
+    const res = await post('/api/model', {model: b.dataset.m});
+    if (!res.ok) { add('divider error', esc(await errorOf(res))); setModels(models, current); return; }
+    setModels(models, (await res.json()).model);
   });
 }
 
 document.getElementById('new').onclick = async () => {
-  await fetch('/api/new', {method:'POST'});
-  add('divider', 'New chat');
+  const res = await post('/api/new');
+  add(res.ok ? 'divider' : 'divider error', res.ok ? 'New chat' : esc(await errorOf(res)));
 };
 
 async function send(text) {
@@ -120,7 +122,8 @@ async function send(text) {
   sendBtn.disabled = true;
   let reply = '';
   try {
-    const res = await fetch('/api/send', {method:'POST', body: JSON.stringify({text})});
+    const res = await post('/api/send', {text});
+    if (!res.ok) throw new Error(await errorOf(res));
     const reader = res.body.getReader();
     const dec = new TextDecoder();
     let buf = '';
@@ -156,7 +159,7 @@ document.getElementById('form').onsubmit = e => {
   send(text);
 };
 input.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); document.getElementById('form').requestSubmit(); }
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); document.getElementById('form').requestSubmit(); }
 });
 load();
 </script>

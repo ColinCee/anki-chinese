@@ -6,8 +6,9 @@ description: Use when the user wants to chat or practise in Chinese/Mandarin in 
 # Chinese tutor
 
 For the fastest voice chat, point the user to the tutor page instead:
-`uv run anki-chinese tutor serve`, then http://127.0.0.1:8790 (sound in about
-2.5 s versus about 6.5 s here). This skill is the in-session fallback.
+`uv run anki-chinese tutor serve`, then http://127.0.0.1:8790 (or the `tutor`
+preview). It skips the tool round trip this skill needs; this skill is the
+in-session fallback.
 
 Speed matters most: each extra tool call adds about 10 seconds. Low effort is
 enough and a little faster. A turn is one command and a short reply. No task
