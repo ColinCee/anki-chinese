@@ -5,9 +5,8 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
-from ..notes import CharacterNote
 from .files import (
     collect_orphaned_audio,
     expected_cantonese_audio_tag,
@@ -16,6 +15,9 @@ from .files import (
     is_valid_audio_tag,
 )
 from .provider import AudioGenerationProfile, TTSProvider
+
+if TYPE_CHECKING:
+    from ..notes import CharacterNote
 
 AudioKind = Literal["mandarin", "cantonese", "sentence"]
 AudioStatus = Literal["valid", "missing", "stale", "invalid", "not_applicable"]

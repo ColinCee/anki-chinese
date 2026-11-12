@@ -20,5 +20,7 @@ data/state/enriched.json
 data/state/pipeline.json
 data/state/audio_manifest.json
 data/state/character_frequency.json
+data/state/tutor_known.json
+data/state/tutor_log.jsonl
 
 google-service-account.json

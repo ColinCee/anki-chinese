@@ -17,8 +17,17 @@ def test_build_google_provider(mock_cls, tmp_path):
 def test_build_minimax_provider(mock_cls, tmp_path):
     provider = build_tts_provider(generated_audio_dir=tmp_path, provider_name="minimax")
 
-    mock_cls.assert_called_once_with(generated_audio_dir=tmp_path)
+    assert mock_cls.call_args.kwargs["generated_audio_dir"] == tmp_path
     assert provider is mock_cls.return_value
+
+
+@patch("anki_chinese.audio.minimax.MiniMaxTTSProvider")
+def test_build_minimax_provider_overrides_mandarin_voice(mock_cls, tmp_path):
+    build_tts_provider(
+        generated_audio_dir=tmp_path, provider_name="minimax", mandarin_voice_id="Other_voice"
+    )
+
+    assert mock_cls.call_args.kwargs["settings"].mandarin_voice_id == "Other_voice"
 
 
 def test_unknown_provider_raises():

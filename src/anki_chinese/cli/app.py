@@ -160,6 +160,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     source_command.register(app, runtime)
     sync_command.register(app, runtime)
     test_tts_command.register(app, runtime)
+    import_module("..tutor.cli", __package__).register(app)
     return app
 
 

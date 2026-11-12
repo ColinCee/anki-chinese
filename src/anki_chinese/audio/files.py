@@ -2,15 +2,28 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ..config import GENERATED_AUDIO_DIR
-from ..notes import CharacterNote
+
+if TYPE_CHECKING:
+    from ..notes import CharacterNote
+
+# Characters Windows forbids in file names (control characters too), plus space.
+_UNSAFE_FILENAME_CHARS = str.maketrans(
+    {c: "_" for c in '/\\:*?"<>| ' + "".join(map(chr, range(32)))}
+)
+_MAX_PREVIEW_STEM = 60
 
 
 def preview_mandarin_filename(text: str) -> str:
-    safe_text = text.translate(str.maketrans({"/": "_", "\\": "_", ":": "_", " ": "_"}))
+    safe_text = text.translate(_UNSAFE_FILENAME_CHARS)
+    if len(safe_text) > _MAX_PREVIEW_STEM:
+        digest = hashlib.sha1(text.encode("utf-8")).hexdigest()[:10]
+        safe_text = f"{safe_text[:_MAX_PREVIEW_STEM]}_{digest}"
     return f"preview_cmn_{safe_text}.mp3"
 
 
