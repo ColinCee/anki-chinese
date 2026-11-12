@@ -1,6 +1,7 @@
 """`anki-chinese tutor`: what a chat-tutor session runs each turn.
 
-`cli.main` runs this without building the full CLI; see `cli/__init__.py`.
+Kept outside `anki_chinese.cli` so `entry.main` can run it without building
+the full CLI.
 """
 
 from __future__ import annotations
@@ -20,27 +21,42 @@ def say(
     voice: str = typer.Option(tutor.TUTOR_VOICE_ID, help="MiniMax voice ID."),
     play: bool = typer.Option(True, help="Play the clips on this PC."),
 ) -> None:
-    """Log new characters in LINES, voice them and play them."""
+    """Voice LINES, play them, and log characters not yet studied."""
     start = time.perf_counter()
-    known = tutor.load_known()
-    new: dict[str, str] = {}
-    for line in lines:
-        for char in known.new_in(line):
-            new.setdefault(char, line)
-    tutor.log_new(new)
-    paths = tutor.voice_lines(lines, voice_id=voice)
-    if play and not tutor.play_in_background(paths):
+    spoken = [line for line in dict.fromkeys(lines) if tutor.has_hanzi(line)]
+    results = tutor.voice_lines(spoken, voice_id=voice)
+    voiced = [path for path in results.values() if not isinstance(path, Exception)]
+    if play and voiced and not tutor.play_in_background(voiced):
         typer.echo("ffplay not found; clips not played")
+
+    new: dict[str, str] = {}
+    try:
+        known = tutor.load_known()
+    except tutor.KnownUnavailableError as error:
+        typer.echo(f"known characters unavailable: {error}")
+    else:
+        for line in spoken:
+            for char in known.new_in(line):
+                new.setdefault(char, line)
+        tutor.log_new(new)
+
     typer.echo(f"new: {' '.join(new) or '-'}")
-    for path in paths:
-        typer.echo(f"audio: {path}")
+    for line, result in results.items():
+        if isinstance(result, Exception):
+            typer.echo(f"audio failed for {line}: {result}")
+        else:
+            typer.echo(f"audio: {result}")
     typer.echo(f"took {time.perf_counter() - start:.1f}s")
 
 
 @app.command()
 def known(refresh: bool = typer.Option(False, help="Re-read Anki now.")) -> None:
     """Print studied and unlocked characters, and this week's new ones to reuse."""
-    data = tutor.refresh_known() if refresh else tutor.load_known()
+    try:
+        data = tutor.refresh_known() if refresh else tutor.load_known()
+    except tutor.KnownUnavailableError as error:
+        typer.echo(f"known characters unavailable: {error}")
+        raise typer.Exit(1) from error
     typer.echo(f"source: {data.source}, {data.updated}")
     typer.echo(f"studied ({len(data.studied)}): {''.join(sorted(data.studied))}")
     typer.echo(f"unlocked, not reviewed ({len(data.unlocked)}): {''.join(sorted(data.unlocked))}")

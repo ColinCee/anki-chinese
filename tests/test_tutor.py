@@ -3,6 +3,8 @@ import sqlite3
 from datetime import date
 from pathlib import Path
 
+import pytest
+
 from anki_chinese import tutor
 from anki_chinese.config import MODEL_ID
 
@@ -61,3 +63,32 @@ def test_log_new_feeds_recent_new(tmp_path: Path) -> None:
     tutor.log_new({"处": "又是处。"}, log)
 
     assert tutor.recent_new(path=log) == ["处", "模"]
+
+
+def test_refresh_known_reports_missing_collection(tmp_path: Path, monkeypatch) -> None:
+    from anki_chinese.activation import AnkiConnectError
+
+    def offline() -> tuple[set[str], set[str]]:
+        raise AnkiConnectError("closed")
+
+    monkeypatch.setattr(tutor, "read_anki_connect", offline)
+    monkeypatch.setattr(tutor, "ANKI_COLLECTION_PATH", tmp_path / "missing.anki2")
+
+    with pytest.raises(tutor.KnownUnavailableError):
+        tutor.refresh_known(tmp_path / "known.json")
+
+
+def test_recent_new_skips_torn_lines(tmp_path: Path) -> None:
+    log = tmp_path / "log.jsonl"
+    entry = json.dumps({"date": str(date.today()), "char": "处", "sentence": "s"})
+    log.write_text(entry + '\n{"da\n', encoding="utf-8")
+
+    assert tutor.recent_new(path=log) == ["处"]
+
+
+def test_command_modules_import_on_their_own() -> None:
+    import subprocess
+    import sys
+
+    for module in ("anki_chinese.cli.card", "anki_chinese.cli.audio", "anki_chinese.tutor.cli"):
+        subprocess.run([sys.executable, "-c", f"import {module}"], check=True)

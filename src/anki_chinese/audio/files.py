@@ -12,8 +12,10 @@ from ..config import GENERATED_AUDIO_DIR
 if TYPE_CHECKING:
     from ..notes import CharacterNote
 
-# Characters Windows forbids in file names, plus space for readable names.
-_UNSAFE_FILENAME_CHARS = str.maketrans({c: "_" for c in '/\\:*?"<>| '})
+# Characters Windows forbids in file names (control characters too), plus space.
+_UNSAFE_FILENAME_CHARS = str.maketrans(
+    {c: "_" for c in '/\\:*?"<>| ' + "".join(map(chr, range(32)))}
+)
 _MAX_PREVIEW_STEM = 60
 
 

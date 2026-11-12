@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-anki-chinese = "anki_chinese.cli:main"
+anki-chinese = "anki_chinese.entry:main"
 
 [build-system]
 requires = ["hatchling"]

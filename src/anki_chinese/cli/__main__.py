@@ -1,6 +1,6 @@
 """Enable `python -m anki_chinese.cli`."""
 
-from . import main
+from ..entry import main
 
 if __name__ == "__main__":
     main()
