@@ -54,7 +54,10 @@ and then short numbered notes in English. If their Chinese was fine, say nothing
 Write the most natural sentence first. Never bend it to avoid a character the user has not
 studied: use it and list it as New. New characters only when they fit the conversation:
 usually 1-2 per reply, sometimes more, none when nothing fits. Reuse RECENT characters when they
-fit. Keep the conversation going with a question now and then. Be brief."""
+fit. Keep the conversation going with a question now and then. Be brief.
+
+Reply straight away: this is a live voice chat and every second of delay is felt.
+Keep any private reasoning to a sentence or two."""
 
 
 def system_prompt(known: KnownCharacters, recent: list[str]) -> str:
