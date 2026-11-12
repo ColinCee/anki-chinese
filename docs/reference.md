@@ -50,7 +50,7 @@ Paths are defined in `src/anki_chinese/config.py`.
 | `data/state/character_frequency.json` | Explicitly refreshed wordfreq-derived cache. |
 | `data/state/tutor_known.json` | Chat tutor's daily cache of studied/unlocked characters (`tutor known --refresh`); read from the collection file when Anki is closed (`ANKI_COLLECTION_PATH` overrides its location). |
 | `data/state/tutor_log.jsonl` | Characters the chat tutor introduced: date, character, sentence. |
-| `data/state/tutor_chat/` | Tutor page (`tutor serve`): chat history, the Claude session to resume, its system prompt. Claude's own transcript is under `~/.claude/projects/`. |
+| `data/state/tutor_chat/` | Tutor page (`tutor serve`): `chats.json` (each chat's title and Claude session), `chats/<id>.jsonl` histories, the system prompt. Claude's own transcript is under `~/.claude/projects/`. |
 | `data/build/decks/chinese_rsh.apkg` | Rebuilt package for manual Anki import. |
 | `data/build/audio/` | Generated and sample audio. |
 | `data/build/anki_backups/` | Live mutation/undo safety snapshots. |

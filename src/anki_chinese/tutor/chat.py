@@ -17,16 +17,24 @@ import shutil
 import subprocess
 import threading
 import time
+import uuid
 from collections.abc import Callable, Generator, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from ..config import STATE_DATA_DIR
-from . import TUTOR_AUDIO_DIR, TUTOR_VOICE_ID, KnownCharacters, has_hanzi, log_new, recent_new
+from . import (
+    TUTOR_AUDIO_DIR,
+    TUTOR_VOICE_ID,
+    KnownCharacters,
+    _write_atomic,
+    has_hanzi,
+    log_new,
+    recent_new,
+)
 
 CHAT_DIR = STATE_DATA_DIR / "tutor_chat"
-SESSION_PATH = CHAT_DIR / "session.json"
-HISTORY_PATH = CHAT_DIR / "history.jsonl"
 MODELS = ("opus", "sonnet")
 # Thinking delays the first word by ~1.5 s and adds little to short chat replies.
 _NO_THINKING = {"MAX_THINKING_TOKENS": "0"}
@@ -281,25 +289,76 @@ class ClaudeChat:
             self._proc.kill()
 
 
-class Tutor:
-    """Owns the Claude process, voice and chat history; one turn at a time."""
+class ChatStore:
+    """Saved chats: an index (title, Claude session, last use) plus one history file each."""
 
-    def __init__(self, known: Callable[[], KnownCharacters]) -> None:
+    def __init__(self, root: Path = CHAT_DIR) -> None:
+        self._index_path = root / "chats.json"
+        self._dir = root / "chats"
+        data = _read_json(self._index_path)
+        chats = data.get("chats")
+        self.chats: dict[str, dict[str, Any]] = chats if isinstance(chats, dict) else {}
+        model = data.get("model")
+        self.model: str = model if model in MODELS else MODELS[0]
+        current = data.get("current")
+        self.current: str = current if current in self.chats else self.create()
+
+    def create(self) -> str:
+        chat_id = uuid.uuid4().hex[:12]
+        self.chats[chat_id] = {"title": "New chat", "session_id": None, "updated": time.time()}
+        self.current = chat_id
+        self.save()
+        return chat_id
+
+    def save(self) -> None:
+        payload = {"model": self.model, "current": self.current, "chats": self.chats}
+        _write_atomic(self._index_path, json.dumps(payload, ensure_ascii=False, indent=1))
+
+    def history_path(self, chat_id: str) -> Path:
+        return self._dir / f"{chat_id}.jsonl"
+
+    def listing(self) -> list[dict[str, Any]]:
+        rows = [{"id": key, **value} for key, value in self.chats.items()]
+        return sorted(rows, key=lambda row: row["updated"], reverse=True)
+
+    def history(self, chat_id: str, limit: int = 300) -> list[dict[str, object]]:
+        path = self.history_path(chat_id)
+        if not path.exists():
+            return []
+        entries = []
+        for line in path.read_text(encoding="utf-8").splitlines()[-limit:]:
+            with contextlib.suppress(ValueError):
+                entries.append(json.loads(line))
+        return entries
+
+
+class Tutor:
+    """Owns the Claude process, voice and saved chats; one turn at a time."""
+
+    def __init__(
+        self, known: Callable[[], KnownCharacters], store: ChatStore | None = None
+    ) -> None:
         self._known = known
         self._lock = threading.Lock()
         self.speaker = Speaker()
-        saved = _read_json(SESSION_PATH)
-        saved_model = saved.get("model", "")
-        self.model: str = saved_model if saved_model in MODELS else MODELS[0]
-        self._chat = self._start(saved.get("session_id"))
+        self.store = store or ChatStore()
+        self._chat = self._start(self._session(self.store.current))
+
+    @property
+    def model(self) -> str:
+        return self.store.model
+
+    def _session(self, chat_id: str) -> str | None:
+        return self.store.chats[chat_id].get("session_id")
 
     def _start(self, resume: str | None, model: str | None = None) -> ClaudeChat:
         prompt = system_prompt(self._known(), recent_new())
         return ClaudeChat(model or self.model, prompt, resume)
 
-    def _save_session(self) -> None:
-        payload = {"model": self.model, "session_id": self._chat.session_id}
-        SESSION_PATH.write_text(json.dumps(payload), encoding="utf-8")
+    def _switch(self, resume: str | None, model: str | None = None) -> None:
+        fresh = self._start(resume, model)
+        self._chat.close()
+        self._chat = fresh
 
     def set_model(self, model: str) -> None:
         if model not in MODELS:
@@ -307,28 +366,37 @@ class Tutor:
         with self._lock:
             if model == self.model:
                 return
-            fresh = self._start(self._chat.session_id, model)
-            self._chat.close()
-            self._chat, self.model = fresh, model
-            self._save_session()
+            self._switch(self._chat.session_id, model)
+            self.store.model = model
+            self.store.save()
 
-    def new_chat(self) -> None:
+    def new_chat(self) -> str:
         with self._lock:
-            fresh = self._start(None)
-            self._chat.close()
-            self._chat = fresh
-            self._save_session()
-            _append(HISTORY_PATH, {"role": "divider"})
+            self.speaker.stop()
+            self._switch(None)
+            return self.store.create()
+
+    def open_chat(self, chat_id: str) -> None:
+        if chat_id not in self.store.chats:
+            raise ValueError("no such chat")
+        with self._lock:
+            if chat_id == self.store.current:
+                return
+            self.speaker.stop()
+            self._switch(self._session(chat_id))
+            self.store.current = chat_id
+            self.store.save()
 
     def turn(self, text: str) -> Generator[dict[str, object]]:
         """Stream one turn as events: text deltas, then new characters, then timings."""
         with self._lock:
+            chat_id = self.store.current
             if not self._chat.usable:
-                self._chat.close()
-                self._chat = self._start(self._chat.session_id)
+                self._switch(self._chat.session_id)
             times = TurnTimes()
             self.speaker.stop()
-            _append(HISTORY_PATH, {"role": "user", "text": text})
+            history_path = self.store.history_path(chat_id)
+            _append(history_path, {"role": "user", "text": text})
             reply = ""
             voiced: list[str] = []
 
@@ -350,8 +418,13 @@ class Tutor:
                 yield {"t": "text", "d": delta}
             voice(final=True)
             times.mark("reply_done")
-            self._save_session()
-            _append(HISTORY_PATH, {"role": "tutor", "text": reply, "voiced": voiced})
+            _append(history_path, {"role": "tutor", "text": reply, "voiced": voiced})
+            entry = self.store.chats[chat_id]
+            if entry["title"] == "New chat":
+                entry["title"] = text[:40]
+            entry.update(session_id=self._chat.session_id, updated=time.time())
+            self.store.save()
+            yield {"t": "chat", "id": chat_id, "title": entry["title"]}
 
             known = self._known()
             new: dict[str, str] = {}
@@ -369,25 +442,13 @@ class Tutor:
             yield {"t": "done", "times": times.marks}
 
 
-def history(limit: int = 200) -> list[dict[str, object]]:
-    if not HISTORY_PATH.exists():
-        return []
-    entries = []
-    for line in HISTORY_PATH.read_text(encoding="utf-8").splitlines()[-limit:]:
-        try:
-            entries.append(json.loads(line))
-        except ValueError:
-            continue
-    return entries
-
-
 def _append(path: Path, entry: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps({**entry, "ts": time.time()}, ensure_ascii=False) + "\n")
 
 
-def _read_json(path: Path) -> dict[str, str]:
+def _read_json(path: Path) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):

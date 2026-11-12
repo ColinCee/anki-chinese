@@ -143,3 +143,21 @@ def test_abandoned_turn_marks_the_chat_unusable(tmp_path, monkeypatch) -> None:
     assert "".join(second.send("b")) == "reply to b"
     assert second.usable and second.session_id == "s1"
     second.close()
+
+
+def test_chat_store_keeps_chats_apart_and_survives_reload(tmp_path) -> None:
+    from anki_chinese.tutor.chat import ChatStore
+
+    store = ChatStore(tmp_path)
+    first = store.current
+    store.chats[first].update(title="first", session_id="s1", updated=1.0)
+    second = store.create()
+    store.chats[second].update(updated=2.0)
+    store.save()
+
+    reloaded = ChatStore(tmp_path)
+
+    assert reloaded.current == second
+    assert [row["id"] for row in reloaded.listing()] == [second, first]
+    assert reloaded.chats[first]["session_id"] == "s1"
+    assert reloaded.history_path(first) != reloaded.history_path(second)

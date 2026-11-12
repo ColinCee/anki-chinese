@@ -9,7 +9,7 @@ from importlib.resources import files
 from typing import Any
 
 from . import load_known
-from .chat import MODELS, Tutor, history
+from .chat import MODELS, Tutor
 
 DEFAULT_PORT = 8790
 _MAX_BODY_BYTES = 16_000
@@ -37,6 +37,16 @@ def request_allowed(
 def serve(port: int = DEFAULT_PORT) -> None:
     tutor = Tutor(load_known)
     page = files(__package__).joinpath("page.html").read_bytes()
+
+    def state() -> dict[str, object]:
+        store = tutor.store
+        return {
+            "model": tutor.model,
+            "models": MODELS,
+            "current": store.current,
+            "chats": [{"id": c["id"], "title": c["title"]} for c in store.listing()],
+            "history": store.history(store.current),
+        }
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, format: str, *args: Any) -> None:  # noqa: A002 - stdlib signature
@@ -86,7 +96,7 @@ def serve(port: int = DEFAULT_PORT) -> None:
                 self.end_headers()
                 self.wfile.write(page)
             elif self.path == "/api/state":
-                self._json({"model": tutor.model, "models": MODELS, "history": history()})
+                self._json(state())
             else:
                 self.send_error(HTTPStatus.NOT_FOUND)
 
@@ -102,7 +112,10 @@ def serve(port: int = DEFAULT_PORT) -> None:
                     self._json({"model": tutor.model})
                 elif self.path == "/api/new":
                     tutor.new_chat()
-                    self._json({"ok": True})
+                    self._json(state())
+                elif self.path == "/api/open":
+                    tutor.open_chat(str(body.get("id")))
+                    self._json(state())
                 elif self.path == "/api/replay":
                     tutor.speaker.say(self._text(body))
                     self._json({"ok": True})
