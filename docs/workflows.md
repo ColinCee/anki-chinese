@@ -213,6 +213,10 @@ exact card/note counts. A dry-run is not a backup: take a full Anki backup befor
 broad, uncertain, or first-time automation. Re-query live state before planning
 a follow-up batch; an old APKG or previous report is not current state.
 
+Live changes reach other devices only after Anki syncs with AnkiWeb: click Sync,
+or POST `{"action": "sync", "version": 6}` to AnkiConnect. A sync that needs a
+full upload/download choice must be resolved in the Anki window.
+
 Undo song activation:
 
 ```bash
@@ -243,8 +247,7 @@ tracks source/enriched/audio freshness, not template files. This packages existi
 enriched content and audio without regenerating them. If enriched state is absent,
 first follow [First rebuild](../README.md#first-rebuild). Import the new APKG separately.
 
-For content changes use [card set](#fix-one-card) or [card add](#add-a-character).
-Vocabulary examples belong in the canonical meaning/sentence fields;
-`data/manual/example_words.json` is not consumed by the current enrichment flow.
-Preserve [model identity](reference.md#anki-model) and the
+For content changes use [card set](#fix-one-card) or [card add](#add-a-character);
+vocabulary examples belong in the canonical meaning/sentence fields. Preserve
+[model identity](reference.md#anki-model) and the
 [study target policy](decisions/study-target-policy.md).

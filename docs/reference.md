@@ -77,7 +77,13 @@ Chinese until the answer. Both backs prioritize the character followed by the
 reading sentence. Meaning and usage sit below it, collapsed by default alongside
 the other optional aids: sentence pinyin/translation, story, and stroke order.
 Revealed vocabulary examples stay enlarged. Vocabulary and sentence practice
-remain within these two cards, not separately scheduled notes.
+remain within these two cards, not separately scheduled notes. Listening cards
+are retired from study: activation unsuspends only Recognition, and
+`activate retire-listening` suspends any active Listening cards. They stay
+retired because the goal is reading, listening and speaking, not handwriting,
+and they took about 3x the daily time for about 6 points of Recognition
+retention. If Recognition retention stays under ~85%, raise the scheduler's
+retention setting instead of restoring them.
 
 Templates use authored content, not inferred word segmentation or generated
 compound pronunciations. See [Customize card templates](workflows.md#customize-card-templates)
