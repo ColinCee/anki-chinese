@@ -22,5 +22,6 @@ data/state/audio_manifest.json
 data/state/character_frequency.json
 data/state/tutor_known.json
 data/state/tutor_log.jsonl
+data/state/tutor_chat/
 
 google-service-account.json
