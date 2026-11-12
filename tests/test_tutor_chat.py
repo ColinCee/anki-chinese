@@ -54,7 +54,7 @@ def _provider(monkeypatch, response: _Response) -> tts.MiniMaxTTSProvider:
     return tts.MiniMaxTTSProvider(rate_limiter=NoOpRateLimiter())
 
 
-def test_stream_plain_mandarin_yields_only_new_chunks(monkeypatch) -> None:
+def test_stream_speech_yields_only_new_chunks(monkeypatch) -> None:
     ok = {"status_code": 0, "status_msg": ""}
     response = _sse(
         {"data": {"status": 1, "audio": "4944"}, "base_resp": ok},
@@ -62,26 +62,26 @@ def test_stream_plain_mandarin_yields_only_new_chunks(monkeypatch) -> None:
         {"data": {"status": 2, "audio": "49443300"}, "base_resp": ok},
     )
 
-    chunks = list(_provider(monkeypatch, response).stream_plain_mandarin("你好"))
+    chunks = list(_provider(monkeypatch, response).stream_speech("你好"))
 
     assert chunks == [b"ID", b"3"]
 
 
-def test_stream_plain_mandarin_raises_on_error_status(monkeypatch) -> None:
+def test_stream_speech_raises_on_error_status(monkeypatch) -> None:
     response = _sse({"base_resp": {"status_code": 1004, "status_msg": "auth failed"}})
 
     with pytest.raises(TTSError, match="auth failed"):
-        list(_provider(monkeypatch, response).stream_plain_mandarin("你好"))
+        list(_provider(monkeypatch, response).stream_speech("你好"))
 
 
-def test_stream_plain_mandarin_raises_on_plain_json_error_body(monkeypatch) -> None:
+def test_stream_speech_raises_on_plain_json_error_body(monkeypatch) -> None:
     body = json.dumps({"base_resp": {"status_code": 1004, "status_msg": "bad key"}}).encode()
 
     with pytest.raises(TTSError, match="bad key"):
-        list(_provider(monkeypatch, _Response(body)).stream_plain_mandarin("你好"))
+        list(_provider(monkeypatch, _Response(body)).stream_speech("你好"))
 
 
-def test_stream_plain_mandarin_rejects_a_clip_cut_short(monkeypatch) -> None:
+def test_stream_speech_rejects_a_clip_cut_short(monkeypatch) -> None:
     ok = {"status_code": 0, "status_msg": ""}
     response = _Response(
         b"data: [DONE]\n\n"
@@ -90,7 +90,7 @@ def test_stream_plain_mandarin_rejects_a_clip_cut_short(monkeypatch) -> None:
     )
 
     with pytest.raises(TTSError, match="before the clip was complete"):
-        list(_provider(monkeypatch, response).stream_plain_mandarin("你好"))
+        list(_provider(monkeypatch, response).stream_speech("你好"))
 
 
 @pytest.mark.parametrize(
@@ -202,6 +202,12 @@ def test_lines_to_voice_read_all_keeps_every_spoken_line_in_order() -> None:
         "辛苦了！",
         "You worked hard!",
         "New: 辛 (xīn) hard",
-        "Corrected: 我今天很累。",
+        "我今天很累。",
     ]
     assert lines_to_voice("辛苦了！\nYou wor", final=False, read_all=True) == ["辛苦了！"]
+
+
+def test_read_all_drops_the_corrected_label() -> None:
+    reply = "好的。\nOK.\nCorrected: 我今天很累。"
+
+    assert lines_to_voice(reply, final=True, read_all=True)[-1] == "我今天很累。"

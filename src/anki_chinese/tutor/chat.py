@@ -76,7 +76,8 @@ def lines_to_voice(text: str, *, final: bool, read_all: bool = False) -> list[st
     if not final:
         lines = lines[:-1]
     if read_all:
-        spoken = (_clean(line) for line in lines)
+        # Drop the label so a corrected sentence shares its cached clip with plain mode.
+        spoken = (_clean(_CORRECTED.sub(r"\1", line.strip())) for line in lines)
         return list(dict.fromkeys(line for line in spoken if re.search(r"\w", line)))
     found: list[str] = []
     first = next((line for line in lines if line.strip()), None)
@@ -126,6 +127,11 @@ class Speaker:
         """Queue a clip; `on_event` gets "first_sound" or "sound_failed"."""
         self._queue.put((self._generation, text, on_event))
 
+    @property
+    def busy(self) -> bool:
+        current = self._current
+        return not self._queue.empty() or (current is not None and current.poll() is None)
+
     def stop(self) -> None:
         self._generation += 1
         current = self._current
@@ -153,7 +159,7 @@ class Speaker:
             self._current = subprocess.Popen([*args, str(path)], creationflags=_NO_WINDOW)
             self._current.wait()
             return
-        stream = getattr(self._provider, "stream_plain_mandarin", None)
+        stream = getattr(self._provider, "stream_speech", None)
         if stream is None:
             raise RuntimeError("the TTS provider cannot stream")
         # Small probe so ffplay starts on the first chunk instead of buffering.
@@ -395,6 +401,7 @@ class Tutor:
         self._lock = threading.Lock()
         self.speaker = Speaker()
         self.store = store or ChatStore()
+        self._replaying = ""
         self._chat = self._start(self._session(self.store.current))
 
     @property
@@ -423,10 +430,18 @@ class Tutor:
 
     def replay(self, text: str, *, read_all: bool) -> None:
         """Play a reply again: its first line, or the whole reply line by line."""
-        self.speaker.stop()
-        lines = lines_to_voice(text, final=True, read_all=read_all) if read_all else [text]
-        for line in lines:
-            self.speaker.say(line)
+        if not self._lock.acquire(blocking=False):
+            raise ValueError("wait for the reply to finish")
+        try:
+            if text == self._replaying and self.speaker.busy:
+                return  # already playing; restarting would pay again for the cut-off line
+            self._replaying = text
+            self.speaker.stop()
+            lines = lines_to_voice(text, final=True, read_all=True) if read_all else [text]
+            for line in lines:
+                self.speaker.say(line)
+        finally:
+            self._lock.release()
 
     def set_model(self, model: str) -> None:
         if model not in MODELS:

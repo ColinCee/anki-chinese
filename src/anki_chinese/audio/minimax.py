@@ -284,9 +284,7 @@ class MiniMaxTTSProvider:
             force=force,
         )
 
-    def stream_plain_mandarin(
-        self, text: str, *, language_boost: str = "Chinese"
-    ) -> Iterator[bytes]:
+    def stream_speech(self, text: str, *, language_boost: str = "Chinese") -> Iterator[bytes]:
         """Yield MP3 chunks as MiniMax produces them, for playback before synthesis ends.
 
         No retries: a live chat would rather skip a clip than wait on backoff.

@@ -17,7 +17,7 @@ aside h1{font:300 22px var(--han);margin:0 4px}
 #chats{list-style:none;margin:0;padding:4px 8px 12px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:2px}
 #chats button{font-weight:300;width:100%;border:0;background:transparent;color:var(--fg);text-align:left;padding:9px 12px;border-radius:8px;font:300 18px/1.4 var(--han);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #chats button:hover{background:var(--surface)}
-body.busy #chats button,body.busy #newchat,body.busy .seg button{opacity:.5;pointer-events:none}
+body.busy #chats button,body.busy #newchat,body.busy .seg button,body.busy .tutor button{opacity:.5;pointer-events:none}
 #chats button[aria-current=true]{background:var(--accent-soft);color:var(--accent)}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
 header{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
@@ -123,16 +123,22 @@ function showTimes(el, t) {
   el.querySelector('.times').textContent = [sound, reply].filter(Boolean).join(' · ');
 }
 
+async function replay(el, body) {
+  if (!body.text || busy) return;
+  try {
+    const res = await post('/api/replay', body);
+    if (!res.ok) el.querySelector('.times').textContent = await errorOf(res);
+  } catch (e) { el.querySelector('.times').textContent = String(e.message || e); }
+}
+
 function tutorBubble(text = '', entry = {}) {
   const el = add('tutor', '<div class="zh"><button type="button" aria-label="Play the Chinese again">▶</button><span></span></div><div class="rest"></div><div class="chips"></div><div class="foot"><button type="button" class="all" aria-label="Play the whole reply">▶ Play all</button><span class="times"></span></div>');
   el.dataset.text = text;
   el.querySelector('.zh button').onclick = () => {
     const line = el.querySelector('.zh span').textContent.trim();
-    if (line) post('/api/replay', {text: line});
+    if (line) replay(el, {text: line});
   };
-  el.querySelector('.all').onclick = () => {
-    if (el.dataset.text) post('/api/replay', {text: el.dataset.text, all: true});
-  };
+  el.querySelector('.all').onclick = () => replay(el, {text: el.dataset.text, all: true});
   renderTutor(el, text);
   showChips(el, entry.new);
   showTimes(el, entry.times);

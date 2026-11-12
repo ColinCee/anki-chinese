@@ -12,7 +12,7 @@ from . import load_known
 from .chat import MODELS, Tutor
 
 DEFAULT_PORT = 8790
-_MAX_BODY_BYTES = 16_000
+_MAX_BODY_BYTES = 24_000
 _MAX_TEXT_CHARS = 500
 _MAX_REPLY_CHARS = 4000
 
@@ -116,8 +116,9 @@ def serve(port: int = DEFAULT_PORT) -> None:
                     tutor.open_chat(str(body.get("id")))
                     self._json(state())
                 elif self.path == "/api/replay":
-                    text = self._text(body, _MAX_REPLY_CHARS)
-                    tutor.replay(text, read_all=body.get("all") is True)
+                    read_all = body.get("all") is True
+                    text = self._text(body, _MAX_REPLY_CHARS if read_all else _MAX_TEXT_CHARS)
+                    tutor.replay(text, read_all=read_all)
                     self._json({"ok": True})
                 else:
                     self.send_error(HTTPStatus.NOT_FOUND)
