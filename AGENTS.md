@@ -15,6 +15,7 @@ Checks: `uv run ruff check && uv run ruff format --check && uv run ty check && u
 | Change card HTML/CSS | [Template rebuild](docs/workflows.md#customize-card-templates) |
 | Configuration / data / identity | [Reference](docs/reference.md) |
 | Curate lyrics / change normalization | [Apply the study policy](docs/decisions/study-target-policy.md#applying-the-policy) |
+| Chinese chat practice | [Tutor skill](.agents/skills/chinese-tutor/SKILL.md) |
 | Live state / mutations | [Live safety skill](.agents/skills/anki-live-activation-safety/SKILL.md) |
 | Docs / skill maintenance | [Maintenance skill](.agents/skills/documentation-maintenance/SKILL.md) |
 

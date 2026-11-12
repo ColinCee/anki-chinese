@@ -91,6 +91,15 @@ def test_preview_mandarin_filename_sanitizes_path_separators() -> None:
     assert preview_mandarin_filename("你/好 test") == "preview_cmn_你_好_test.mp3"
 
 
+def test_preview_mandarin_filename_is_writable_for_any_text(tmp_path: Path) -> None:
+    texts = ['你好吗? "是" <a|b>*', "很长的句子" * 40, "很长的句子" * 40 + "。"]
+    names = [preview_mandarin_filename(text) for text in texts]
+
+    for name in names:
+        (tmp_path / name).write_bytes(b"ID3")
+    assert len(set(names)) == len(texts)
+
+
 # -- Sentence audio -----------------------------------------------------------
 
 

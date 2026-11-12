@@ -48,6 +48,8 @@ Paths are defined in `src/anki_chinese/config.py`.
 | `data/state/pipeline.json` | Local stage fingerprints. |
 | `data/state/audio_manifest.json` | Audio provider/model/voice provenance. |
 | `data/state/character_frequency.json` | Explicitly refreshed wordfreq-derived cache. |
+| `data/state/tutor_known.json` | Chat tutor's daily cache of studied/unlocked characters (`tutor known --refresh`). |
+| `data/state/tutor_log.jsonl` | Characters the chat tutor introduced: date, character, sentence. |
 | `data/build/decks/chinese_rsh.apkg` | Rebuilt package for manual Anki import. |
 | `data/build/audio/` | Generated and sample audio. |
 | `data/build/anki_backups/` | Live mutation/undo safety snapshots. |

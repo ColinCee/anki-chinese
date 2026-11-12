@@ -143,6 +143,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     source_command = import_module(".source", __package__)
     sync_command = import_module(".sync", __package__)
     test_tts_command = import_module(".test_tts", __package__)
+    tutor_command = import_module(".tutor", __package__)
 
     activate_command.register(app, runtime)
     card_command.register(app, runtime)
@@ -160,6 +161,7 @@ def create_app(runtime: AppRuntime | None = None) -> typer.Typer:
     source_command.register(app, runtime)
     sync_command.register(app, runtime)
     test_tts_command.register(app, runtime)
+    tutor_command.register(app)
     return app
 
 

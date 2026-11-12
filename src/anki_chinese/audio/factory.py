@@ -17,10 +17,12 @@ def build_tts_provider(
     *,
     generated_audio_dir: Path = GENERATED_AUDIO_DIR,
     provider_name: str | None = None,
+    mandarin_voice_id: str | None = None,
 ) -> TTSProvider:
     """Build a TTS provider by name.
 
-    Supported values: "google" (default), "minimax".
+    Supported values: "google" (default), "minimax". `mandarin_voice_id`
+    overrides the configured MiniMax Mandarin voice.
     """
     name = (provider_name or DEFAULT_PROVIDER).strip().lower()
 
@@ -30,8 +32,13 @@ def build_tts_provider(
         return GoogleTTSProvider(generated_audio_dir=generated_audio_dir)
 
     if name == "minimax":
-        from .minimax import MiniMaxTTSProvider
+        from dataclasses import replace
 
-        return MiniMaxTTSProvider(generated_audio_dir=generated_audio_dir)
+        from .minimax import MiniMaxSettings, MiniMaxTTSProvider
+
+        settings = MiniMaxSettings.from_env()
+        if mandarin_voice_id:
+            settings = replace(settings, mandarin_voice_id=mandarin_voice_id)
+        return MiniMaxTTSProvider(generated_audio_dir=generated_audio_dir, settings=settings)
 
     raise ValueError(f"Unknown TTS provider: {name!r}. Choose from: {', '.join(PROVIDER_NAMES)}")
