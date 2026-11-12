@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tutor",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "anki-chinese", "tutor", "serve"],
+      "port": 8790
+    }
+  ]
+}

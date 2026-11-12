@@ -69,5 +69,13 @@ def check(text: str) -> None:
     typer.echo(" ".join(tutor.load_known().new_in(text)) or "-")
 
 
+@app.command()
+def serve(port: int = typer.Option(8790, help="Local port for the chat page.")) -> None:
+    """Run the fast chat page: always-on Claude on your subscription, streamed voice."""
+    from .server import serve as run_server
+
+    run_server(port)
+
+
 def register(parent: typer.Typer) -> None:
     parent.add_typer(app, name="tutor")

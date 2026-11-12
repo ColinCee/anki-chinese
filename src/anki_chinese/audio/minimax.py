@@ -6,6 +6,7 @@ __all__: list[str] = []  # Internal module — import from package instead
 
 import json
 import os
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -152,6 +153,25 @@ def _build_request_payload(
     }
 
 
+def _http_error(error: HTTPError) -> TTSError:
+    # Pre-parse message from MiniMax's status envelope if possible
+    raw_body = error.read().decode("utf-8", errors="replace")
+    message = raw_body.strip() or f"MiniMax request failed with HTTP {error.code}"
+    try:
+        data = json.loads(raw_body)
+        _, status_message = _extract_status_details(data)
+        if status_message:
+            message = status_message
+    except json.JSONDecodeError:
+        pass
+    return classify_http_error(
+        error,
+        provider_name="MiniMax",
+        extract_message=message,
+        config_hint=_configuration_guidance(),
+    )
+
+
 def _post_t2a_request(
     *,
     endpoint: str,
@@ -172,23 +192,7 @@ def _post_t2a_request(
         with urlopen(request, timeout=timeout_seconds) as response:
             body = response.read().decode("utf-8")
     except HTTPError as error:
-        # Pre-parse message from MiniMax's status envelope if possible
-        raw_body = error.read().decode("utf-8", errors="replace")
-        message = raw_body.strip() or f"MiniMax request failed with HTTP {error.code}"
-        try:
-            data = json.loads(raw_body)
-            _, status_message = _extract_status_details(data)
-            if status_message:
-                message = status_message
-        except json.JSONDecodeError:
-            pass
-
-        raise classify_http_error(
-            error,
-            provider_name="MiniMax",
-            extract_message=message,
-            config_hint=_configuration_guidance(),
-        ) from error
+        raise _http_error(error) from error
     except URLError as error:
         raise TTSError(f"MiniMax request failed: {error.reason}") from error
 
@@ -272,6 +276,49 @@ class MiniMaxTTSProvider:
             language_boost="Chinese",
             force=force,
         )
+
+    def stream_plain_mandarin(self, text: str) -> Iterator[bytes]:
+        """Yield MP3 chunks as MiniMax produces them, for playback before synthesis ends.
+
+        No retries: a live chat would rather skip a clip than wait on backoff.
+        """
+        api_key = os.getenv("MINIMAX_API_KEY", "").strip()
+        if not api_key:
+            raise TTSConfigurationError(
+                "MINIMAX_API_KEY not set. Copy .env.example to .env and add your MiniMax key."
+            )
+        payload = _build_request_payload(
+            text=text,
+            voice_id=self.settings.mandarin_voice_id,
+            language_boost="Chinese",
+            model=self.settings.model,
+        )
+        payload["stream"] = True
+        request = Request(
+            self.settings.endpoint,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            method="POST",
+        )
+        self.rate_limiter.acquire()
+        try:
+            with urlopen(request, timeout=self.settings.timeout_seconds) as response:
+                for raw in response:
+                    line = raw.strip()
+                    if not line.startswith(b"data:"):
+                        continue
+                    event = json.loads(line[len(b"data:") :])
+                    status_code, status_message = _extract_status_details(event)
+                    if status_code not in {None, _SUCCESS_STATUS_CODE}:
+                        raise TTSError(status_message or f"MiniMax status_code={status_code}")
+                    data = event.get("data") or {}
+                    # The final event (status 2) repeats the whole clip; only status 1 is new audio.
+                    if data.get("status") == 1 and data.get("audio"):
+                        yield bytes.fromhex(data["audio"])
+        except HTTPError as error:
+            raise _http_error(error) from error
+        except URLError as error:
+            raise TTSError(f"MiniMax request failed: {error.reason}") from error
 
     def generate_cantonese(self, hanzi: str, jyutping: str, *, force: bool = False) -> str:
         safe_jyutping = jyutping.replace(" ", "_")
