@@ -14,6 +14,7 @@ from .chat import MODELS, Tutor
 DEFAULT_PORT = 8790
 _MAX_BODY_BYTES = 16_000
 _MAX_TEXT_CHARS = 500
+_MAX_REPLY_CHARS = 4000
 
 
 def request_allowed(
@@ -74,10 +75,10 @@ def serve(port: int = DEFAULT_PORT) -> None:
                 raise ValueError("expected a JSON object")
             return body
 
-        def _text(self, body: dict[str, Any]) -> str:
+        def _text(self, body: dict[str, Any], limit: int = _MAX_TEXT_CHARS) -> str:
             text = str(body.get("text", "")).strip()
-            if not text or len(text) > _MAX_TEXT_CHARS:
-                raise ValueError(f"text must be 1-{_MAX_TEXT_CHARS} characters")
+            if not text or len(text) > limit:
+                raise ValueError(f"text must be 1-{limit} characters")
             return text
 
         def do_GET(self) -> None:
@@ -101,7 +102,9 @@ def serve(port: int = DEFAULT_PORT) -> None:
                 if self.path == "/api/send":
                     chat_id = body.get("chat")
                     self._stream_turn(
-                        self._text(body), chat_id if isinstance(chat_id, str) else None
+                        self._text(body),
+                        chat_id if isinstance(chat_id, str) else None,
+                        read_all=body.get("read_all") is True,
                     )
                 elif self.path == "/api/model":
                     tutor.set_model(str(body.get("model")))
@@ -113,7 +116,8 @@ def serve(port: int = DEFAULT_PORT) -> None:
                     tutor.open_chat(str(body.get("id")))
                     self._json(state())
                 elif self.path == "/api/replay":
-                    tutor.speaker.say(self._text(body))
+                    text = self._text(body, _MAX_REPLY_CHARS)
+                    tutor.replay(text, read_all=body.get("all") is True)
                     self._json({"ok": True})
                 else:
                     self.send_error(HTTPStatus.NOT_FOUND)
@@ -122,10 +126,10 @@ def serve(port: int = DEFAULT_PORT) -> None:
             except RuntimeError as error:
                 self._json({"error": str(error)}, HTTPStatus.INTERNAL_SERVER_ERROR)
 
-        def _stream_turn(self, text: str, chat_id: str | None) -> None:
+        def _stream_turn(self, text: str, chat_id: str | None, *, read_all: bool) -> None:
             if chat_id is not None and chat_id not in tutor.store.chats:
                 raise ValueError("no such chat")
-            turn = tutor.turn(text, chat_id)
+            turn = tutor.turn(text, chat_id, read_all=read_all)
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
             self.send_header("Cache-Control", "no-store")

@@ -193,3 +193,15 @@ def test_history_folds_late_timings_into_the_reply(tmp_path) -> None:
 
     assert [h["role"] for h in history] == ["user", "tutor"]
     assert history[1]["times"] == {"first_sound": 2.1}
+
+
+def test_lines_to_voice_read_all_keeps_every_spoken_line_in_order() -> None:
+    reply = "辛苦了！\nYou worked hard!\n\nNew: 辛 (xīn) hard\n**Corrected:** 我今天很累。\n---"
+
+    assert lines_to_voice(reply, final=True, read_all=True) == [
+        "辛苦了！",
+        "You worked hard!",
+        "New: 辛 (xīn) hard",
+        "Corrected: 我今天很累。",
+    ]
+    assert lines_to_voice("辛苦了！\nYou wor", final=False, read_all=True) == ["辛苦了！"]

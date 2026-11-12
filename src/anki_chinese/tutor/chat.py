@@ -54,7 +54,10 @@ and then short numbered notes in English. If their Chinese was fine, say nothing
 Write the most natural sentence first. Never bend it to avoid a character the user has not
 studied: use it and list it as New. New characters only when they fit the conversation:
 usually 1-2 per reply, sometimes more, none when nothing fits. Reuse RECENT characters when they
-fit. Keep the conversation going with a question now and then. Be brief."""
+fit. Keep the conversation going with a question now and then. Be brief.
+
+Reply straight away: this is a live voice chat and every second of delay is felt.
+Keep any private reasoning to a sentence or two."""
 
 
 def system_prompt(known: KnownCharacters, recent: list[str]) -> str:
@@ -64,14 +67,17 @@ def system_prompt(known: KnownCharacters, recent: list[str]) -> str:
     )
 
 
-def lines_to_voice(text: str, *, final: bool) -> list[str]:
-    """Chinese lines in `text` worth voicing: line 1 and any corrected sentence.
+def lines_to_voice(text: str, *, final: bool, read_all: bool = False) -> list[str]:
+    """Lines in `text` worth voicing: line 1 and any corrected sentence, or every line.
 
     Only complete lines count unless `final`, so a line is never voiced half-written.
     """
     lines = text.split("\n")
     if not final:
         lines = lines[:-1]
+    if read_all:
+        spoken = (_clean(line) for line in lines)
+        return list(dict.fromkeys(line for line in spoken if re.search(r"\w", line)))
     found: list[str] = []
     first = next((line for line in lines if line.strip()), None)
     if first is not None and has_hanzi(first):
@@ -167,7 +173,9 @@ class Speaker:
         audio = bytearray()
         assert player.stdin is not None
         try:
-            for chunk in stream(text):
+            # Pure Chinese lines get the Chinese boost; English or mixed lines need auto.
+            boost = "Chinese" if has_hanzi(text) and not re.search("[A-Za-z]", text) else "auto"
+            for chunk in stream(text, language_boost=boost):
                 if generation != self._generation:
                     return  # cut off by stop(); stop paying for the rest
                 if not audio:
@@ -413,6 +421,13 @@ class Tutor:
         self.store.current = chat_id
         self.store.save()
 
+    def replay(self, text: str, *, read_all: bool) -> None:
+        """Play a reply again: its first line, or the whole reply line by line."""
+        self.speaker.stop()
+        lines = lines_to_voice(text, final=True, read_all=read_all) if read_all else [text]
+        for line in lines:
+            self.speaker.say(line)
+
     def set_model(self, model: str) -> None:
         if model not in MODELS:
             raise ValueError(f"model must be one of {MODELS}")
@@ -437,7 +452,9 @@ class Tutor:
         with self._lock:
             self._open(chat_id)
 
-    def turn(self, text: str, chat_id: str | None = None) -> Generator[dict[str, object]]:
+    def turn(
+        self, text: str, chat_id: str | None = None, *, read_all: bool = False
+    ) -> Generator[dict[str, object]]:
         """Stream one turn in `chat_id` (default: current): text deltas, new characters, timings."""
         if chat_id is not None and chat_id not in self.store.chats:
             raise ValueError("no such chat")
@@ -459,7 +476,7 @@ class Tutor:
                 times.mark(event)
 
             def voice(final: bool) -> None:
-                for line in lines_to_voice(reply, final=final):
+                for line in lines_to_voice(reply, final=final, read_all=read_all):
                     if line not in voiced:
                         voiced.append(line)
                         times.mark("chinese_ready")
@@ -477,7 +494,7 @@ class Tutor:
             # Save before yielding again: the page may already be gone.
             known = self._known()
             new: dict[str, str] = {}
-            for line in voiced:
+            for line in lines_to_voice(reply, final=True):
                 for char in known.new_in(line):
                     new.setdefault(char, line)
             log_new(new)

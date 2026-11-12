@@ -284,10 +284,13 @@ class MiniMaxTTSProvider:
             force=force,
         )
 
-    def stream_plain_mandarin(self, text: str) -> Iterator[bytes]:
+    def stream_plain_mandarin(
+        self, text: str, *, language_boost: str = "Chinese"
+    ) -> Iterator[bytes]:
         """Yield MP3 chunks as MiniMax produces them, for playback before synthesis ends.
 
         No retries: a live chat would rather skip a clip than wait on backoff.
+        `language_boost="auto"` reads mixed Chinese and English.
         """
         api_key = os.getenv("MINIMAX_API_KEY", "").strip()
         if not api_key:
@@ -297,7 +300,7 @@ class MiniMaxTTSProvider:
         payload = _build_request_payload(
             text=text,
             voice_id=self.settings.mandarin_voice_id,
-            language_boost="Chinese",
+            language_boost=language_boost,
             model=self.settings.model,
         )
         payload["stream"] = True
