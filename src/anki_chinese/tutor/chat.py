@@ -18,7 +18,7 @@ import subprocess
 import threading
 import time
 import uuid
-from collections.abc import Callable, Generator, Iterator
+from collections.abc import Callable, Generator, Iterator, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -418,14 +418,6 @@ class Tutor:
                 yield {"t": "text", "d": delta}
             voice(final=True)
             times.mark("reply_done")
-            _append(history_path, {"role": "tutor", "text": reply, "voiced": voiced})
-            entry = self.store.chats[chat_id]
-            if entry["title"] == "New chat":
-                entry["title"] = text[:40]
-            entry.update(session_id=self._chat.session_id, updated=time.time())
-            self.store.save()
-            yield {"t": "chat", "id": chat_id, "title": entry["title"]}
-
             known = self._known()
             new: dict[str, str] = {}
             for line in voiced:
@@ -433,16 +425,25 @@ class Tutor:
                     new.setdefault(char, line)
             log_new(new)
             yield {"t": "new", "chars": list(new)}
-            # Wait briefly so the page can show when sound started.
+
+            # Wait briefly so the timings, kept with the reply, include when sound started.
             deadline = time.perf_counter() + _SOUND_WAIT_SECONDS
             while voiced and not times.marks.keys() & {"first_sound", "sound_failed"}:
                 if time.perf_counter() > deadline:
                     break
                 time.sleep(0.05)
+            tutor_entry = {"role": "tutor", "text": reply, "new": list(new), "times": times.marks}
+            _append(history_path, dict(tutor_entry))
+            entry = self.store.chats[chat_id]
+            if entry["title"] == "New chat":
+                entry["title"] = text[:40]
+            entry.update(session_id=self._chat.session_id, updated=time.time())
+            self.store.save()
+            yield {"t": "chat", "id": chat_id, "title": entry["title"]}
             yield {"t": "done", "times": times.marks}
 
 
-def _append(path: Path, entry: dict[str, object]) -> None:
+def _append(path: Path, entry: Mapping[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps({**entry, "ts": time.time()}, ensure_ascii=False) + "\n")

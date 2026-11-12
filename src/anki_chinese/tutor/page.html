@@ -105,13 +105,26 @@ function renderTutor(el, text) {
   el.querySelector('.rest').innerHTML = (en ? '<span class="en">' + bold(en) + '</span>' : '') + (rest ? '\n' + bold(rest) : '');
 }
 
-function tutorBubble(text = '') {
+function showChips(el, chars) {
+  el.querySelector('.chips').innerHTML = (chars || []).map(c => '<span class="chip">新 ' + esc(c) + '</span>').join('');
+}
+
+function showTimes(el, t) {
+  if (!t) return;
+  const sound = t.first_sound ? 'first sound ' + t.first_sound.toFixed(1) + ' s' : t.sound_failed ? 'no sound' : '';
+  const reply = t.reply_done ? 'reply ' + t.reply_done.toFixed(1) + ' s' : '';
+  el.querySelector('.times').textContent = [sound, reply].filter(Boolean).join(' · ');
+}
+
+function tutorBubble(text = '', entry = {}) {
   const el = add('tutor', '<div class="zh"><button type="button" aria-label="Play again">▶</button><span></span></div><div class="rest"></div><div class="chips"></div><div class="times"></div>');
   el.querySelector('.zh button').onclick = () => {
     const line = el.querySelector('.zh span').textContent.trim();
     if (line) post('/api/replay', {text: line});
   };
   renderTutor(el, text);
+  showChips(el, entry.new);
+  showTimes(el, entry.times);
   return el;
 }
 
@@ -130,7 +143,7 @@ function render(next) {
   log.innerHTML = '';
   for (const h of state.history) {
     if (h.role === 'user') add('user', esc(h.text));
-    else if (h.role === 'tutor') tutorBubble(h.text);
+    else if (h.role === 'tutor') tutorBubble(h.text, h);
   }
   if (!state.history.length) log.innerHTML = '<div class="empty">用中文说点什么吧。<br>Say something in Chinese to start.</div>';
   input.focus();
@@ -164,6 +177,7 @@ async function send(text) {
   const el = tutorBubble();
   sendBtn.disabled = true;
   let reply = '';
+  let newChars = [];
   try {
     const res = await post('/api/send', {text});
     if (!res.ok) throw new Error(await errorOf(res));
@@ -182,13 +196,12 @@ async function send(text) {
         else if (ev.t === 'chat') {
           const chat = state.chats.find(c => c.id === ev.id);
           if (chat) { chat.title = ev.title; state.chats = [chat, ...state.chats.filter(c => c !== chat)]; }
-          state.history.push({role: 'user', text}, {role: 'tutor', text: reply});
           renderSidebar();
         }
-        else if (ev.t === 'new') el.querySelector('.chips').innerHTML = ev.chars.map(c => '<span class="chip">新 ' + esc(c) + '</span>').join('');
+        else if (ev.t === 'new') { showChips(el, ev.chars); newChars = ev.chars; }
         else if (ev.t === 'done') {
-          const t = ev.times;
-          el.querySelector('.times').textContent = [t.first_sound && 'sound ' + t.first_sound + ' s', t.reply_done && 'reply ' + t.reply_done + ' s'].filter(Boolean).join(' · ');
+          showTimes(el, ev.times);
+          state.history.push({role: 'user', text}, {role: 'tutor', text: reply, new: newChars, times: ev.times});
         }
         else if (ev.t === 'error') el.querySelector('.rest').innerHTML = '<span class="error">' + esc(ev.message) + '</span>';
       }
