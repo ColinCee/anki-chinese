@@ -39,14 +39,7 @@ def serve(port: int = DEFAULT_PORT) -> None:
     page = files(__package__).joinpath("page.html").read_bytes()
 
     def state() -> dict[str, object]:
-        store = tutor.store
-        return {
-            "model": tutor.model,
-            "models": MODELS,
-            "current": store.current,
-            "chats": [{"id": c["id"], "title": c["title"]} for c in store.listing()],
-            "history": store.history(store.current),
-        }
+        return {**tutor.store.snapshot(), "models": MODELS}
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, format: str, *args: Any) -> None:  # noqa: A002 - stdlib signature
@@ -106,7 +99,10 @@ def serve(port: int = DEFAULT_PORT) -> None:
             try:
                 body = self._body()
                 if self.path == "/api/send":
-                    self._stream_turn(self._text(body))
+                    chat_id = body.get("chat")
+                    self._stream_turn(
+                        self._text(body), chat_id if isinstance(chat_id, str) else None
+                    )
                 elif self.path == "/api/model":
                     tutor.set_model(str(body.get("model")))
                     self._json({"model": tutor.model})
@@ -126,8 +122,10 @@ def serve(port: int = DEFAULT_PORT) -> None:
             except RuntimeError as error:
                 self._json({"error": str(error)}, HTTPStatus.INTERNAL_SERVER_ERROR)
 
-        def _stream_turn(self, text: str) -> None:
-            turn = tutor.turn(text)
+        def _stream_turn(self, text: str, chat_id: str | None) -> None:
+            if chat_id is not None and chat_id not in tutor.store.chats:
+                raise ValueError("no such chat")
+            turn = tutor.turn(text, chat_id)
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
             self.send_header("Cache-Control", "no-store")

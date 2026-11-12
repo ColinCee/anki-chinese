@@ -158,6 +158,38 @@ def test_chat_store_keeps_chats_apart_and_survives_reload(tmp_path) -> None:
     reloaded = ChatStore(tmp_path)
 
     assert reloaded.current == second
-    assert [row["id"] for row in reloaded.listing()] == [second, first]
+    assert [row["id"] for row in reloaded.snapshot()["chats"]] == [second, first]
     assert reloaded.chats[first]["session_id"] == "s1"
     assert reloaded.history_path(first) != reloaded.history_path(second)
+
+
+def test_chat_store_survives_a_damaged_index(tmp_path) -> None:
+    from anki_chinese.tutor.chat import ChatStore
+
+    damaged = {"current": ["x"], "chats": {"a": "oops", "b": {"session_id": 3}}}
+    (tmp_path / "chats.json").write_text(json.dumps(damaged), encoding="utf-8")
+
+    store = ChatStore(tmp_path)
+
+    assert set(store.chats) == {"b", store.current}
+    assert store.chats["b"] == {"title": "New chat", "session_id": None, "updated": 0.0}
+    assert store.snapshot()["current"] == store.current
+
+
+def test_history_folds_late_timings_into_the_reply(tmp_path) -> None:
+    from anki_chinese.tutor.chat import ChatStore
+
+    store = ChatStore(tmp_path)
+    path = store.history_path(store.current)
+    path.parent.mkdir(parents=True)
+    lines = [
+        {"role": "user", "text": "你好"},
+        {"role": "tutor", "text": "你好！"},
+        {"role": "times", "times": {"first_sound": 2.1}},
+    ]
+    path.write_text("\n".join(json.dumps(x) for x in lines), encoding="utf-8")
+
+    history = store.history(store.current)
+
+    assert [h["role"] for h in history] == ["user", "tutor"]
+    assert history[1]["times"] == {"first_sound": 2.1}

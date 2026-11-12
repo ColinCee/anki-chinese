@@ -290,45 +290,90 @@ class ClaudeChat:
 
 
 class ChatStore:
-    """Saved chats: an index (title, Claude session, last use) plus one history file each."""
+    """Saved chats: an index (title, Claude session, last use) plus one history file each.
+
+    Thread-safe: the page polls state while a turn is running.
+    """
 
     def __init__(self, root: Path = CHAT_DIR) -> None:
         self._index_path = root / "chats.json"
         self._dir = root / "chats"
+        self._lock = threading.RLock()
         data = _read_json(self._index_path)
-        chats = data.get("chats")
-        self.chats: dict[str, dict[str, Any]] = chats if isinstance(chats, dict) else {}
+        raw_chats = data.get("chats")
+        self.chats: dict[str, dict[str, Any]] = {}
+        if isinstance(raw_chats, dict):
+            for key, value in raw_chats.items():
+                if isinstance(key, str) and isinstance(value, dict):
+                    session = value.get("session_id")
+                    self.chats[key] = {
+                        "title": str(value.get("title") or "New chat"),
+                        "session_id": session if isinstance(session, str) else None,
+                        "updated": float(value.get("updated") or 0),
+                    }
         model = data.get("model")
-        self.model: str = model if model in MODELS else MODELS[0]
+        self.model: str = model if isinstance(model, str) and model in MODELS else MODELS[0]
         current = data.get("current")
-        self.current: str = current if current in self.chats else self.create()
+        self.current: str = (
+            current if isinstance(current, str) and current in self.chats else self.create()
+        )
 
     def create(self) -> str:
-        chat_id = uuid.uuid4().hex[:12]
-        self.chats[chat_id] = {"title": "New chat", "session_id": None, "updated": time.time()}
-        self.current = chat_id
-        self.save()
-        return chat_id
+        with self._lock:
+            chat_id = uuid.uuid4().hex[:12]
+            self.chats[chat_id] = {"title": "New chat", "session_id": None, "updated": time.time()}
+            self.current = chat_id
+            self.save()
+            return chat_id
 
     def save(self) -> None:
-        payload = {"model": self.model, "current": self.current, "chats": self.chats}
-        _write_atomic(self._index_path, json.dumps(payload, ensure_ascii=False, indent=1))
+        with self._lock:
+            payload = {"model": self.model, "current": self.current, "chats": self.chats}
+            _write_atomic(self._index_path, json.dumps(payload, ensure_ascii=False, indent=1))
+
+    def update(self, chat_id: str, *, first_message: str, session_id: str | None) -> str:
+        """Record a finished turn; returns the chat's title."""
+        with self._lock:
+            entry = self.chats[chat_id]
+            if entry["title"] == "New chat":
+                entry["title"] = first_message[:40]
+            entry.update(session_id=session_id, updated=time.time())
+            self.save()
+            return entry["title"]
+
+    def is_empty(self, chat_id: str) -> bool:
+        return not self.history_path(chat_id).exists()
 
     def history_path(self, chat_id: str) -> Path:
         return self._dir / f"{chat_id}.jsonl"
 
-    def listing(self) -> list[dict[str, Any]]:
-        rows = [{"id": key, **value} for key, value in self.chats.items()]
-        return sorted(rows, key=lambda row: row["updated"], reverse=True)
+    def snapshot(self) -> dict[str, object]:
+        with self._lock:
+            rows = sorted(self.chats.items(), key=lambda item: item[1]["updated"], reverse=True)
+            return {
+                "model": self.model,
+                "current": self.current,
+                "chats": [{"id": key, "title": value["title"]} for key, value in rows],
+                "history": self.history(self.current),
+            }
 
-    def history(self, chat_id: str, limit: int = 300) -> list[dict[str, object]]:
+    def history(self, chat_id: str, limit: int = 300) -> list[dict[str, Any]]:
         path = self.history_path(chat_id)
         if not path.exists():
             return []
-        entries = []
+        entries: list[dict[str, Any]] = []
         for line in path.read_text(encoding="utf-8").splitlines()[-limit:]:
-            with contextlib.suppress(ValueError):
-                entries.append(json.loads(line))
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(entry, dict):
+                continue
+            # Timings are written after the reply itself; fold them back into it.
+            if entry.get("role") == "times" and entries and entries[-1].get("role") == "tutor":
+                entries[-1]["times"] = entry.get("times")
+            else:
+                entries.append(entry)
         return entries
 
 
@@ -360,6 +405,14 @@ class Tutor:
         self._chat.close()
         self._chat = fresh
 
+    def _open(self, chat_id: str) -> None:
+        if chat_id == self.store.current:
+            return
+        self.speaker.stop()
+        self._switch(self._session(chat_id))
+        self.store.current = chat_id
+        self.store.save()
+
     def set_model(self, model: str) -> None:
         if model not in MODELS:
             raise ValueError(f"model must be one of {MODELS}")
@@ -370,26 +423,28 @@ class Tutor:
             self.store.model = model
             self.store.save()
 
-    def new_chat(self) -> str:
+    def new_chat(self) -> None:
         with self._lock:
             self.speaker.stop()
+            if self.store.is_empty(self.store.current):
+                return  # already on an unused chat
             self._switch(None)
-            return self.store.create()
+            self.store.create()
 
     def open_chat(self, chat_id: str) -> None:
         if chat_id not in self.store.chats:
             raise ValueError("no such chat")
         with self._lock:
-            if chat_id == self.store.current:
-                return
-            self.speaker.stop()
-            self._switch(self._session(chat_id))
-            self.store.current = chat_id
-            self.store.save()
+            self._open(chat_id)
 
-    def turn(self, text: str) -> Generator[dict[str, object]]:
-        """Stream one turn as events: text deltas, then new characters, then timings."""
+    def turn(self, text: str, chat_id: str | None = None) -> Generator[dict[str, object]]:
+        """Stream one turn in `chat_id` (default: current): text deltas, new characters, timings."""
+        if chat_id is not None and chat_id not in self.store.chats:
+            raise ValueError("no such chat")
         with self._lock:
+            # Another tab may have switched chats; answer in the chat this page shows.
+            if chat_id is not None:
+                self._open(chat_id)
             chat_id = self.store.current
             if not self._chat.usable:
                 self._switch(self._chat.session_id)
@@ -418,29 +473,27 @@ class Tutor:
                 yield {"t": "text", "d": delta}
             voice(final=True)
             times.mark("reply_done")
+
+            # Save before yielding again: the page may already be gone.
             known = self._known()
             new: dict[str, str] = {}
             for line in voiced:
                 for char in known.new_in(line):
                     new.setdefault(char, line)
             log_new(new)
+            _append(history_path, {"role": "tutor", "text": reply, "new": list(new)})
+            title = self.store.update(chat_id, first_message=text, session_id=self._chat.session_id)
+            yield {"t": "chat", "id": chat_id, "title": title}
             yield {"t": "new", "chars": list(new)}
 
-            # Wait briefly so the timings, kept with the reply, include when sound started.
             deadline = time.perf_counter() + _SOUND_WAIT_SECONDS
             while voiced and not times.marks.keys() & {"first_sound", "sound_failed"}:
                 if time.perf_counter() > deadline:
                     break
                 time.sleep(0.05)
-            tutor_entry = {"role": "tutor", "text": reply, "new": list(new), "times": times.marks}
-            _append(history_path, dict(tutor_entry))
-            entry = self.store.chats[chat_id]
-            if entry["title"] == "New chat":
-                entry["title"] = text[:40]
-            entry.update(session_id=self._chat.session_id, updated=time.time())
-            self.store.save()
-            yield {"t": "chat", "id": chat_id, "title": entry["title"]}
-            yield {"t": "done", "times": times.marks}
+            marks = dict(times.marks)  # the speaker thread may still add to it
+            _append(history_path, {"role": "times", "times": marks})
+            yield {"t": "done", "times": marks}
 
 
 def _append(path: Path, entry: Mapping[str, object]) -> None:

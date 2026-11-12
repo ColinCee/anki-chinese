@@ -17,6 +17,7 @@ aside h1{font:300 22px var(--han);margin:0 4px}
 #chats{list-style:none;margin:0;padding:4px 8px 12px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:2px}
 #chats button{font-weight:300;width:100%;border:0;background:transparent;color:var(--fg);text-align:left;padding:9px 12px;border-radius:8px;font:300 18px/1.4 var(--han);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #chats button:hover{background:var(--surface)}
+body.busy #chats button,body.busy #newchat,body.busy .seg button{opacity:.5;pointer-events:none}
 #chats button[aria-current=true]{background:var(--accent-soft);color:var(--accent)}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
 header{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
@@ -154,21 +155,28 @@ function setModels() {
   box.innerHTML = state.models.map(m => `<button type="button" aria-pressed="${m === state.model}" data-m="${m}">${m[0].toUpperCase() + m.slice(1)}</button>`).join('');
   box.querySelectorAll('button').forEach(b => b.onclick = async () => {
     if (b.dataset.m === state.model) return;
+    if (busy) return;
     b.textContent = '…';
-    const res = await post('/api/model', {model: b.dataset.m});
-    if (res.ok) state.model = (await res.json()).model;
-    else add('tutor error', esc(await errorOf(res)));
+    try {
+      const res = await post('/api/model', {model: b.dataset.m});
+      if (res.ok) state.model = (await res.json()).model;
+      else add('tutor error', esc(await errorOf(res)));
+    } catch (e) { add('tutor error', esc(e.message || e)); }
     setModels();
   });
 }
 
+let busy = false;
 async function call(path, body) {
   document.body.classList.remove('side-open');
-  const res = await post(path, body);
-  if (res.ok) render(await res.json());
-  else add('tutor error', esc(await errorOf(res)));
+  if (busy || !state) return;
+  try {
+    const res = await post(path, body);
+    if (res.ok) render(await res.json());
+    else add('tutor error', esc(await errorOf(res)));
+  } catch (e) { add('tutor error', esc(e.message || e)); }
 }
-const openChat = id => id !== state.current && call('/api/open', {id});
+const openChat = id => id === state?.current ? document.body.classList.remove('side-open') : call('/api/open', {id});
 document.getElementById('newchat').onclick = () => call('/api/new');
 document.getElementById('menu').onclick = () => document.body.classList.toggle('side-open');
 
@@ -176,10 +184,12 @@ async function send(text) {
   add('user', esc(text));
   const el = tutorBubble();
   sendBtn.disabled = true;
+  busy = true;
+  document.body.classList.add('busy');
   let reply = '';
   let newChars = [];
   try {
-    const res = await post('/api/send', {text});
+    const res = await post('/api/send', {text, chat: state.current});
     if (!res.ok) throw new Error(await errorOf(res));
     const reader = res.body.getReader();
     const dec = new TextDecoder();
@@ -209,6 +219,8 @@ async function send(text) {
   } catch (e) {
     el.querySelector('.rest').innerHTML = '<span class="error">' + esc(String(e.message || e)) + '</span>';
   } finally {
+    busy = false;
+    document.body.classList.remove('busy');
     sendBtn.disabled = false;
     input.focus();
   }
@@ -217,7 +229,7 @@ async function send(text) {
 document.getElementById('form').onsubmit = e => {
   e.preventDefault();
   const text = input.value.trim();
-  if (!text || sendBtn.disabled) return;
+  if (!text || sendBtn.disabled || !state) return;
   input.value = '';
   send(text);
 };
@@ -234,7 +246,8 @@ function applyZoom(next) {
 document.getElementById('smaller').onclick = () => applyZoom(zoom - 0.1);
 document.getElementById('bigger').onclick = () => applyZoom(zoom + 0.1);
 applyZoom(zoom);
-fetch('/api/state').then(r => r.json()).then(render);
+fetch('/api/state').then(r => r.ok ? r.json() : Promise.reject(new Error(r.statusText))).then(render)
+  .catch(e => { log.innerHTML = '<div class="empty error">Could not load chats: ' + esc(e.message || e) + '</div>'; });
 </script>
 </body>
 </html>
