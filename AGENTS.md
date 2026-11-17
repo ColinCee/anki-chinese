@@ -21,14 +21,12 @@ Checks: `uv run ruff check && uv run ruff format --check && uv run ty check && u
 
 ## Guardrails
 
-- Humans use the workbench; agents use deterministic CLI commands.
-- Do not change `MODEL_ID`, `DECK_ID`, field order, or GUID behavior without an explicit migration.
+- Humans use the presentational workbench; agents use deterministic CLI commands.
 - Keep rebuildable content separate from live suspension, review state, and tags.
-- Keep the workbench presentational, provider details behind `audio/provider.py`
-  and `audio/factory.py`, and AnkiConnect access behind `activation/`.
-- `doctor` is read-only; `--check-anki` is only a version probe.
-- Runtime song planning stays deterministic: no LLM, translation, OpenCC, or
-  pypinyin guessing. Follow the [study policy](docs/decisions/study-target-policy.md).
+- Follow the [study policy](docs/decisions/study-target-policy.md) for song planning.
+- [`test_guardrails.py`](tests/regressions/test_guardrails.py) pins Anki identity
+  (changes need a migration), the workbench/audio/AnkiConnect boundaries, read-only
+  `doctor`, and deterministic song planning. Fix the code, not the test.
 - Use only task-relevant skills. Read-only tasks do not inherit mutation gates;
   template-only changes do not require content edits or audio regeneration.
 
