@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import ast
+import sys
 from functools import cache
 from pathlib import Path
 
 import genanki
 
 import anki_chinese
+from anki_chinese.activation import AnkiConnectClient
 from anki_chinese.activation import __all__ as ACTIVATION_EXPORTS
 from anki_chinese.config import DECK_ID, FIELDS, MODEL_ID
 from anki_chinese.deck import _build_model, _StableNote
@@ -128,22 +130,84 @@ def test_ankiconnect_transport_stays_in_activation() -> None:
     assert not offenders, f"Reach AnkiConnect through `anki_chinese.activation`: {offenders}"
 
 
-AUDIO_VENDOR_MODULES = ("anki_chinese.audio.google_tts", "anki_chinese.audio.minimax")
-TTS_SDKS = ("google.auth", "google.oauth2", "google.cloud")
+# Vendor-neutral audio modules; any other `audio/` module is a provider implementation.
+AUDIO_NEUTRAL = {
+    f"anki_chinese.audio{suffix}"
+    for suffix in (
+        "",
+        ".provider",
+        ".factory",
+        ".state",
+        ".files",
+        ".errors",
+        ".pinyin",
+        ".retry",
+        ".rate_limit",
+    )
+}
+# What code outside `audio/` may import: protocol, construction, provenance, filenames.
+AUDIO_PUBLIC = {f"anki_chinese.audio{s}" for s in ("", ".provider", ".factory", ".state", ".files")}
 
 
-def test_tts_vendor_details_stay_behind_audio_factory() -> None:
-    offenders = [
-        module
+def _is_third_party(imported: str) -> bool:
+    top = imported.partition(".")[0]
+    return top != "anki_chinese" and top not in sys.stdlib_module_names
+
+
+def test_audio_providers_stay_behind_factory() -> None:
+    audio = [m for m in _modules() if _inside(m, "anki_chinese.audio")]
+    vendors = {m for m in audio if m not in AUDIO_NEUTRAL}
+    offenders = sorted(
+        f"{module} -> {imported}"
         for module in _modules()
-        if module not in (*AUDIO_VENDOR_MODULES, "anki_chinese.audio.factory")
-        and any(_matches(m, AUDIO_VENDOR_MODULES + TTS_SDKS) for m in _imported_modules(module))
-    ]
+        for imported in _imported_modules(module)
+        if _inside(imported, "anki_chinese.audio")
+        and module not in vendors
+        and (
+            (not _inside(module, "anki_chinese.audio") and imported not in AUDIO_PUBLIC)
+            or (imported in vendors and module != "anki_chinese.audio.factory")
+        )
+    )
+    offenders += sorted(
+        f"{module} -> {imported}"
+        for module in audio
+        if module in AUDIO_NEUTRAL
+        for imported in _imported_modules(module)
+        if _is_third_party(imported)
+    )
+    assert vendors, "no provider implementations found; update AUDIO_NEUTRAL"
     assert not offenders, (
-        f"Use `audio/provider.py` and `audio/factory.py`, not vendor modules/SDKs: {offenders}"
+        "Provider details stay in provider modules built by `audio/factory.py`; "
+        f"elsewhere use the `audio` package, provider, factory, state or files: {offenders}"
     )
 
 
+def _client_methods() -> set[str]:
+    return {
+        name
+        for name, value in vars(AnkiConnectClient).items()
+        if callable(value) and name != "__init__"
+    }
+
+
+def _client_calls(module: str) -> set[str]:
+    """AnkiConnectClient method names referenced as attributes anywhere in a module."""
+    tree = ast.parse(_modules()[module].read_text(encoding="utf-8"))
+    methods = _client_methods()
+    return {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)} & methods
+
+
+# Read-only AnkiConnectClient methods. New client methods count as mutations until listed.
+CLIENT_READS = {
+    "version",
+    "find_notes_by_chars",
+    "find_notes_by_template",
+    "find_notes_by_tag",
+    "suspended_card_ids",
+    "find_studied_characters",
+    "find_active_characters",
+    "find_all_deck_info",
+}
 ACTIVATION_MUTATIONS = {
     name
     for name in ACTIVATION_EXPORTS
@@ -151,66 +215,74 @@ ACTIVATION_MUTATIONS = {
 }
 
 
-def test_workbench_does_not_drive_live_mutations() -> None:
+def test_workbench_only_reads_live_anki_directly() -> None:
+    tui = [m for m in _modules() if _inside(m, "anki_chinese.tui")]
     offenders = sorted(
         f"{module}: {name or imported}"
-        for module in _modules()
-        if _inside(module, "anki_chinese.tui")
+        for module in tui
         for imported, name in _imports(module)
         if (_inside(imported, "anki_chinese.activation") and name in ACTIVATION_MUTATIONS)
         or _matches(imported, ("anki_chinese.activation.service", "anki_chinese.cli.activate"))
     )
+    offenders += sorted(f"{m}: client.{c}" for m in tui for c in _client_calls(m) - CLIENT_READS)
     assert ACTIVATION_MUTATIONS, "activation mutation exports were renamed; update this test"
-    assert not offenders, (
-        f"The workbench is presentational; live mutations stay in CLI: {offenders}"
-    )
+    assert not offenders, f"The workbench must not mutate live Anki directly: {offenders}"
 
 
-def test_doctor_imports_no_mutations() -> None:
-    names = {
-        name
-        for imported, name in _imports("anki_chinese.cli.doctor")
-        if imported.startswith("anki_")
-    }
-    offenders = sorted(
+FILE_WRITES = {"write_text", "write_bytes", "mkdir", "unlink", "rmdir", "touch", "dump"}
+WRITE_MODULES = ("shutil", "tempfile", "sqlite3", "subprocess")
+
+
+def test_doctor_is_read_only_and_only_probes_version() -> None:
+    doctor = "anki_chinese.cli.doctor"
+    tree = ast.parse(_modules()[doctor].read_text(encoding="utf-8"))
+    offenders = sorted(f"client.{c}" for c in _client_calls(doctor) - {"version"})
+    offenders += sorted(
         str(name)
-        for name in names
-        if name in ACTIVATION_MUTATIONS
-        or (name or "").startswith(("run_", "write_", "save_", "delete_", "apply_"))
+        for imported, name in _imports(doctor)
+        if imported.startswith("anki_")
+        and (
+            name in ACTIVATION_MUTATIONS
+            or (name or "").startswith(("run_", "write_", "save_", "delete_", "apply_"))
+        )
     )
-    assert not offenders, f"`doctor` is read-only: {offenders}"
+    offenders += sorted(m for m in _imported_modules(doctor) if _matches(m, WRITE_MODULES))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and node.attr in FILE_WRITES:
+            offenders.append(f".{node.attr}")
+        if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "open":
+            offenders.append("open()")
+    assert not offenders, (
+        f"`doctor` is read-only and `--check-anki` only calls version: {offenders}"
+    )
 
 
 # ── Deterministic song planning ───────────────────────────────────────
 
-NONDETERMINISTIC = (
-    "pypinyin",
-    "opencc",
-    "jieba",
-    "google",
-    "openai",
-    "anthropic",
-    "googletrans",
-    "deep_translator",
-    "translate",
-    "anki_chinese.sentences",
-    "anki_chinese.data_sources",
-    "anki_chinese.audio",
-    "anki_chinese.tutor",
-)
+# Everything song planning may import. Additions need a deterministic, offline reason;
+# readings, LLMs, translation, segmentation and network clients do not qualify.
+SONG_PLANNING_ALLOWED = {
+    "__future__",
+    "collections",
+    "dataclasses",
+    "pathlib",
+    "re",
+    "anki_chinese.songs.analysis",
+    "anki_chinese.songs.lyrics",
+}
 
 
-def test_song_planning_stays_deterministic() -> None:
+def test_song_planning_imports_only_allowlisted_modules() -> None:
     reachable = _closure("anki_chinese.songs.analysis", "anki_chinese.songs.lyrics")
     offenders = sorted(
         f"{module} -> {imported}"
         for module in reachable
         for imported in _imported_modules(module)
-        if _matches(imported, NONDETERMINISTIC)
+        if imported not in SONG_PLANNING_ALLOWED
     )
     assert not offenders, (
-        "Song planning must not guess readings or translate; see "
-        f"docs/decisions/study-target-policy.md: {offenders}"
+        "Song planning must stay deterministic and offline (no LLM, translation, OpenCC, "
+        f"pypinyin or network); see docs/decisions/study-target-policy.md: {offenders}"
     )
 
 
@@ -220,3 +292,6 @@ def test_import_scanner_sees_known_edges() -> None:
     assert ("anki_chinese.activation", "AnkiConnectClient") in _imports("anki_chinese.cli.doctor")
     assert "anki_chinese.audio.google_tts" in _imported_modules("anki_chinese.audio.factory")
     assert "google.oauth2" in _imported_modules("anki_chinese.audio.google_tts")
+    assert "version" in _client_calls("anki_chinese.cli.doctor")
+    assert {"find_active_characters"} <= _client_calls("anki_chinese.tui.dashboard_model")
+    assert {"_invoke", "unsuspend_cards", "version"} <= _client_methods()

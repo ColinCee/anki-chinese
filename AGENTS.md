@@ -21,14 +21,26 @@ Checks: `uv run ruff check && uv run ruff format --check && uv run ty check && u
 
 ## Guardrails
 
-- Humans use the presentational workbench; agents use deterministic CLI commands.
+- Humans use the workbench; agents use deterministic CLI commands.
 - Keep rebuildable content separate from live suspension, review state, and tags.
-- Follow the [study policy](docs/decisions/study-target-policy.md) for song planning.
-- [`test_guardrails.py`](tests/regressions/test_guardrails.py) pins Anki identity
-  (changes need a migration), the workbench/audio/AnkiConnect boundaries, read-only
-  `doctor`, and deterministic song planning. Fix the code, not the test.
 - Use only task-relevant skills. Read-only tasks do not inherit mutation gates;
   template-only changes do not require content edits or audio regeneration.
+
+[`test_guardrails.py`](tests/regressions/test_guardrails.py) checks the rules below
+from source imports and calls; fix the code, not the test. It reads each module
+directly, so code reached through a helper it calls is your responsibility.
+
+- Change `MODEL_ID`, `DECK_ID`, field order, or GUID behavior only with an
+  explicit migration (pinned).
+- Keep the workbench presentational (judgment). Tested: it imports no activation
+  mutations and calls only read methods on the AnkiConnect client.
+- Keep provider details behind `audio/provider.py` and `audio/factory.py`, and
+  AnkiConnect access behind `activation/` (both import boundaries tested).
+- `doctor` is read-only; `--check-anki` is only a version probe. Tested: it calls
+  only `version()` on the client and has no direct file writes or mutation imports.
+- Runtime song planning stays deterministic: no LLM, translation, OpenCC,
+  pypinyin, or network. `songs/analysis.py` and `lyrics.py` may import only an
+  allowlist; it does not check logic. Follow the [study policy](docs/decisions/study-target-policy.md).
 
 When a task reveals guidance friction, apply the
 [maintenance loop](CONTRIBUTING.md#maintaining-docs-and-skills) once in the
