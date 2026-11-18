@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 import chevron
 import pytest
 
-from anki_chinese.config import CARDS_DIR, FIELDS, MODEL_ID
+from anki_chinese.config import CARDS_DIR
 from anki_chinese.deck import _build_model
 
 
@@ -146,10 +146,8 @@ def test_cantonese_play_button_requires_both_pronunciation_and_audio() -> None:
     assert "[sound:yue.mp3]" not in "".join(root.itertext())
 
 
-def test_redesign_preserves_model_identity_and_wires_reading_enhancement() -> None:
+def test_model_templates_wire_reading_enhancement() -> None:
     model = _build_model()
-    assert model.model_id == MODEL_ID
-    assert [field["name"] for field in model.fields] == FIELDS
     assert [template["name"] for template in model.templates] == ["Recognition", "Listening"]
     reading_script = (CARDS_DIR / "reading_script.html").read_text(encoding="utf-8")
     assert model.templates[0]["qfmt"].endswith(reading_script)

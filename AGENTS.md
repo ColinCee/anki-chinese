@@ -26,7 +26,7 @@ Checks: `uv run ruff check && uv run ruff format --check && uv run ty check && u
 - Use only task-relevant skills. Read-only tasks do not inherit mutation gates;
   template-only changes do not require content edits or audio regeneration.
 
-[`test_guardrails.py`](tests/regressions/test_guardrails.py) checks the rules below
+[`test_guardrails.py`](tests/test_guardrails.py) checks the rules below
 from source imports and calls; fix the code, not the test. It reads each module
 directly and matches names, so these are on you: code reached through a helper,
 an activation mutation export without an `activate_`/`suspend_`/`write_`-style
