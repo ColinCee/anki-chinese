@@ -12,7 +12,7 @@ import genanki
 import anki_chinese
 from anki_chinese.activation import AnkiConnectClient
 from anki_chinese.activation import __all__ as ACTIVATION_EXPORTS
-from anki_chinese.config import DECK_ID, FIELDS
+from anki_chinese.config import DECK_ID, FIELDS, MODEL_ID
 from anki_chinese.deck import _build_model, _StableNote
 
 PACKAGE_DIR = Path(anki_chinese.__file__).parent
@@ -90,24 +90,28 @@ def _inside(module: str, package: str) -> bool:
 
 def test_anki_identity_is_pinned() -> None:
     model = _build_model()
-    assert model.model_id == 1_704_328_571, MIGRATION_HINT
+    assert model.model_id == MODEL_ID == 1_704_328_571, MIGRATION_HINT
     assert DECK_ID == 1_704_328_572, MIGRATION_HINT
-    assert [field["name"] for field in model.fields] == [
-        "Hanzi",
-        "Meaning",
-        "Pinyin",
-        "Jyutping",
-        "MandarinAudio",
-        "CantoneseAudio",
-        "StrokeOrder",
-        "HeisigNum",
-        "Lesson",
-        "Story",
-        "SentenceAudio",
-        "Sentence",
-        "SentencePinyin",
-        "SentenceEnglish",
-    ], MIGRATION_HINT
+    assert (
+        [field["name"] for field in model.fields]
+        == FIELDS
+        == [
+            "Hanzi",
+            "Meaning",
+            "Pinyin",
+            "Jyutping",
+            "MandarinAudio",
+            "CantoneseAudio",
+            "StrokeOrder",
+            "HeisigNum",
+            "Lesson",
+            "Story",
+            "SentenceAudio",
+            "Sentence",
+            "SentencePinyin",
+            "SentenceEnglish",
+        ]
+    ), MIGRATION_HINT
 
 
 def test_note_guid_depends_only_on_hanzi() -> None:
