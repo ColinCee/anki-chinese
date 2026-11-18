@@ -28,14 +28,18 @@ Checks: `uv run ruff check && uv run ruff format --check && uv run ty check && u
 
 [`test_guardrails.py`](tests/regressions/test_guardrails.py) checks the rules below
 from source imports and calls; fix the code, not the test. It reads each module
-directly, so code reached through a helper it calls is your responsibility.
+directly and matches names, so these are on you: code reached through a helper,
+a mutation under a new name (it checks name prefixes and a client-call allowlist),
+`doctor` writing via `Path.open("w")`, `.rename` or `.replace`, and
+`config.ANKICONNECT_URL` read through a module import.
 
 - Change `MODEL_ID`, `DECK_ID`, field order, or GUID behavior only with an
   explicit migration (pinned).
 - Keep the workbench presentational (judgment). Tested: it imports no activation
   mutations and calls only read methods on the AnkiConnect client.
-- Keep provider details behind `audio/provider.py` and `audio/factory.py`, and
-  AnkiConnect access behind `activation/` (both import boundaries tested).
+- Keep provider details behind `audio/provider.py` and `audio/factory.py` (others
+  may also import `state` and `files`; neutral `audio/` modules import no
+  third-party code), and AnkiConnect access behind `activation/` (both tested).
 - `doctor` is read-only; `--check-anki` is only a version probe. Tested: it calls
   only `version()` on the client and has no direct file writes or mutation imports.
 - Runtime song planning stays deterministic: no LLM, translation, OpenCC,

@@ -124,7 +124,10 @@ def test_ankiconnect_transport_stays_in_activation() -> None:
         and (
             ("anki_chinese.config", "ANKICONNECT_URL") in _imports(module)
             or "anki_chinese.activation.ankiconnect" in _imported_modules(module)
-            or (module != "anki_chinese.config" and ":8765" in _modules()[module].read_text())
+            or (
+                module != "anki_chinese.config"
+                and ":8765" in _modules()[module].read_text(encoding="utf-8")
+            )
         )
     ]
     assert not offenders, f"Reach AnkiConnect through `anki_chinese.activation`: {offenders}"
