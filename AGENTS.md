@@ -29,8 +29,9 @@ Checks: `uv run ruff check && uv run ruff format --check && uv run ty check && u
 [`test_guardrails.py`](tests/regressions/test_guardrails.py) checks the rules below
 from source imports and calls; fix the code, not the test. It reads each module
 directly and matches names, so these are on you: code reached through a helper,
-a mutation under a new name (it checks name prefixes and a client-call allowlist),
-`doctor` writing via `Path.open("w")`, `.rename` or `.replace`, and
+an activation mutation export without an `activate_`/`suspend_`/`write_`-style
+prefix, `doctor` writing by any route but a bare `open()` and the listed calls
+(such as `Path.open("w")`, `.rename` or `os.replace`), and
 `config.ANKICONNECT_URL` read through a module import.
 
 - Change `MODEL_ID`, `DECK_ID`, field order, or GUID behavior only with an
